@@ -1,0 +1,201 @@
+{
+  "name": "Party House - Transfer Submit (webhook desde la landing)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ph/transfer-submit",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryData": true,
+          "rawBody": false,
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Webhook (landing)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "ph-transfer-submit",
+      "notes": "multipart/form-data: campos code, amount, reference, receipt (binary)."
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $json.body || {};\nconst code = String(body.code || '').trim().toUpperCase();\nconst amount = Number(body.amount || 0);\nconst reference = String(body.reference || '').trim();\nif (!code || !amount) return [{ json: { _error: 'missing_fields' } }];\nreturn [{ json: { code, amount, reference } }];"
+      },
+      "name": "Validar campos",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": { "string": [{ "value1": "={{$json._error || ''}}", "operation": "isEmpty" }] }
+      },
+      "name": "¿Campos OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Construye el path del archivo en el bucket y conserva el binario\nconst code = $json.code;\nconst ts = Date.now();\nconst b = $binary.receipt;\nif (!b) throw new Error('archivo receipt faltante');\nconst ext = (b.fileExtension || 'bin').toLowerCase();\nconst path = `transfers/${code}-${ts}.${ext}`;\nreturn [{ json: { ...$json, storage_path: path, mime: b.mimeType || 'application/octet-stream' }, binary: { receipt: b } }];"
+      },
+      "name": "Preparar upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/storage/v1/object/receipts/{{$json.storage_path}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "={{$json.mime}}" },
+          { "name": "x-upsert", "value": "false" }
+        ]},
+        "sendBody": true,
+        "specifyBody": "binary",
+        "binaryPropertyName": "receipt"
+      },
+      "name": "Supabase Storage: upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// URL firmada (60 días) para que los admins puedan abrir el comprobante desde Telegram.\n// Esta request la hacemos después con otra petición HTTP.\nreturn [{ json: {\n  code: $node['Preparar upload'].json.code,\n  amount: $node['Preparar upload'].json.amount,\n  reference: $node['Preparar upload'].json.reference,\n  storage_path: $node['Preparar upload'].json.storage_path\n}}];"
+      },
+      "name": "Preparar signed URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/storage/v1/object/sign/receipts/{{$json.storage_path}}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "expiresIn", "value": "5184000" }
+        ]}
+      },
+      "name": "Supabase: signed URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const signed = $json.signedURL || $json.signedUrl || '';\nconst full = signed.startsWith('http') ? signed : ($env.SUPABASE_URL.replace(/\\/$/, '') + '/storage/v1' + signed);\nreturn [{ json: {\n  code: $node['Preparar signed URL'].json.code,\n  amount: $node['Preparar signed URL'].json.amount,\n  reference: $node['Preparar signed URL'].json.reference,\n  receipt_url: full\n}}];"
+      },
+      "name": "Armar receipt_url",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1740, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/rpc_create_transfer_order",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "p_code", "value": "={{$json.code}}" },
+          { "name": "p_amount_usd", "value": "={{$json.amount}}" },
+          { "name": "p_reference", "value": "={{$json.reference}}" },
+          { "name": "p_receipt_url", "value": "={{$json.receipt_url}}" }
+        ]}
+      },
+      "name": "Supabase: create_transfer_order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1960, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "if ($json.error) return [{ json: { _error: $json.error } }];\nreturn [{ json: { order_id: $json.order_id, receipt_url: $node['Armar receipt_url'].json.receipt_url, code: $node['Armar receipt_url'].json.code, amount: $node['Armar receipt_url'].json.amount, reference: $node['Armar receipt_url'].json.reference } }];"
+      },
+      "name": "Post-insert",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2180, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const ids = ($env.ADMIN_TELEGRAM_IDS || '').split(',').map(s => s.trim()).filter(Boolean);\nreturn ids.map(id => ({ json: { chat_id: id, order_id: $json.order_id, code: $json.code, amount: $json.amount, reference: $json.reference, receipt_url: $json.receipt_url } }));"
+      },
+      "name": "Fan-out admins",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2400, 140]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "=💸 *Nueva transferencia pendiente*\n\nCódigo: *{{$json.code}}*\nMonto: USD {{$json.amount}}\nReferencia: `{{$json.reference}}`\nComprobante: {{$json.receipt_url}}\n\nOrder ID: `{{$json.order_id}}`\n\nAprobar:  */aprobar {{$json.order_id}}*\nRechazar: */rechazar {{$json.order_id}}*",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "name": "Telegram a admins",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2620, 140],
+      "credentials": { "telegramApi": "PH_ADMIN_BOT" }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, order_id: $node['Post-insert'].json.order_id } }}"
+      },
+      "name": "Responder landing (OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2840, 140]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'bad_request', detail: $json._error } }}",
+        "options": { "responseCode": 400 }
+      },
+      "name": "Responder landing (400)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [860, 440]
+    }
+  ],
+  "connections": {
+    "Webhook (landing)": { "main": [[{ "node": "Validar campos", "type": "main", "index": 0 }]] },
+    "Validar campos": { "main": [[{ "node": "¿Campos OK?", "type": "main", "index": 0 }]] },
+    "¿Campos OK?": { "main": [
+      [{ "node": "Preparar upload", "type": "main", "index": 0 }],
+      [{ "node": "Responder landing (400)", "type": "main", "index": 0 }]
+    ]},
+    "Preparar upload": { "main": [[{ "node": "Supabase Storage: upload", "type": "main", "index": 0 }]] },
+    "Supabase Storage: upload": { "main": [[{ "node": "Preparar signed URL", "type": "main", "index": 0 }]] },
+    "Preparar signed URL": { "main": [[{ "node": "Supabase: signed URL", "type": "main", "index": 0 }]] },
+    "Supabase: signed URL": { "main": [[{ "node": "Armar receipt_url", "type": "main", "index": 0 }]] },
+    "Armar receipt_url": { "main": [[{ "node": "Supabase: create_transfer_order", "type": "main", "index": 0 }]] },
+    "Supabase: create_transfer_order": { "main": [[{ "node": "Post-insert", "type": "main", "index": 0 }]] },
+    "Post-insert": { "main": [[{ "node": "Fan-out admins", "type": "main", "index": 0 }]] },
+    "Fan-out admins": { "main": [[{ "node": "Telegram a admins", "type": "main", "index": 0 }]] },
+    "Telegram a admins": { "main": [[{ "node": "Responder landing (OK)", "type": "main", "index": 0 }]] }
+  }
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party House — Validador de entradas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#050509" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">◆ VALIDATOR</div>
+    <nav><a href="#" id="logoutLink">Cerrar</a></nav>
+  </header>
+
+  <section class="hero" style="min-height:auto; padding-top:130px;">
+    <h1 style="font-size:2.2rem;">Control de acceso</h1>
+    <p class="tagline" id="eventName">—</p>
+  </section>
+
+  <section class="section">
+    <!-- Login del empleado -->
+    <div class="card" id="loginCard">
+      <h2>Ingreso de personal</h2>
+      <p class="subtitle">Usa tus credenciales de empleado.</p>
+      <div id="loginAlert" class="alert alert-error"></div>
+      <form id="staffLogin">
+        <div class="field"><label>Usuario / Telegram ID</label><input id="staffUser" required/></div>
+        <div class="field"><label>PIN</label><input id="staffPin" type="password" required/></div>
+        <button class="btn btn-primary" style="width:100%;">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Escáner -->
+    <div class="card" id="scannerCard" style="display:none; max-width:560px;">
+      <h2>Escáner QR</h2>
+      <p class="subtitle">Apunta la cámara al código del invitado.</p>
+
+      <div id="reader" style="width:100%; background:#000; border-radius:12px; overflow:hidden;"></div>
+
+      <div id="resultBox" style="margin-top:16px; padding:18px; border-radius:12px; text-align:center; display:none;">
+        <div id="resultIcon" style="font-size:3rem;">◯</div>
+        <div id="resultText" style="margin-top:8px; font-weight:700; letter-spacing:2px; text-transform:uppercase;"></div>
+        <div id="resultGuest" style="color:var(--color-text-dim); margin-top:6px;"></div>
+      </div>
+
+      <button class="btn" style="width:100%; margin-top:18px;" id="rescanBtn">Escanear otro</button>
+    </div>
+  </section>
+
+  <footer><div>© Party House · Staff</div></footer>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script>
+    let scanner = null;
+    const loginCard = document.getElementById('loginCard');
+    const scannerCard = document.getElementById('scannerCard');
+    const loginAlert = document.getElementById('loginAlert');
+    const resultBox = document.getElementById('resultBox');
+    const resultIcon = document.getElementById('resultIcon');
+    const resultText = document.getElementById('resultText');
+    const resultGuest = document.getElementById('resultGuest');
+
+    // Login staff
+    document.getElementById('staffLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        user: document.getElementById('staffUser').value.trim(),
+        pin: document.getElementById('staffPin').value.trim()
+      };
+      const res = await fetch('/api/staff/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        loginAlert.textContent = data.error || 'Credenciales inválidas.';
+        loginAlert.classList.add('show');
+        return;
+      }
+      sessionStorage.setItem('ph_staff', JSON.stringify(data));
+      startScanner();
+    });
+
+    document.getElementById('logoutLink').addEventListener('click', (e) => {
+      e.preventDefault(); sessionStorage.clear(); location.reload();
+    });
+
+    document.getElementById('rescanBtn').addEventListener('click', () => {
+      resultBox.style.display = 'none';
+      if (scanner) scanner.resume();
+    });
+
+    function showResult(result, guestLabel) {
+      resultBox.style.display = 'block';
+      if (result === 'valid') {
+        resultBox.style.background = 'rgba(0,240,180,0.12)';
+        resultBox.style.border = '2px solid #00f0b4';
+        resultIcon.textContent = '✔';
+        resultIcon.style.color = '#00f0b4';
+        resultText.textContent = 'ACCESO PERMITIDO';
+      } else {
+        resultBox.style.background = 'rgba(255,45,100,0.12)';
+        resultBox.style.border = '2px solid #ff3366';
+        resultIcon.textContent = '✖';
+        resultIcon.style.color = '#ff3366';
+        resultText.textContent = ({
+          already_used: 'YA INGRESÓ',
+          invalid: 'QR INVÁLIDO',
+          expired: 'QR EXPIRADO'
+        })[result] || 'QR INVÁLIDO';
+      }
+      resultGuest.textContent = guestLabel || '';
+    }
+
+    function startScanner() {
+      loginCard.style.display = 'none';
+      scannerCard.style.display = 'block';
+      const staff = JSON.parse(sessionStorage.getItem('ph_staff'));
+      document.getElementById('eventName').textContent = staff.event?.name || 'Evento activo';
+
+      scanner = new Html5Qrcode('reader');
+      scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 260 },
+        async (decodedText) => {
+          scanner.pause();
+          const res = await fetch('/api/tickets/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-staff-token': staff.token },
+            body: JSON.stringify({ qr: decodedText })
+          });
+          const body = await res.json();
+          showResult(body.result, body.guest ? `${body.guest.first_name} ${body.guest.last_name}` : '');
+        },
+        () => {}
+      );
+    }
+
+    if (sessionStorage.getItem('ph_staff')) startScanner();
+  </script>
+</body>
+</html>

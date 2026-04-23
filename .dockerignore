@@ -1,0 +1,25 @@
+# Nunca meter estos en la imagen Docker
+node_modules
+**/node_modules
+.git
+.gitignore
+.dockerignore
+
+# Secrets — nunca en la imagen (los setea Easypanel via env vars)
+.env
+server/.env
+**/.env
+
+# Carpetas de desarrollo / docs que no hacen falta en runtime
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Docs y archivados — no son necesarios para correr
+docs
+n8n/_archived
+*.md
+!README.md

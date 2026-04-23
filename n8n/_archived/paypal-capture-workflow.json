@@ -1,0 +1,254 @@
+{
+  "name": "Party House - PayPal Capture (webhook desde la landing)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ph/paypal-capture",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "name": "Webhook (landing)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "ph-paypal-capture",
+      "notes": "Recibe { code, paypal_order_id } desde evento.html tras onApprove."
+    },
+    {
+      "parameters": {
+        "functionCode": "const b = $json.body || {};\nif (!b.code || !b.paypal_order_id) {\n  return [{ json: { _error: 'missing_fields' } }];\n}\nreturn [{ json: { code: String(b.code).toUpperCase(), paypal_order_id: b.paypal_order_id } }];"
+      },
+      "name": "Validar body",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": { "string": [{ "value1": "={{$json._error || ''}}", "operation": "isEmpty" }] }
+      },
+      "name": "¿Body válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com' }}/v1/oauth2/token",
+        "method": "POST",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "Content-Type", "value": "application/x-www-form-urlencoded" }
+        ]},
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": { "parameters": [
+          { "name": "grant_type", "value": "client_credentials" }
+        ]}
+      },
+      "name": "PayPal OAuth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [860, 200],
+      "credentials": { "httpBasicAuth": "PH_PAYPAL_BASIC" },
+      "notes": "Credencial Basic Auth con client_id:client_secret de PayPal."
+    },
+    {
+      "parameters": {
+        "url": "={{ ($env.PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com') + '/v2/checkout/orders/' + $node['Validar body'].json.paypal_order_id + '/capture' }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Authorization", "value": "=Bearer {{$json.access_token}}" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [] }
+      },
+      "name": "PayPal Capture",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1080, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const cap = $json;\nconst status = cap.status || '';\nif (status !== 'COMPLETED') return [{ json: { _error: 'capture_failed', detail: cap } }];\nconst unit = (cap.purchase_units && cap.purchase_units[0]) || {};\nconst amount = unit.payments && unit.payments.captures && unit.payments.captures[0] && unit.payments.captures[0].amount && unit.payments.captures[0].amount.value;\nreturn [{ json: {\n  amount_usd: Number(amount || 0),\n  paypal_order_id: $node['Validar body'].json.paypal_order_id,\n  code: $node['Validar body'].json.code\n}}];"
+      },
+      "name": "Extraer monto",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "conditions": { "string": [{ "value1": "={{$json._error || ''}}", "operation": "isEmpty" }] }
+      },
+      "name": "¿Captura OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1520, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/rpc_create_paypal_order",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "p_code", "value": "={{$json.code}}" },
+          { "name": "p_amount_usd", "value": "={{$json.amount_usd}}" },
+          { "name": "p_paypal_order_id", "value": "={{$json.paypal_order_id}}" }
+        ]}
+      },
+      "name": "Supabase: create_paypal_order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1740, 120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Firmar JWT del QR\nconst jwt = require('jsonwebtoken');\nconst payload = {\n  o: $json.order_id,\n  e: $json.event_id,\n  g: $json.guest_id,\n  iat: Math.floor(Date.now()/1000)\n};\nconst token = jwt.sign(payload, $env.JWT_SECRET, { expiresIn: '180d' });\nreturn [{ json: { ...$json, qr_token: token, qr_payload: payload } }];"
+      },
+      "name": "Firmar JWT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1960, 120]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/rpc_issue_ticket",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "p_order_id", "value": "={{$json.order_id}}" },
+          { "name": "p_qr_token", "value": "={{$json.qr_token}}" },
+          { "name": "p_payload", "value": "={{$json.qr_payload}}" }
+        ]}
+      },
+      "name": "Supabase: issue_ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2180, 120]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/guests?id=eq.{{$node['Firmar JWT'].json.guest_id}}&select=first_name,last_name,email",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" }
+        ]}
+      },
+      "name": "Traer invitado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2400, 120]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.SMTP_FROM}}",
+        "toEmail": "={{$json[0].email}}",
+        "subject": "Party House — Tu entrada",
+        "html": "=<div style=\"font-family:Arial;background:#050509;color:#f2f2f2;padding:32px;border-radius:12px;\"><h1 style=\"color:#ff2df7;letter-spacing:3px;\">PARTY HOUSE</h1><h2 style=\"color:#00f0ff;\">Hola {{$json[0].first_name}}, tu pase está listo.</h2><p>Presentá este QR en la entrada:</p><img src=\"https://api.qrserver.com/v1/create-qr-code/?size=320x320&data={{encodeURIComponent($node['Firmar JWT'].json.qr_token)}}\" style=\"background:#fff;padding:8px;border-radius:10px;\" /><p style=\"color:#9a9ab0;margin-top:20px;\">Nos vemos esa noche.</p></div>"
+      },
+      "name": "Email con QR",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2620, 120],
+      "credentials": { "smtp": "PH_SMTP" }
+    },
+    {
+      "parameters": {
+        "functionCode": "const ids = ($env.ADMIN_TELEGRAM_IDS || '').split(',').map(s => s.trim()).filter(Boolean);\nreturn ids.map(id => ({ json: { chat_id: id, guest: $json[0], qr_token: $node['Firmar JWT'].json.qr_token } }));"
+      },
+      "name": "Fan-out admins",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2840, 120]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "=🎟 *Ticket emitido (PayPal)*\n\nInvitado: *{{$json.guest.first_name}} {{$json.guest.last_name}}* ({{$json.guest.email}})",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "name": "Telegram a admins",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [3060, 120],
+      "credentials": { "telegramApi": "PH_ADMIN_BOT" }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, ticket_url: '/ticket.html?c=' + $node['Validar body'].json.code } }}"
+      },
+      "name": "Responder landing (OK)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [3280, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'payment_failed' } }}",
+        "options": { "responseCode": 400 }
+      },
+      "name": "Responder landing (fail)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1740, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'bad_request', detail: $json._error } }}",
+        "options": { "responseCode": 400 }
+      },
+      "name": "Responder landing (400)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [860, 440]
+    }
+  ],
+  "connections": {
+    "Webhook (landing)": { "main": [[{ "node": "Validar body", "type": "main", "index": 0 }]] },
+    "Validar body": { "main": [[{ "node": "¿Body válido?", "type": "main", "index": 0 }]] },
+    "¿Body válido?": { "main": [
+      [{ "node": "PayPal OAuth", "type": "main", "index": 0 }],
+      [{ "node": "Responder landing (400)", "type": "main", "index": 0 }]
+    ]},
+    "PayPal OAuth": { "main": [[{ "node": "PayPal Capture", "type": "main", "index": 0 }]] },
+    "PayPal Capture": { "main": [[{ "node": "Extraer monto", "type": "main", "index": 0 }]] },
+    "Extraer monto": { "main": [[{ "node": "¿Captura OK?", "type": "main", "index": 0 }]] },
+    "¿Captura OK?": { "main": [
+      [{ "node": "Supabase: create_paypal_order", "type": "main", "index": 0 }],
+      [{ "node": "Responder landing (fail)", "type": "main", "index": 0 }]
+    ]},
+    "Supabase: create_paypal_order": { "main": [[{ "node": "Firmar JWT", "type": "main", "index": 0 }]] },
+    "Firmar JWT": { "main": [[{ "node": "Supabase: issue_ticket", "type": "main", "index": 0 }]] },
+    "Supabase: issue_ticket": { "main": [[{ "node": "Traer invitado", "type": "main", "index": 0 }]] },
+    "Traer invitado": { "main": [[{ "node": "Email con QR", "type": "main", "index": 0 }]] },
+    "Email con QR": { "main": [[{ "node": "Fan-out admins", "type": "main", "index": 0 }]] },
+    "Fan-out admins": { "main": [[{ "node": "Telegram a admins", "type": "main", "index": 0 }]] },
+    "Telegram a admins": { "main": [[{ "node": "Responder landing (OK)", "type": "main", "index": 0 }]] }
+  }
+}

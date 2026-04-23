@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party House — Amenidades</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">◆ PARTY HOUSE</div>
+    <nav>
+      <a href="./evento.html">Mi evento</a>
+      <a href="./ticket.html">Mi ticket</a>
+      <a href="./index.html">Inicio</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="min-height:auto; padding-top:140px;">
+    <h1>Amenidades</h1>
+    <p class="tagline">Lo que vas a vivir esa noche</p>
+  </section>
+
+  <section class="section">
+    <div class="grid" id="amenitiesGrid">
+      <div class="amenity"><h3>Cargando...</h3><p></p></div>
+    </div>
+  </section>
+
+  <footer><div>© Party House</div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/app.js"></script>
+  <script>
+    async function load() {
+      const session = window.ph.getSession();
+      const eventId = session?.event?.id;
+      const grid = document.getElementById('amenitiesGrid');
+
+      if (!eventId) {
+        grid.innerHTML = '<p style="color:var(--color-text-dim); text-align:center;">Ingresá con tu código para ver las amenidades.</p>';
+        return;
+      }
+
+      const { data, error } = await window.ph.supabase.rpc('rpc_get_amenities', { p_event_id: eventId });
+      if (error) { grid.innerHTML = '<p style="color:#ff7a9c;">No se pudieron cargar las amenidades.</p>'; return; }
+
+      const items = Array.isArray(data) ? data : [];
+      if (!items.length) {
+        grid.innerHTML = '<p style="color:var(--color-text-dim); text-align:center;">Pronto publicaremos las amenidades del evento.</p>';
+        return;
+      }
+      grid.innerHTML = items.map(a => `
+        <div class="amenity">
+          <h3>${a.title}</h3>
+          <p>${a.description || ''}</p>
+        </div>
+      `).join('');
+    }
+    load();
+  </script>
+</body>
+</html>

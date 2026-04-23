@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party House — Administración</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">◆ ADMIN</div>
+    <nav>
+      <a href="#" id="refreshLink">Actualizar</a>
+      <a href="#" id="logoutLink">Salir</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="min-height:auto; padding-top:130px;">
+    <h1 style="font-size:2.2rem;">Panel de administración</h1>
+    <p class="tagline">Transferencias por confirmar</p>
+  </section>
+
+  <section class="section">
+    <!-- Login -->
+    <div class="card" id="loginCard">
+      <h2>Ingreso admin</h2>
+      <p class="subtitle">Accede con tu usuario y contraseña.</p>
+      <div id="loginAlert" class="alert alert-error"></div>
+      <form id="adminLoginForm">
+        <div class="field"><label>Usuario o email</label><input id="adminUser" autocomplete="username" required/></div>
+        <div class="field"><label>Contraseña</label><input id="adminPass" type="password" autocomplete="current-password" required/></div>
+        <button class="btn btn-primary" style="width:100%;">Entrar</button>
+      </form>
+    </div>
+
+    <!-- Panel -->
+    <div id="panelWrap" style="display:none; max-width:1100px; margin:0 auto;">
+      <div id="panelAlert" class="alert"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <div>
+          <span id="adminName" style="color:var(--neon-cyan); font-weight:700; letter-spacing:1.5px;"></span>
+          <span style="color:var(--color-text-dim); margin-left:8px;" id="adminRole"></span>
+        </div>
+        <span id="pendingCount" style="color:var(--color-text-dim); letter-spacing:1.5px;"></span>
+      </div>
+      <div id="pendingList" class="grid" style="grid-template-columns: 1fr;"></div>
+      <p id="emptyState" style="display:none; text-align:center; color:var(--color-text-dim); padding:40px;">
+        No hay transferencias por confirmar. Cuando un invitado registre una, aparecerá acá.
+      </p>
+    </div>
+  </section>
+
+  <footer><div>© Party House · Admin</div></footer>
+
+  <script>
+    const loginCard   = document.getElementById('loginCard');
+    const panelWrap   = document.getElementById('panelWrap');
+    const loginAlert  = document.getElementById('loginAlert');
+    const panelAlert  = document.getElementById('panelAlert');
+    const pendingList = document.getElementById('pendingList');
+    const emptyState  = document.getElementById('emptyState');
+    const countTag    = document.getElementById('pendingCount');
+
+    function getAdmin() {
+      try { return JSON.parse(sessionStorage.getItem('ph_admin') || 'null'); } catch { return null; }
+    }
+    function setAdmin(a) { sessionStorage.setItem('ph_admin', JSON.stringify(a)); }
+    function clearAdmin() { sessionStorage.removeItem('ph_admin'); }
+
+    function showLoginError(msg) {
+      loginAlert.textContent = msg;
+      loginAlert.classList.add('show');
+    }
+    function showPanelAlert(type, msg) {
+      panelAlert.className = 'alert alert-' + type + ' show';
+      panelAlert.textContent = msg;
+      setTimeout(() => panelAlert.classList.remove('show'), 5000);
+    }
+
+    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginAlert.classList.remove('show');
+      const body = {
+        user: document.getElementById('adminUser').value.trim(),
+        password: document.getElementById('adminPass').value
+      };
+      try {
+        const r = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!r.ok) return showLoginError(j.error || 'Credenciales inválidas.');
+        setAdmin(j);
+        showPanel();
+      } catch (err) {
+        showLoginError('Error de red.');
+      }
+    });
+
+    document.getElementById('logoutLink').addEventListener('click', (e) => {
+      e.preventDefault(); clearAdmin(); location.reload();
+    });
+    document.getElementById('refreshLink').addEventListener('click', (e) => {
+      e.preventDefault(); loadPending();
+    });
+
+    function showPanel() {
+      const a = getAdmin();
+      if (!a) return;
+      loginCard.style.display = 'none';
+      panelWrap.style.display = 'block';
+      document.getElementById('adminName').textContent = a.admin?.name || '';
+      document.getElementById('adminRole').textContent = '· ' + (a.admin?.role || '');
+      loadPending();
+    }
+
+    function fmtDate(iso) {
+      try { return new Date(iso).toLocaleString('es'); } catch { return iso; }
+    }
+    function fmtMoney(n) { return 'USD ' + Number(n || 0).toFixed(2); }
+
+    function cardFor(tr) {
+      const guest = tr.guest || {};
+      const ev    = tr.event || {};
+      const code  = tr.code?.code || '(sin código)';
+      const wa    = (guest.phone || '').replace(/[^+\d]/g, '');
+      const waLink = wa ? `https://wa.me/${wa.replace('+', '')}` : null;
+
+      const el = document.createElement('div');
+      el.className = 'amenity';
+      el.style.borderColor = 'var(--neon-gold)';
+      el.innerHTML = `
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; align-items:baseline;">
+          <h3 style="color:var(--neon-gold);">${guest.first_name || ''} ${guest.last_name || ''}</h3>
+          <span style="color:var(--neon-cyan); font-family:monospace; font-size:0.9rem;">${code}</span>
+        </div>
+        <p style="margin-top:6px;"><strong>${ev.name || ''}</strong> · ${fmtDate(ev.event_date)}</p>
+        <p style="margin-top:6px; color:var(--color-text-dim); font-size:0.9rem;">
+          ${guest.email || ''} ${guest.phone ? '· ' + guest.phone : ''}<br/>
+          Monto: <strong>${fmtMoney(tr.amount_usd)}</strong>
+          ${tr.transfer_reference ? ' · Ref: <code>' + tr.transfer_reference + '</code>' : ''}<br/>
+          Registrado: ${fmtDate(tr.created_at)}
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+          <button class="btn btn-primary" data-act="confirm" data-id="${tr.id}">Confirmar pago</button>
+          <button class="btn" data-act="reject" data-id="${tr.id}">Rechazar</button>
+          ${waLink ? `<a class="btn" href="${waLink}" target="_blank">Abrir WhatsApp</a>` : ''}
+        </div>
+      `;
+      el.querySelector('[data-act="confirm"]').addEventListener('click', () => confirmTransfer(tr.id, el));
+      el.querySelector('[data-act="reject"]').addEventListener('click', () => rejectTransfer(tr.id, el));
+      return el;
+    }
+
+    async function loadPending() {
+      const a = getAdmin();
+      if (!a) return;
+      pendingList.innerHTML = '<p style="color:var(--color-text-dim); padding:20px;">Cargando…</p>';
+      try {
+        const r = await fetch('/api/admin/transfers/pending', {
+          headers: { 'x-admin-token': a.token }
+        });
+        if (r.status === 401) { clearAdmin(); return location.reload(); }
+        const j = await r.json();
+        pendingList.innerHTML = '';
+        const list = j.transfers || [];
+        countTag.textContent = list.length + ' pendiente' + (list.length === 1 ? '' : 's');
+        if (!list.length) {
+          emptyState.style.display = 'block';
+          return;
+        }
+        emptyState.style.display = 'none';
+        list.forEach(tr => pendingList.appendChild(cardFor(tr)));
+      } catch (err) {
+        pendingList.innerHTML = '<p style="color:#ff7a9c; padding:20px;">Error de red.</p>';
+      }
+    }
+
+    async function confirmTransfer(id, cardEl) {
+      if (!confirm('¿Confirmar este depósito y emitir el QR?')) return;
+      const a = getAdmin();
+      cardEl.style.opacity = '0.5';
+      try {
+        const r = await fetch('/api/admin/transfers/' + id + '/confirm', {
+          method: 'POST', headers: { 'x-admin-token': a.token }
+        });
+        const j = await r.json();
+        if (!r.ok) {
+          cardEl.style.opacity = '1';
+          return showPanelAlert('error', j.error || 'No se pudo confirmar.');
+        }
+        showPanelAlert('success', 'Pago confirmado. QR emitido para ' + (j.code || 'el invitado') + '.');
+        cardEl.remove();
+        const left = pendingList.querySelectorAll('.amenity').length;
+        countTag.textContent = left + ' pendiente' + (left === 1 ? '' : 's');
+        if (!left) emptyState.style.display = 'block';
+      } catch (err) {
+        cardEl.style.opacity = '1';
+        showPanelAlert('error', 'Error de red.');
+      }
+    }
+
+    async function rejectTransfer(id, cardEl) {
+      const reason = prompt('Motivo del rechazo (opcional):') || '';
+      const a = getAdmin();
+      cardEl.style.opacity = '0.5';
+      try {
+        const r = await fetch('/api/admin/transfers/' + id + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': a.token },
+          body: JSON.stringify({ reason })
+        });
+        const j = await r.json();
+        if (!r.ok) {
+          cardEl.style.opacity = '1';
+          return showPanelAlert('error', j.error || 'No se pudo rechazar.');
+        }
+        showPanelAlert('warn', 'Transferencia marcada como rechazada.');
+        cardEl.remove();
+        const left = pendingList.querySelectorAll('.amenity').length;
+        countTag.textContent = left + ' pendiente' + (left === 1 ? '' : 's');
+        if (!left) emptyState.style.display = 'block';
+      } catch (err) {
+        cardEl.style.opacity = '1';
+        showPanelAlert('error', 'Error de red.');
+      }
+    }
+
+    // Auto-login si ya había sesión
+    if (getAdmin()) showPanel();
+  </script>
+</body>
+</html>

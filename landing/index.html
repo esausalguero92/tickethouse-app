@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party House — Accede con tu código</title>
+  <meta name="description" content="Party House — Experiencias exclusivas. Ingresa tu código de invitación." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">◆ PARTY HOUSE</div>
+    <nav>
+      <a href="#about">Experiencia</a>
+      <a href="#contact">Contacto</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <h1>Welcome to the<br/>Night Experience</h1>
+    <p class="tagline">Acceso solo con invitación · Exclusive</p>
+
+    <div class="card" style="margin-top:50px;">
+      <h2>Ingresa tu código</h2>
+      <p class="subtitle">Sin código, no hay fiesta. Pídelo a tu anfitrión.</p>
+
+      <div id="alert" class="alert alert-error"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="code">Código de invitación</label>
+          <input type="text" id="code" name="code" placeholder="NOMBRE-####" required autocomplete="off" />
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Entrar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section" id="about">
+    <h2>Una Experiencia Diferente</h2>
+    <div class="grid">
+      <div class="amenity">
+        <h3>Exclusividad</h3>
+        <p>Acceso limitado por invitación. Vivís la noche con quienes realmente importan.</p>
+      </div>
+      <div class="amenity">
+        <h3>Música y Ambiente</h3>
+        <p>DJs cuidadosamente seleccionados, iluminación de alto impacto y un espacio que late.</p>
+      </div>
+      <div class="amenity">
+        <h3>Atención Premium</h3>
+        <p>Servicio de bar, áreas VIP y atención personalizada para cada invitado.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer id="contact">
+    <div>© Party House · Todos los derechos reservados</div>
+    <div style="margin-top:8px;">Contacto: eventos@partyhouse.example</div>
+  </footer>
+
+  <!-- Supabase JS SDK (vía CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/app.js"></script>
+
+  <script>
+    // Si llega con ?c=CODIGO lo prellenamos
+    const urlCode = new URLSearchParams(window.location.search).get('c');
+    if (urlCode) document.getElementById('code').value = urlCode;
+
+    const form = document.getElementById('loginForm');
+    const alertBox = document.getElementById('alert');
+
+    function showError(msg) {
+      alertBox.textContent = msg;
+      alertBox.classList.add('show');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.classList.remove('show');
+      const code = document.getElementById('code').value.trim().toUpperCase();
+      if (!code) return;
+
+      if (!window.ph?.supabase) {
+        showError('Configuración de Supabase incompleta.');
+        return;
+      }
+
+      try {
+        const { data, error } = await window.ph.supabase.rpc('rpc_validate_code', { p_code: code });
+        if (error) { showError('Error consultando el código.'); return; }
+
+        if (data.error === 'code_not_found' || data.error === 'code_required') {
+          showError('Código no reconocido.');
+          return;
+        }
+        if (data.error === 'code_inactive') {
+          showError('Código inactivo.');
+          return;
+        }
+
+        // Guardar "sesión" en sessionStorage
+        window.ph.setSession(data);
+
+        // Redirigir según estado
+        if (data.already_paid) {
+          window.location.href = './ticket.html';
+        } else {
+          window.location.href = './evento.html';
+        }
+      } catch (err) {
+        console.error(err);
+        showError('Error de conexión. Intentá de nuevo.');
+      }
+    });
+  </script>
+</body>
+</html>

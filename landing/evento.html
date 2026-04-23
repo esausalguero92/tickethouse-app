@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party House — Bienvenido</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">◆ PARTY HOUSE</div>
+    <nav>
+      <a href="./amenidades.html">Amenidades</a>
+      <a href="#" id="logoutLink">Salir</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="min-height:auto; padding-top:140px;">
+    <h1 id="welcomeMsg">Bienvenido</h1>
+    <p class="tagline" id="eventTag">Cargando tu evento...</p>
+  </section>
+
+  <section class="section">
+    <div class="card" style="max-width:560px;">
+      <h2>Confirma tu acceso</h2>
+      <p class="subtitle" id="orderSummary">Cargando detalles...</p>
+
+      <div id="alert" class="alert"></div>
+
+      <div id="payStage">
+        <div class="pay-options">
+          <div class="pay-option active" data-method="paypal">
+            <strong>PayPal</strong>
+            <small>Tarjeta o cuenta PayPal</small>
+          </div>
+          <div class="pay-option" data-method="transfer">
+            <strong>Transferencia</strong>
+            <small>Validación manual</small>
+          </div>
+        </div>
+
+        <!-- Panel PayPal -->
+        <div class="pay-panel active" id="panel-paypal">
+          <p style="color:var(--color-text-dim); margin-bottom:16px; font-size:0.9rem;">
+            Pago seguro procesado por PayPal. Acepta tarjetas de crédito/débito.
+          </p>
+          <div id="paypal-button-container" style="min-height:55px;"></div>
+        </div>
+
+        <!-- Panel Transferencia -->
+        <div class="pay-panel" id="panel-transfer">
+          <p style="color:var(--color-text-dim); margin-bottom:16px; font-size:0.9rem;">
+            Realizá la transferencia a la cuenta de abajo y subí la <strong>captura del comprobante</strong>.
+            El administrador la revisa y te mandamos el QR por email apenas se confirme.
+          </p>
+          <div id="bankBox" style="background:var(--color-surface-2); border:1px dashed var(--color-border); padding:14px; border-radius:8px; font-size:0.9rem; margin-bottom:16px;">
+            <strong style="color:var(--neon-cyan);">Datos bancarios</strong><br/>
+            <span id="bankDetails">Cargando…</span><br/>
+            Referencia: usa tu código de invitación
+          </div>
+          <form id="transferForm">
+            <div class="field">
+              <label for="reference">Número / folio de referencia (opcional)</label>
+              <input type="text" id="reference" placeholder="Ej. 0001234567" />
+            </div>
+            <div class="field">
+              <label for="proofFile">Comprobante de la transferencia <span style="color:#ff3cf0;">*</span></label>
+              <input type="file" id="proofFile" accept="image/jpeg,image/png,image/webp,image/heic,application/pdf" required
+                style="color:var(--color-text); background:var(--color-surface-2); border:1px solid var(--color-border); padding:10px; border-radius:6px; width:100%;" />
+              <small style="color:var(--color-text-dim);">JPG, PNG, WEBP o PDF. Máximo 5&nbsp;MB.</small>
+              <div id="proofPreview" style="margin-top:10px; display:none;">
+                <img id="proofPreviewImg" alt="Vista previa" style="max-width:100%; max-height:220px; border-radius:8px; border:1px solid var(--color-border);" />
+                <div id="proofPreviewPdf" style="display:none; padding:10px; background:var(--color-surface-2); border:1px solid var(--color-border); border-radius:6px; color:var(--color-text-dim); font-size:0.85rem;"></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Registrar transferencia</button>
+          </form>
+          <div id="transferDone" style="display:none; margin-top:16px; padding:14px; border-radius:10px; background:rgba(0,240,180,0.1); border:1px solid #00f0b4; color:#9cffe2;">
+            <strong>Recibimos tu comprobante.</strong>
+            El administrador lo está revisando. Cuando confirme, te llegará un email con el QR
+            y también podrás descargarlo desde la pantalla de tu ticket.
+            <div id="emailNote" style="margin-top:8px; color:#c8f5e4; font-size:0.9rem;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>© Party House</div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/app.js"></script>
+  <script>
+    // Carga diferida de PayPal SDK. El client_id puede venir de config.js o
+    // del endpoint /api/public-config (preferido).
+    (async function loadPaypalSdk() {
+      let clientId = (window.PH_CONFIG && window.PH_CONFIG.PAYPAL_CLIENT_ID) || 'sb';
+      let currency = (window.PH_CONFIG && window.PH_CONFIG.PAYPAL_CURRENCY) || 'USD';
+      try {
+        const r = await fetch('/api/public-config');
+        if (r.ok) {
+          const j = await r.json();
+          if (j.paypal_client_id) clientId = j.paypal_client_id;
+          if (j.paypal_currency)  currency = j.paypal_currency;
+        }
+      } catch (_) {}
+      const s = document.createElement('script');
+      s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}`;
+      s.async = true;
+      s.onload = () => window.__paypalReady = true;
+      document.head.appendChild(s);
+    })();
+  </script>
+
+  <script>
+    const session = window.ph.getSession();
+    if (!session) { window.location.href = './index.html'; }
+
+    document.getElementById('welcomeMsg').textContent = `Hola, ${session.guest.first_name}`;
+    document.getElementById('eventTag').textContent = `${session.event.name} · ${window.ph.formatDate(session.event.event_date)}`;
+    document.getElementById('orderSummary').textContent =
+      `${session.event.name} — ${session.event.venue || ''} · Total: ${window.ph.formatMoney(session.event.price_usd)}`;
+
+    // Ya pagó → ticket
+    if (session.already_paid) window.location.href = './ticket.html';
+    // Transferencia pendiente → informar
+    if (session.awaiting_review) {
+      const box = document.getElementById('alert');
+      box.className = 'alert alert-warn show';
+      box.textContent = 'Tu transferencia está en revisión. Cuando el admin la confirme, podrás descargar tu QR desde la pantalla del ticket.';
+      document.getElementById('payStage').style.display = 'none';
+    }
+
+    // Logout
+    document.getElementById('logoutLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.ph.clearSession();
+      window.location.href = './index.html';
+    });
+
+    // Toggle método de pago
+    document.querySelectorAll('.pay-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.pay-option').forEach(o => o.classList.remove('active'));
+        document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+        opt.classList.add('active');
+        document.getElementById('panel-' + opt.dataset.method).classList.add('active');
+      });
+    });
+
+    const alertBox = document.getElementById('alert');
+    function showAlert(type, msg) {
+      alertBox.className = 'alert alert-' + type + ' show';
+      alertBox.textContent = msg;
+    }
+
+    // Cargar datos bancarios y WhatsApp del server
+    (async function loadTransferInfo() {
+      try {
+        const r = await fetch('/api/transfer/info');
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j.bank_details) document.getElementById('bankDetails').textContent = j.bank_details;
+      } catch (_) {}
+    })();
+
+    // --- PayPal (server-side capture) ---
+    function initPayPal() {
+      if (!window.paypal) return setTimeout(initPayPal, 400);
+      paypal.Buttons({
+        // createOrder llama a nuestro server para pedirle a PayPal la orden.
+        createOrder: async () => {
+          const res = await fetch('/api/paypal/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: session.code })
+          });
+          const body = await res.json();
+          if (!res.ok || !body.id) {
+            showAlert('error', body.error || 'No se pudo iniciar el pago.');
+            throw new Error(body.error || 'paypal_create_failed');
+          }
+          return body.id;
+        },
+        onApprove: async (data) => {
+          try {
+            const res = await fetch('/api/paypal/capture-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: session.code, paypal_order_id: data.orderID })
+            });
+            const body = await res.json();
+            if (res.ok && body.ok) {
+              window.location.href = body.ticket_url || './ticket.html';
+            } else {
+              showAlert('error', body.error || 'No se pudo confirmar el pago.');
+            }
+          } catch (e) {
+            showAlert('error', 'Error de red al confirmar PayPal.');
+          }
+        },
+        onError: (err) => {
+          console.error('[paypal.onError]', err);
+          showAlert('error', 'PayPal no pudo procesar el pago.');
+        }
+      }).render('#paypal-button-container');
+    }
+    initPayPal();
+
+    // --- Preview del archivo al seleccionar ---
+    const fileInput = document.getElementById('proofFile');
+    const previewWrap = document.getElementById('proofPreview');
+    const previewImg = document.getElementById('proofPreviewImg');
+    const previewPdf = document.getElementById('proofPreviewPdf');
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        const f = fileInput.files && fileInput.files[0];
+        previewWrap.style.display = 'none';
+        previewImg.style.display = 'none';
+        previewPdf.style.display = 'none';
+        if (!f) return;
+        if (f.size > 5 * 1024 * 1024) {
+          showAlert('error', 'El archivo supera 5 MB.');
+          fileInput.value = '';
+          return;
+        }
+        previewWrap.style.display = 'block';
+        if (f.type.startsWith('image/')) {
+          previewImg.src = URL.createObjectURL(f);
+          previewImg.style.display = 'block';
+        } else {
+          previewPdf.textContent = `📄 ${f.name} · ${(f.size/1024).toFixed(0)} KB`;
+          previewPdf.style.display = 'block';
+        }
+      });
+    }
+
+    // --- Transferencia con upload de comprobante ---
+    document.getElementById('transferForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const reference = document.getElementById('reference').value.trim();
+      const file = fileInput && fileInput.files && fileInput.files[0];
+      if (!file) { showAlert('error', 'Seleccioná la imagen o PDF del comprobante.'); return; }
+
+      const fd = new FormData();
+      fd.append('code', session.code);
+      if (reference) fd.append('reference', reference);
+      fd.append('proof', file, file.name);
+
+      const submitBtn = document.querySelector('#transferForm button[type="submit"]');
+      const originalLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Subiendo comprobante...';
+
+      try {
+        const res = await fetch('/api/transfer/submit', {
+          method: 'POST',
+          body: fd
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.ok) {
+          const errMap = {
+            file_too_large: 'El archivo supera 5 MB. Reducí la imagen o subí una foto.',
+            file_type_not_allowed: 'Formato no permitido. Subí JPG, PNG, WEBP o PDF.',
+            proof_required: 'Tenés que adjuntar el comprobante.',
+            code_invalid: 'Tu código no es válido.',
+            order_exists: 'Ya registramos una transferencia para este código.',
+            storage_upload_failed: 'No pudimos guardar el comprobante. Probá de nuevo.'
+          };
+          showAlert('error', errMap[body.error] || body.error || 'No se pudo registrar la transferencia.');
+          return;
+        }
+        document.getElementById('transferForm').style.display = 'none';
+        const done = document.getElementById('transferDone');
+        done.style.display = 'block';
+        if (body.email) {
+          document.getElementById('emailNote').textContent = `Avisaremos a ${body.email} cuando esté listo.`;
+        }
+      } catch (err) {
+        showAlert('error', 'Error de red al registrar la transferencia.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# ======================================================================
+# Party House — Docker Compose
+# ======================================================================
+# N8N vive en un VPS separado (Easypanel):
+#     https://horizon-n8n.8qkrxr.easypanel.host/
+# Supabase también es externo (cloud).
+# Este compose solo levanta la app (landing + API).
+# ======================================================================
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: partyhouse-app
+    restart: unless-stopped
+    env_file: ./server/.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./landing:/app/landing:ro
