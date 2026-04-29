@@ -21,6 +21,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const QRCode = require('qrcode');
+const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
@@ -55,6 +56,9 @@ const MAIL_FROM = process.env.MAIL_FROM || (SMTP_USER ? `Party House <${SMTP_USE
 // URL pública (para armar links en emails y Telegram)
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 
+// Secret compartido con N8N para el endpoint de invitados especiales
+const N8N_WEBHOOK_SECRET = process.env.N8N_WEBHOOK_SECRET || '';
+
 // Storage
 const RECEIPTS_BUCKET = process.env.RECEIPTS_BUCKET || 'receipts';
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
@@ -74,6 +78,9 @@ if (!TELEGRAM_BOT_TOKEN || ADMIN_TELEGRAM_IDS.length === 0) {
 }
 if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
   console.warn('[warn] SMTP_HOST / SMTP_USER / SMTP_PASS incompletos — no se enviará email con el QR al confirmar transferencias.');
+}
+if (!N8N_WEBHOOK_SECRET) {
+  console.warn('[warn] N8N_WEBHOOK_SECRET no configurado — /api/n8n/complimentary-ticket estará desprotegido.');
 }
 
 const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
@@ -332,6 +339,7 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     if (!supabase) return res.status(503).json({ error: 'supabase_not_configured' });
     const code = String(req.body.code || '');
     const paypalOrderId = String(req.body.paypal_order_id || '');
+    const email = String(req.body.email || '').trim().toLowerCase();
     if (!paypalOrderId) return res.status(400).json({ error: 'paypal_order_id_required' });
 
     const ctx = await loadCodeContext(code);
@@ -360,6 +368,11 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     if (rpcErr || (rpcData && rpcData.error)) {
       console.error('[rpc_create_paypal_order]', rpcErr, rpcData);
       return res.status(500).json({ error: 'db_order_failed' });
+    }
+
+    // Guardar email del invitado si fue proporcionado
+    if (email) {
+      await supabase.from('guests').update({ email }).eq('id', ctx.guest_id);
     }
 
     // Emitir ticket
@@ -408,6 +421,7 @@ app.post('/api/transfer/submit', (req, res, next) => {
 
     const code = String(req.body.code || '');
     const reference = String(req.body.reference || '').trim().slice(0, 120);
+    const email = String(req.body.email || '').trim().toLowerCase();
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'proof_required' });
 
@@ -454,6 +468,11 @@ app.post('/api/transfer/submit', (req, res, next) => {
     if (error || (data && data.error)) {
       console.error('[rpc_create_transfer_order]', error, data);
       return res.status(500).json({ error: 'db_transfer_failed' });
+    }
+
+    // Guardar email del invitado si fue proporcionado
+    if (email) {
+      await supabase.from('guests').update({ email }).eq('id', ctx.guest_id);
     }
 
     // Notificar al admin (non-blocking: no romper la respuesta si falla Telegram)
@@ -633,10 +652,10 @@ app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req, res) => {
 });
 
 // =====================================================
-// D) DESCARGA DEL QR (PNG)
+// D) DESCARGA DEL QR (PDF — boleto completo)
 // =====================================================
-// El invitado lo pide desde ticket.html; no requiere auth porque el código
-// ya es el secreto (solo el invitado lo conoce). Devuelve 404 si no hay ticket.
+// Genera un PDF con el QR, datos del evento y "See you inside".
+// No requiere auth porque el código ya es el secreto del invitado.
 app.get('/api/qr/:code/download', async (req, res) => {
   try {
     if (!supabase) return res.status(503).send('supabase_not_configured');
@@ -646,18 +665,148 @@ app.get('/api/qr/:code/download', async (req, res) => {
     const token = data.ticket?.qr_token;
     if (!token) return res.status(404).send('sin_qr_token');
 
-    const png = await QRCode.toBuffer(token, { width: 512, margin: 2 });
-    res.set('Content-Type', 'image/png');
-    res.set('Content-Disposition', `attachment; filename="party-house-${code}.png"`);
-    return res.send(png);
+    // Generar QR como buffer PNG para embeber en el PDF
+    const qrPng = await QRCode.toBuffer(token, { width: 400, margin: 2,
+      color: { dark: '#000000', light: '#FFFFFF' } });
+
+    // Datos del evento / invitado para el boleto
+    const eventName  = data.event?.name  || 'Party House';
+    const eventDate  = data.event?.event_date
+      ? new Date(data.event.event_date).toLocaleString('es', { dateStyle: 'full', timeStyle: 'short' })
+      : '';
+    const eventVenue = data.event?.venue || '';
+    const guestName  = `${data.guest?.first_name || ''} ${data.guest?.last_name || ''}`.trim();
+
+    // Crear PDF (tamaño A5 apaisado — ideal para boleto)
+    const doc = new PDFDocument({ size: [595, 420], margin: 0, info: {
+      Title: `Entrada Party House — ${code}`,
+      Author: 'Party House'
+    }});
+
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `attachment; filename="party-house-${code}.pdf"`);
+    doc.pipe(res);
+
+    // Fondo oscuro
+    doc.rect(0, 0, 595, 420).fill('#0b0815');
+
+    // Banda izquierda (acento neón)
+    doc.rect(0, 0, 6, 420).fill('#ff3cf0');
+
+    // Logo / título
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#ffffff')
+       .text('◆ PARTY HOUSE', 32, 30, { align: 'left' });
+
+    // Nombre del evento
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#ff3cf0')
+       .text(eventName, 32, 60, { width: 270, align: 'left' });
+
+    // Fecha y venue
+    if (eventDate) {
+      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
+         .text(eventDate, 32, 82, { width: 270, align: 'left' });
+    }
+    if (eventVenue) {
+      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
+         .text(eventVenue, 32, 96, { width: 270, align: 'left' });
+    }
+
+    // Nombre del invitado
+    if (guestName) {
+      doc.font('Helvetica').fontSize(10).fillColor('#c8c0e0')
+         .text(`Invitado: ${guestName}`, 32, 120, { width: 270, align: 'left' });
+    }
+
+    // Etiqueta ACCESO
+    doc.font('Helvetica').fontSize(9).fillColor('#9f98b3')
+       .text('CÓDIGO DE ACCESO', 32, 155, { characterSpacing: 2 });
+
+    // Código en grande
+    doc.font('Helvetica-Bold').fontSize(32).fillColor('#00f0ff')
+       .text(code, 32, 170);
+
+    // Línea separadora vertical
+    doc.rect(320, 20, 1, 380).fill('#2a2540');
+
+    // QR centrado en la parte derecha
+    const qrX = 340;
+    const qrY = 30;
+    const qrSize = 240;
+    doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
+
+    // Instrucción bajo el QR
+    doc.font('Helvetica').fontSize(9).fillColor('#9f98b3')
+       .text('Presentá este QR en la entrada', qrX, qrY + qrSize + 10, { width: qrSize, align: 'center' });
+
+    // Línea divisoria horizontal
+    doc.rect(32, 330, 560, 1).fill('#2a2540');
+
+    // "See you inside" al pie
+    doc.font('Helvetica-BoldOblique').fontSize(18).fillColor('#ff3cf0')
+       .text('See you inside', 0, 350, { align: 'center' });
+
+    // Pie de página
+    doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
+       .text('© Party House · Entrada personal e intransferible', 0, 390, { align: 'center' });
+
+    doc.end();
   } catch (e) {
     console.error('[qr.download]', e);
-    return res.status(500).send(String(e.message || e));
+    if (!res.headersSent) return res.status(500).send(String(e.message || e));
   }
 });
 
 // =====================================================
-// E) STAFF (puerta) — login + validación
+// E) INVITADOS ESPECIALES — emitir ticket gratis (desde N8N)
+// =====================================================
+// N8N llama a este endpoint después de crear el access_code.
+// Autenticación: header x-n8n-secret debe coincidir con N8N_WEBHOOK_SECRET.
+
+app.post('/api/n8n/complimentary-ticket', async (req, res) => {
+  try {
+    // Verificar secret
+    const incoming = req.header('x-n8n-secret') || '';
+    if (N8N_WEBHOOK_SECRET && incoming !== N8N_WEBHOOK_SECRET) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    if (!supabase) return res.status(503).json({ error: 'supabase_not_configured' });
+
+    const code = String(req.body.code || '').toUpperCase().trim();
+    if (!code) return res.status(400).json({ error: 'code_required' });
+
+    // Crear orden gratuita vía RPC
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', {
+      p_code: code
+    });
+    if (rpcErr || (rpcData && rpcData.error)) {
+      console.error('[complimentary]', rpcErr, rpcData);
+      return res.status(500).json({ error: rpcData?.error || 'complimentary_order_failed' });
+    }
+
+    // Cargar contexto para el ticket
+    const ctx = await loadCodeContext(code);
+    if (!ctx) return res.status(400).json({ error: 'code_context_failed' });
+
+    // Emitir ticket JWT
+    const qrToken = await createTicketForOrder({
+      orderId: rpcData.order_id,
+      eventId: rpcData.event_id,
+      guestId: rpcData.guest_id,
+      code,
+      eventDate: ctx.event?.event_date
+    });
+
+    const ticketUrl = `${PUBLIC_BASE_URL}/ticket.html`;
+    console.log(`[complimentary] Ticket emitido para invitado especial: ${code}`);
+    return res.json({ ok: true, qr_token: qrToken, ticket_url: ticketUrl, code });
+  } catch (e) {
+    console.error('[complimentary]', e);
+    return res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+// =====================================================
+// F) STAFF (puerta) — login + validación
 // =====================================================
 
 app.post('/api/staff/login', async (req, res) => {

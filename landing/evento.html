@@ -29,7 +29,22 @@
 
       <div id="alert" class="alert"></div>
 
+      <!-- Aviso precio en taquilla -->
+      <div style="background:rgba(255,60,240,0.08); border:1px solid rgba(255,60,240,0.3); border-radius:8px; padding:10px 14px; margin-bottom:18px; font-size:0.88rem; color:#e8c0f0;">
+        📍 El día del evento en taquilla el costo es de <strong>Q75</strong> (efectivo y POS).
+        Comprando en línea pagás <strong>Q50</strong>.
+      </div>
+
       <div id="payStage">
+
+        <!-- Campo de email (antes del pago) -->
+        <div class="field" style="margin-bottom:18px;">
+          <label for="guestEmail">Correo electrónico <span style="color:#ff3cf0;">*</span></label>
+          <input type="email" id="guestEmail" placeholder="tu@correo.com" required
+            style="width:100%; box-sizing:border-box;" />
+          <small style="color:var(--color-text-dim);">Te enviaremos tu QR a este correo cuando se confirme tu pago.</small>
+        </div>
+
         <div class="pay-options">
           <div class="pay-option active" data-method="paypal">
             <strong>PayPal</strong>
@@ -55,11 +70,14 @@
             Realizá la transferencia a la cuenta de abajo y subí la <strong>captura del comprobante</strong>.
             El administrador la revisa y te mandamos el QR por email apenas se confirme.
           </p>
-          <div id="bankBox" style="background:var(--color-surface-2); border:1px dashed var(--color-border); padding:14px; border-radius:8px; font-size:0.9rem; margin-bottom:16px;">
-            <strong style="color:var(--neon-cyan);">Datos bancarios</strong><br/>
-            <span id="bankDetails">Cargando…</span><br/>
-            Referencia: usa tu código de invitación
+
+          <!-- Datos bancarios — prominentes -->
+          <div id="bankBox" style="background:rgba(0,240,255,0.06); border:2px solid var(--neon-cyan); padding:18px 16px; border-radius:10px; font-size:1rem; margin-bottom:18px; text-align:center;">
+            <div style="color:var(--neon-cyan); font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;">Datos bancarios</div>
+            <div style="font-size:1.35rem; font-weight:800; color:#ffffff; line-height:1.3;" id="bankDetails">Cargando…</div>
+            <div style="margin-top:8px; color:#9f98b3; font-size:0.85rem;">Referencia: usá tu código de invitación (<strong style="color:#00f0ff;" id="bankCodeHint">---</strong>)</div>
           </div>
+
           <form id="transferForm">
             <div class="field">
               <label for="reference">Número / folio de referencia (opcional)</label>
@@ -126,6 +144,10 @@
     document.getElementById('orderSummary').textContent =
       `${session.event.name} — ${session.event.venue || ''} · Total: ${window.ph.formatMoney(session.event.price_usd)}`;
 
+    // Mostrar el código como referencia bancaria
+    const bankCodeHint = document.getElementById('bankCodeHint');
+    if (bankCodeHint) bankCodeHint.textContent = session.code || '---';
+
     // Ya pagó → ticket
     if (session.already_paid) window.location.href = './ticket.html';
     // Transferencia pendiente → informar
@@ -173,8 +195,12 @@
     function initPayPal() {
       if (!window.paypal) return setTimeout(initPayPal, 400);
       paypal.Buttons({
-        // createOrder llama a nuestro server para pedirle a PayPal la orden.
         createOrder: async () => {
+          const email = document.getElementById('guestEmail').value.trim();
+          if (!email) {
+            showAlert('error', 'Ingresá tu correo electrónico antes de pagar.');
+            throw new Error('email_required');
+          }
           const res = await fetch('/api/paypal/create-order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -189,10 +215,11 @@
         },
         onApprove: async (data) => {
           try {
+            const email = document.getElementById('guestEmail').value.trim();
             const res = await fetch('/api/paypal/capture-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: session.code, paypal_order_id: data.orderID })
+              body: JSON.stringify({ code: session.code, paypal_order_id: data.orderID, email })
             });
             const body = await res.json();
             if (res.ok && body.ok) {
@@ -243,12 +270,15 @@
     // --- Transferencia con upload de comprobante ---
     document.getElementById('transferForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const email = document.getElementById('guestEmail').value.trim();
+      if (!email) { showAlert('error', 'Ingresá tu correo electrónico antes de continuar.'); return; }
       const reference = document.getElementById('reference').value.trim();
       const file = fileInput && fileInput.files && fileInput.files[0];
       if (!file) { showAlert('error', 'Seleccioná la imagen o PDF del comprobante.'); return; }
 
       const fd = new FormData();
       fd.append('code', session.code);
+      fd.append('email', email);
       if (reference) fd.append('reference', reference);
       fd.append('proof', file, file.name);
 
@@ -278,8 +308,9 @@
         document.getElementById('transferForm').style.display = 'none';
         const done = document.getElementById('transferDone');
         done.style.display = 'block';
-        if (body.email) {
-          document.getElementById('emailNote').textContent = `Avisaremos a ${body.email} cuando esté listo.`;
+        const confirmedEmail = email || body.email;
+        if (confirmedEmail) {
+          document.getElementById('emailNote').textContent = `Avisaremos a ${confirmedEmail} cuando esté listo.`;
         }
       } catch (err) {
         showAlert('error', 'Error de red al registrar la transferencia.');

@@ -49,6 +49,15 @@ create table if not exists public.app_users (
 -- Compatibilidad: si la tabla ya existía sin la columna password_hash, agregarla.
 alter table public.app_users add column if not exists password_hash text;
 
+-- Compatibilidad: actualizar el constraint de payment_method para incluir 'complimentary'.
+do $$
+begin
+  alter table public.orders drop constraint if exists orders_payment_method_check;
+  alter table public.orders add constraint orders_payment_method_check
+    check (payment_method in ('paypal','transfer','complimentary'));
+exception when others then null;
+end $$;
+
 -- Compatibilidad: si la tabla existía sin UNIQUE en email, agregarlo.
 -- (necesario para que el upsert por email de create-admin.js funcione)
 do $$
@@ -67,11 +76,14 @@ create table if not exists public.guests (
     id           uuid primary key default uuid_generate_v4(),
     first_name   text not null,
     last_name    text not null,
-    email        text not null,
+    email        text,           -- se captura al momento del pago, no al crear el código
     phone        text,
     created_at   timestamptz not null default now(),
     unique (email)
 );
+
+-- Compatibilidad: si la tabla ya existía con email NOT NULL, quitamos la restricción.
+alter table public.guests alter column email drop not null;
 
 -- Códigos de acceso a la landing page
 -- Formato sugerido: NOMBRE-####  (ej. JONATHAN-4821)
@@ -95,7 +107,7 @@ create table if not exists public.orders (
     event_id          uuid not null references public.events(id),
     guest_id          uuid not null references public.guests(id),
     amount_usd        numeric(10,2) not null,
-    payment_method    text not null check (payment_method in ('paypal','transfer')),
+    payment_method    text not null check (payment_method in ('paypal','transfer','complimentary')),
     payment_status    text not null default 'pending'
                       check (payment_status in ('pending','awaiting_review','paid','rejected','refunded')),
     paypal_order_id   text,
@@ -190,25 +202,27 @@ drop trigger if exists trg_orders_updated on public.orders;
 create trigger trg_orders_updated before update on public.orders
 for each row execute function public.set_updated_at();
 
--- Generador de códigos: NOMBRE-####  (nombre en mayúsculas sin espacios)
-create or replace function public.generate_access_code(p_first_name text)
+-- Generador de códigos: 2 iniciales + 3 dígitos (ej. JP482)
+-- Espacio = 26*26*900 = 608 400 códigos únicos posibles.
+create or replace function public.generate_access_code(p_first_name text, p_last_name text default '')
 returns text language plpgsql as $$
 declare
-    normalized text;
+    first_init text;
+    last_init  text;
     candidate  text;
     attempts   int := 0;
 begin
-    normalized := upper(regexp_replace(p_first_name, '[^A-Za-z0-9]', '', 'g'));
-    if length(normalized) < 2 then
-        normalized := 'GUEST';
-    end if;
+    first_init := upper(left(regexp_replace(p_first_name, '[^A-Za-z]', '', 'g'), 1));
+    last_init  := upper(left(regexp_replace(p_last_name,  '[^A-Za-z]', '', 'g'), 1));
+    if first_init = '' then first_init := 'G'; end if;
+    if last_init  = '' then last_init  := 'X'; end if;
 
     loop
-        candidate := normalized || '-' || lpad(floor(random()*10000)::text, 4, '0');
+        candidate := first_init || last_init || (floor(random()*900) + 100)::int::text;
         exit when not exists (select 1 from public.access_codes where code = candidate);
         attempts := attempts + 1;
-        if attempts > 50 then
-            raise exception 'No se pudo generar un código único después de 50 intentos';
+        if attempts > 200 then
+            raise exception 'No se pudo generar un código único después de 200 intentos';
         end if;
     end loop;
 
@@ -653,6 +667,54 @@ as $$
 $$;
 
 grant execute on function public.rpc_pending_transfers(uuid) to service_role;
+
+-- 6.10 Crea una orden gratuita ('complimentary') para invitados especiales.
+-- Llamada desde el server Node (N8N → /api/n8n/complimentary-ticket).
+create or replace function public.rpc_create_complimentary_order(
+  p_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code_id  uuid;
+  v_event_id uuid;
+  v_guest_id uuid;
+  v_order_id uuid;
+begin
+  select id, event_id, guest_id
+    into v_code_id, v_event_id, v_guest_id
+  from public.access_codes
+  where code = upper(trim(p_code))
+    and status = 'active'
+  limit 1;
+
+  if v_code_id is null then
+    return jsonb_build_object('error','code_not_found_or_inactive');
+  end if;
+
+  -- Si ya hay una orden activa (paid o awaiting), no crear duplicado.
+  if exists (
+    select 1 from public.orders
+     where code_id = v_code_id
+       and payment_status in ('paid','awaiting_review')
+  ) then
+    return jsonb_build_object('error','order_already_exists');
+  end if;
+
+  insert into public.orders (code_id, event_id, guest_id, amount_usd,
+                             payment_method, payment_status, paid_at)
+  values (v_code_id, v_event_id, v_guest_id, 0,
+          'complimentary', 'paid', now())
+  returning id into v_order_id;
+
+  return jsonb_build_object('ok', true, 'order_id', v_order_id,
+                            'event_id', v_event_id, 'guest_id', v_guest_id);
+end; $$;
+
+grant execute on function public.rpc_create_complimentary_order(text) to service_role;
 
 -- =====================================================================
 -- 7. Storage — bucket `receipts` para los comprobantes de transferencia

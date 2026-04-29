@@ -41,7 +41,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Arma el body del pedido a OpenAI y preserva info del mensaje.\n// Tolera mensajes sin texto (sticker/foto/voz) — responde con help.\nconst msg = $json.message || {};\nconst userText = (msg.text || '').trim();\nconst chat_id = msg.chat && msg.chat.id;\n\nconst systemPrompt = [\n  'Sos un asistente para el admin de Party House.',\n  'Extraé del mensaje los datos del invitado que el admin quiere crear.',\n  'Responde SIEMPRE con JSON puro, sin markdown. Usá uno de estos 3 formatos:',\n  '1) Si hay datos suficientes (al menos first_name):',\n  '   {\"action\":\"create_code\",\"first_name\":\"...\",\"last_name\":\"...\",\"email\":\"...\",\"phone\":\"...\"}',\n  '2) Si falta información:',\n  '   {\"action\":\"ask\",\"message\":\"Pedile al usuario lo que falta\"}',\n  '3) Si el mensaje no es una orden válida:',\n  '   {\"action\":\"help\",\"message\":\"Ejemplo: crea código para Juan Pérez, juan@example.com, +5255123456\"}'\n].join('\\n');\n\nconst body = {\n  model: 'gpt-4o-mini',\n  temperature: 0,\n  response_format: { type: 'json_object' },\n  messages: [\n    { role: 'system', content: systemPrompt },\n    { role: 'user', content: userText || 'hola' }\n  ]\n};\n\nreturn [{ json: { chat_id, userText, openai_body: body } }];"
+        "functionCode": "// Arma el body del pedido a OpenAI y preserva info del mensaje.\n// Tolera mensajes sin texto (sticker/foto/voz) — responde con help.\nconst msg = $json.message || {};\nconst userText = (msg.text || '').trim();\nconst chat_id = msg.chat && msg.chat.id;\n\nconst systemPrompt = [\n  'Sos un asistente para el admin de Party House.',\n  'Extraé del mensaje el nombre del invitado que el admin quiere crear.',\n  'Si el mensaje incluye \"invitado especial\" o \"especial\", ese invitado no paga (special_guest: true).',\n  'NO pidas ni proceses email ni número de teléfono — esos datos se capturan después.',\n  'Responde SIEMPRE con JSON puro, sin markdown. Usá uno de estos 3 formatos:',\n  '1) Si hay datos suficientes (al menos first_name y last_name):',\n  '   {\"action\":\"create_code\",\"first_name\":\"...\",\"last_name\":\"...\",\"special_guest\":false}',\n  '   Si es invitado especial:',\n  '   {\"action\":\"create_code\",\"first_name\":\"...\",\"last_name\":\"...\",\"special_guest\":true}',\n  '2) Si falta información (nombre completo):',\n  '   {\"action\":\"ask\",\"message\":\"Pedile al usuario lo que falta\"}',\n  '3) Si el mensaje no es una orden válida:',\n  '   {\"action\":\"help\",\"message\":\"Ejemplo: crea código para Juan Pérez / invitado especial María López\"}'\n].join('\\n');\n\nconst body = {\n  model: 'gpt-4o-mini',\n  temperature: 0,\n  response_format: { type: 'json_object' },\n  messages: [\n    { role: 'system', content: systemPrompt },\n    { role: 'user', content: userText || 'hola' }\n  ]\n};\n\nreturn [{ json: { chat_id, userText, openai_body: body } }];"
       },
       "name": "Preparar pedido OpenAI",
       "type": "n8n-nodes-base.function",
@@ -73,7 +73,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Parsea la respuesta de OpenAI (formato estándar chat completions)\n// y construye el código si hay datos suficientes.\nconst EVENT_ID = 'bdf59dc5-a260-4be9-99b4-81450982c8d6';\n\nconst prepItems = $items('Preparar pedido OpenAI');\nconst prep = (prepItems && prepItems[0] && prepItems[0].json) || {};\nconst chat_id = prep.chat_id;\n\nlet aiContent = '';\ntry {\n  aiContent = $json.choices && $json.choices[0] && $json.choices[0].message\n    ? $json.choices[0].message.content\n    : '';\n} catch (e) {\n  aiContent = '';\n}\n\nlet ai = {};\ntry { ai = JSON.parse(aiContent || '{}'); }\ncatch (e) {\n  ai = { action: 'help', message: 'No pude entender. Probá: \"crea código para Juan Pérez, juan@example.com\"' };\n}\n\nif (ai.action !== 'create_code' || !ai.first_name) {\n  const helpMsg = ai.message || 'No entendí. Probá: \"crea código para Juan Pérez, juan@example.com\"';\n  return [{ json: { needs_reply: true, chat_id, text: helpMsg } }];\n}\n\nconst clean = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();\nconst firstPart = clean(ai.first_name).slice(0, 6) || 'GUEST';\nconst lastPart  = clean(ai.last_name).slice(0, 3);\nconst digits    = String(Math.floor(Math.random() * 9000) + 1000);\nconst code      = lastPart ? `${firstPart}-${lastPart}-${digits}` : `${firstPart}-${digits}`;\n\nreturn [{ json: {\n  needs_reply: false,\n  chat_id,\n  first_name: ai.first_name,\n  last_name:  ai.last_name || '',\n  email:      ai.email || null,\n  phone:      ai.phone || null,\n  event_id:   EVENT_ID,\n  code\n}}];"
+        "functionCode": "// Parsea la respuesta de OpenAI y construye el código en nuevo formato:\n// 2 iniciales (primer letra nombre + primer letra apellido) + 3 dígitos (100-999)\n// Ejemplo: Juan Pérez → JP482\nconst EVENT_ID = 'bdf59dc5-a260-4be9-99b4-81450982c8d6';\n\nconst prepItems = $items('Preparar pedido OpenAI');\nconst prep = (prepItems && prepItems[0] && prepItems[0].json) || {};\nconst chat_id = prep.chat_id;\n\nlet aiContent = '';\ntry {\n  aiContent = $json.choices && $json.choices[0] && $json.choices[0].message\n    ? $json.choices[0].message.content\n    : '';\n} catch (e) {\n  aiContent = '';\n}\n\nlet ai = {};\ntry { ai = JSON.parse(aiContent || '{}'); }\ncatch (e) {\n  ai = { action: 'help', message: 'No pude entender. Probá: \"crea código para Juan Pérez\" o \"invitado especial María López\"' };\n}\n\nif (ai.action !== 'create_code' || !ai.first_name) {\n  const helpMsg = ai.message || 'No entendí. Probá: \"crea código para Juan Pérez\"';\n  return [{ json: { needs_reply: true, chat_id, text: helpMsg } }];\n}\n\n// Nuevo formato: 2 iniciales + 3 dígitos (100-999)\nconst clean = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();\nconst firstInitial = clean(ai.first_name).charAt(0) || 'G';\nconst lastInitial  = clean(ai.last_name || '').charAt(0) || 'X';\nconst digits       = String(Math.floor(Math.random() * 900) + 100); // 100-999\nconst code         = firstInitial + lastInitial + digits;\n\nreturn [{ json: {\n  needs_reply:   false,\n  chat_id,\n  first_name:    ai.first_name,\n  last_name:     ai.last_name || '',\n  event_id:      EVENT_ID,\n  code,\n  special_guest: ai.special_guest === true\n}}];"
       },
       "name": "Construir código",
       "type": "n8n-nodes-base.function",
@@ -103,25 +103,26 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://pvdrbkvafmlqoylbwsxh.supabase.co/rest/v1/guests?on_conflict=email",
+        "url": "https://pvdrbkvafmlqoylbwsxh.supabase.co/rest/v1/guests",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             { "name": "apikey", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZHJia3ZhZm1scW95bGJ3c3hoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjM3NDAzNywiZXhwIjoyMDkxOTUwMDM3fQ.dP2xizMDcV1KZgzb3DUXImyj2Kx3Oo2glFKELmxlRqg" },
             { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZHJia3ZhZm1scW95bGJ3c3hoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjM3NDAzNywiZXhwIjoyMDkxOTUwMDM3fQ.dP2xizMDcV1KZgzb3DUXImyj2Kx3Oo2glFKELmxlRqg" },
             { "name": "Content-Type", "value": "application/json" },
-            { "name": "Prefer", "value": "resolution=merge-duplicates,return=representation" }
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ first_name: $json.first_name, last_name: $json.last_name, email: $json.email, phone: $json.phone }) }}",
+        "jsonBody": "={{ JSON.stringify({ first_name: $json.first_name, last_name: $json.last_name }) }}",
         "options": {}
       },
-      "name": "Supabase: upsert guest",
+      "name": "Supabase: insert guest",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1520, 220]
+      "position": [1520, 220],
+      "notes": "Email/phone se capturan al momento del pago — no se ingresan aquí."
     },
     {
       "parameters": {
@@ -148,6 +149,23 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$items('Construir código')[0].json.special_guest}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "¿Invitado especial?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1960, 220],
+      "notes": "Si es invitado especial, llama al server para emitir ticket gratis."
+    },
+    {
+      "parameters": {
         "chatId": "={{$items('Construir código')[0].json.chat_id}}",
         "text": "=✅ Código generado\n\n👤 {{$items('Construir código')[0].json.first_name}} {{$items('Construir código')[0].json.last_name}}\n🎟 Código: {{$items('Construir código')[0].json.code}}\n\nCompartilo con el invitado — lo ingresa en la landing para pagar y recibir su QR.",
         "additionalFields": {}
@@ -155,8 +173,42 @@
       "name": "Responder con código",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [1960, 220],
-      "notes": "Seleccioná la credencial 'PartyHouse Bot'. Texto plano (sin Markdown) para evitar errores 400 con nombres que tengan _ * ` [."
+      "position": [2180, 340],
+      "notes": "Invitado regular — debe pagar en la landing."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://tickethouse.site/api/n8n/complimentary-ticket",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "x-n8n-secret", "value": "CAMBIAR_POR_N8N_WEBHOOK_SECRET" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ code: $items('Construir código')[0].json.code }) }}",
+        "options": {}
+      },
+      "name": "Server: ticket gratis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2180, 100],
+      "notes": "Configura x-n8n-secret con el mismo valor que N8N_WEBHOOK_SECRET en el .env del server."
+    },
+    {
+      "parameters": {
+        "chatId": "={{$items('Construir código')[0].json.chat_id}}",
+        "text": "=🎉 Invitado especial registrado\n\n👤 {{$items('Construir código')[0].json.first_name}} {{$items('Construir código')[0].json.last_name}}\n🎟 Código: {{$items('Construir código')[0].json.code}}\n✅ Entrada GRATIS emitida\n\nCompartile el código — ya tiene su QR listo en la landing.",
+        "additionalFields": {}
+      },
+      "name": "Responder ticket especial",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2400, 100],
+      "notes": "Invitado especial — QR emitido sin cobro."
     }
   ],
   "connections": {
@@ -181,14 +233,23 @@
     "¿Falta info?": {
       "main": [
         [{ "node": "Responder ayuda", "type": "main", "index": 0 }],
-        [{ "node": "Supabase: upsert guest", "type": "main", "index": 0 }]
+        [{ "node": "Supabase: insert guest", "type": "main", "index": 0 }]
       ]
     },
-    "Supabase: upsert guest": {
+    "Supabase: insert guest": {
       "main": [[{ "node": "Supabase: insert access_code", "type": "main", "index": 0 }]]
     },
     "Supabase: insert access_code": {
-      "main": [[{ "node": "Responder con código", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "¿Invitado especial?", "type": "main", "index": 0 }]]
+    },
+    "¿Invitado especial?": {
+      "main": [
+        [{ "node": "Server: ticket gratis", "type": "main", "index": 0 }],
+        [{ "node": "Responder con código", "type": "main", "index": 0 }]
+      ]
+    },
+    "Server: ticket gratis": {
+      "main": [[{ "node": "Responder ticket especial", "type": "main", "index": 0 }]]
     }
   },
   "active": false,
