@@ -38,7 +38,7 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
 const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
 
 const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER || '';
-const BANK_DETAILS = process.env.BANK_DETAILS || 'Banco Ejemplo · Cuenta: 0000-0000-0000 · Titular: Party House SA';
+const BANK_DETAILS = process.env.BANK_DETAILS || 'Banco Ejemplo - Cuenta: 0000-0000-0000 - Titular: Party House SA';
 
 // Notificaciones Telegram al admin cuando hay nueva transferencia
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -316,7 +316,7 @@ app.post('/api/paypal/create-order', async (req, res) => {
         intent: 'CAPTURE',
         purchase_units: [{
           reference_id: ctx.code,
-          description: `${ctx.event.name} · ${ctx.guest.first_name} ${ctx.guest.last_name}`,
+          description: `${ctx.event.name} - ${ctx.guest.first_name} ${ctx.guest.last_name}`,
           amount: { currency_code: 'USD', value: Number(ctx.event.price_usd).toFixed(2) }
         }]
       })
@@ -689,8 +689,8 @@ app.get('/api/qr/:code/download', async (req, res) => {
     res.set('Content-Disposition', `attachment; filename="party-house-${code}.pdf"`);
     doc.pipe(res);
 
-    // --- Fondo oscuro completo ---
-    doc.rect(0, 0, W, H).fill('#0b0815');
+    // --- Fondo negro ---
+    doc.rect(0, 0, W, H).fill('#000000');
 
     // --- Banda superior neón (acento) ---
     doc.rect(0, 0, W, 6).fill('#ff3cf0');
@@ -700,14 +700,10 @@ app.get('/api/qr/:code/download', async (req, res) => {
        .text('See you inside', 0, 22, { align: 'center', width: W });
 
     // --- Línea separadora bajo el título ---
-    doc.rect(30, 62, W - 60, 1).fill('#2a2540');
-
-    // --- Nombre del evento ---
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#ff3cf0')
-       .text(eventName, 0, 74, { align: 'center', width: W });
+    doc.rect(30, 62, W - 60, 1).fill('#333333');
 
     // --- Fecha ---
-    let infoY = 96;
+    let infoY = 74;
     if (eventDate) {
       doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
          .text(eventDate, 0, infoY, { align: 'center', width: W });
@@ -729,7 +725,7 @@ app.get('/api/qr/:code/download', async (req, res) => {
     }
 
     // --- Separador ---
-    doc.rect(30, infoY + 8, W - 60, 1).fill('#2a2540');
+    doc.rect(30, infoY + 8, W - 60, 1).fill('#333333');
 
     // --- Etiqueta CÓDIGO ---
     doc.font('Helvetica').fontSize(8).fillColor('#9f98b3')
@@ -750,9 +746,9 @@ app.get('/api/qr/:code/download', async (req, res) => {
        .text('Presenta este QR en la entrada', 0, qrY + qrSize + 10, { align: 'center', width: W });
 
     // --- Banda inferior y pie ---
-    doc.rect(0, H - 28, W, 28).fill('#110d20');
+    doc.rect(0, H - 28, W, 28).fill('#111111');
     doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
-       .text('© Party House · Entrada personal e intransferible', 0, H - 18, { align: 'center', width: W });
+       .text('(c) Party House - Entrada personal e intransferible', 0, H - 18, { align: 'center', width: W });
 
     doc.end();
   } catch (e) {
