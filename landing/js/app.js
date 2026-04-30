@@ -54,10 +54,10 @@
         code,
         event: {
           id: "evt-mock-1",
-          name: "Party House — Opening Night",
-          venue: "Salón Neón",
-          event_date: "2026-05-30T22:00:00Z",
-          price_usd: 50
+          name: "Party House",
+          venue: "",
+          event_date: "2026-05-17T02:00:00Z",
+          price_usd: 6.45
         }
       };
       if (code === "PAID-0001") return res({
@@ -92,7 +92,7 @@
 
     if (name === "rpc_get_my_ticket") {
       return res({
-        event: { id: "evt-mock-1", name: "Party House — Opening Night", event_date: "2026-05-30T22:00:00Z", venue: "Salón Neón" },
+        event: { id: "evt-mock-1", name: "Party House", event_date: "2026-05-17T02:00:00Z", venue: "" },
         guest: { first_name: "Jonathan", last_name: "Pérez" },
         ticket: { id: "t-mock-1", qr_token: "MOCK.QR." + Date.now(), status: "issued" }
       });
