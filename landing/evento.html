@@ -128,7 +128,7 @@
         }
       } catch (_) {}
       const s = document.createElement('script');
-      s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}`;
+      s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&locale=es_GT`;
       s.async = true;
       s.onload = () => window.__paypalReady = true;
       document.head.appendChild(s);

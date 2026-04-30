@@ -692,9 +692,6 @@ app.get('/api/qr/:code/download', async (req, res) => {
     // --- Fondo negro ---
     doc.rect(0, 0, W, H).fill('#000000');
 
-    // --- Banda superior neón (acento) ---
-    doc.rect(0, 0, W, 6).fill('#ff3cf0');
-
     // --- "See you inside" — parte superior, letras blancas ---
     doc.font('Helvetica-BoldOblique').fontSize(26).fillColor('#ffffff')
        .text('See you inside', 0, 22, { align: 'center', width: W });
