@@ -40,10 +40,13 @@ const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || '';
 const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER || '';
 const BANK_DETAILS = process.env.BANK_DETAILS || 'Banco Ejemplo - Cuenta: 0000-0000-0000 - Titular: Party House SA';
 
-// Notificaciones Telegram al admin cuando hay nueva transferencia
+// Notificaciones Telegram
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+// IDs autorizados para crear códigos en el bot admin (N8N usa esta lista)
 const ADMIN_TELEGRAM_IDS = (process.env.ADMIN_TELEGRAM_IDS || '')
   .split(',').map(s => s.trim()).filter(Boolean);
+// ID que recibe los avisos de depósito/transferencia (puede ser distinto a los admins)
+const TRANSFER_NOTIFY_ID = process.env.TRANSFER_NOTIFY_ID || '';
 
 // Email con el QR (SMTP propio — Roundcube/hosting)
 const SMTP_HOST = process.env.SMTP_HOST || '';
@@ -74,7 +77,10 @@ if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET) {
   console.warn('[warn] PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET no configurados — /api/paypal/* devolverá error.');
 }
 if (!TELEGRAM_BOT_TOKEN || ADMIN_TELEGRAM_IDS.length === 0) {
-  console.warn('[warn] TELEGRAM_BOT_TOKEN / ADMIN_TELEGRAM_IDS no configurados — el admin no recibirá notificaciones de transferencias.');
+  console.warn('[warn] TELEGRAM_BOT_TOKEN / ADMIN_TELEGRAM_IDS no configurados — el bot admin no funcionará correctamente.');
+}
+if (!TRANSFER_NOTIFY_ID) {
+  console.warn('[warn] TRANSFER_NOTIFY_ID no configurado — los avisos de transferencia no se enviarán.');
 }
 if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
   console.warn('[warn] SMTP_HOST / SMTP_USER / SMTP_PASS incompletos — no se enviará email con el QR al confirmar transferencias.');
@@ -218,9 +224,9 @@ async function telegramCall(method, body) {
   return j.result;
 }
 
-// Manda la foto con caption a cada admin. Non-blocking: captura errores.
+// Manda la foto con caption al ID de notificaciones de transferencia. Non-blocking.
 async function notifyAdminsNewTransfer({ photoUrl, guestName, code, eventName, amountUsd, reference, orderId }) {
-  if (!TELEGRAM_BOT_TOKEN || ADMIN_TELEGRAM_IDS.length === 0) return;
+  if (!TELEGRAM_BOT_TOKEN || !TRANSFER_NOTIFY_ID) return;
   const lines = [
     'Nueva transferencia pendiente',
     '',
@@ -235,16 +241,14 @@ async function notifyAdminsNewTransfer({ photoUrl, guestName, code, eventName, a
   ];
   const caption = lines.join('\n');
 
-  for (const chatId of ADMIN_TELEGRAM_IDS) {
-    try {
-      if (photoUrl) {
-        await telegramCall('sendPhoto', { chat_id: chatId, photo: photoUrl, caption });
-      } else {
-        await telegramCall('sendMessage', { chat_id: chatId, text: caption });
-      }
-    } catch (e) {
-      console.error(`[telegram.notify ${chatId}]`, e.message || e);
+  try {
+    if (photoUrl) {
+      await telegramCall('sendPhoto', { chat_id: TRANSFER_NOTIFY_ID, photo: photoUrl, caption });
+    } else {
+      await telegramCall('sendMessage', { chat_id: TRANSFER_NOTIFY_ID, text: caption });
     }
+  } catch (e) {
+    console.error(`[telegram.notify.transfer ${TRANSFER_NOTIFY_ID}]`, e.message || e);
   }
 }
 
@@ -273,9 +277,14 @@ async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken })
   const info = await mailTransport.sendMail({
     from: MAIL_FROM,
     to: toEmail,
-    subject: `🎟 Tu entrada para ${eventName}`,
+    subject: `Tu entrada confirmada - ${eventName}`,
     html,
     text,
+    headers: {
+      'X-Priority': '3',
+      'X-Mailer': 'Party House Tickets',
+      'List-Unsubscribe': `<mailto:info@tickethouse.site?subject=unsubscribe>`
+    },
     attachments: [
       { filename: `party-house-${code}.png`, content: png, contentType: 'image/png' }
     ]

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Party House — First Edition · 16.05</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@700&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:   #050505;
+      --white:   #F1EEE8;
+      --gray:    #B7B3AA;
+      --gray-dk: #6e6b65;
+      --border:  #2a2622;
+      --pad:     5vw;
+    }
+    html, body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Barlow Condensed', sans-serif;
+      min-height: 100vh;
+    }
+    /* Grain texture overlay */
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      opacity: 0.09; mix-blend-mode: screen;
+    }
+
+    /* ─── NAVBAR ─────────────────────────────── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px var(--pad);
+      background: rgba(5,5,5,0.97);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 17px; letter-spacing: 5px; color: var(--white);
+    }
+    .nav-links { display: flex; gap: 10px; align-items: center; }
+    .nav-btn {
+      font-family: 'Oswald', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gray); text-decoration: none;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      transition: color .2s, border-color .2s;
+      cursor: pointer; background: none;
+    }
+    .nav-btn:hover { color: var(--white); border-color: rgba(241,238,232,0.35); }
+
+    /* ─── PAGE SHELL ─────────────────────────── */
+    .page { padding-top: 50px; width: 100%; }
+
+    /* ─── SHARED DIVIDER ─────────────────────── */
+    hr.div {
+      border: none;
+      border-top: 1px solid var(--border);
+      opacity: .6;
+    }
+
+    /* ─── TOP LABEL ──────────────────────────── */
+    .label-top {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.55rem, 1.5vw, 0.72rem);
+      letter-spacing: 6px; text-transform: uppercase;
+      color: var(--gray-dk); text-align: center;
+      padding: 14px var(--pad) 10px;
+    }
+
+    /* ─── TITLE ──────────────────────────────── */
+    .title-block {
+      text-align: center;
+      padding: 2px var(--pad) 6px;
+      overflow: hidden;
+    }
+    .title-main {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(3rem, 13.5vw, 14rem);
+      letter-spacing: 0.06em;
+      color: var(--white);
+      line-height: 0.86;
+      display: block;
+      white-space: nowrap;
+    }
+    .title-script {
+      font-family: 'Dancing Script', cursive;
+      font-size: clamp(1.1rem, 3.5vw, 2.2rem);
+      color: var(--gray);
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* ─── DANCE SCENE ────────────────────────── */
+    .dance-section { line-height: 0; }
+    .dance-section svg {
+      width: 100%; height: auto; display: block;
+      overflow: visible;
+    }
+
+    /* transform-box: fill-box → transform-origin is relative to each
+       element's own bounding box, not the SVG viewport */
+    .d1, .d2, .d4, .d5 {
+      transform-box: fill-box;
+      transform-origin: center 92%;
+    }
+    .ttl, .ttr {
+      transform-box: fill-box;
+      transform-origin: center center;
+    }
+
+    @keyframes sw1 { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(11deg)} }
+    @keyframes sw2 { 0%,100%{transform:rotate(10deg)}  50%{transform:rotate(-12deg)} }
+    @keyframes sw3 { 0%,100%{transform:rotate(-10deg)} 33%{transform:rotate(13deg)} 66%{transform:rotate(-7deg)} }
+    @keyframes sw4 { 0%,100%{transform:rotate(11deg)}  50%{transform:rotate(-13deg)} }
+    @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    /* Dancers are static — each frozen in a distinct pose via transform */
+    .d1 { transform: rotate(-8deg); }
+    .d2 { transform: rotate(7deg); }
+    .d4 { transform: rotate(-6deg); }
+    .d5 { transform: rotate(9deg); }
+    .ttl { animation: spin 2.2s linear infinite; }
+    .ttr { animation: spin 2.2s linear infinite reverse; }
+
+    /* ─── HAS SIDO SELECCIONADO ──────────────── */
+    .has-sido {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(2.2rem, 8.5vw, 10rem);
+      letter-spacing: 0.06em;
+      color: var(--white);
+      text-align: center;
+      line-height: 1;
+      padding: 14px var(--pad) 12px;
+    }
+
+    /* ─── EVENT INFO ─────────────────────────── */
+    .event-info {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      align-items: center;
+      padding: 0 var(--pad);
+    }
+    .info-sep {
+      background: var(--border);
+      width: 1px; height: 68px; margin: auto;
+    }
+    .info-col {
+      padding: 16px 3vw;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .date-big {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(3rem, 10vw, 10rem);
+      letter-spacing: 0.08em;
+      color: var(--white); line-height: 1;
+    }
+    .info-label {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.58rem, 1.6vw, 0.78rem);
+      font-weight: 600; letter-spacing: 4px;
+      color: var(--gray-dk); text-transform: uppercase;
+    }
+    .info-sub {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.62rem, 1.8vw, 0.85rem);
+      letter-spacing: 2px; color: var(--gray); text-transform: uppercase;
+    }
+    .loc-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: var(--gray-dk); text-decoration: none;
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+      letter-spacing: 2px; text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .loc-link:hover { color: var(--white); }
+    .lineup-name {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(1.8rem, 5.5vw, 5.5rem);
+      letter-spacing: 0.04em; color: var(--white); line-height: 1.05;
+    }
+
+    /* ─── PRICES ─────────────────────────────── */
+    .price-row {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      padding: 0 var(--pad);
+    }
+    .price-col {
+      padding: 14px 3vw;
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.6rem, 1.8vw, 0.82rem);
+      font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--gray); line-height: 1.6;
+    }
+    .price-col strong {
+      display: block;
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(2rem, 7vw, 7rem);
+      letter-spacing: 0.04em; color: var(--white); line-height: 1;
+    }
+    .price-sep { background: var(--border); width: 1px; height: 44px; margin: auto; }
+
+    /* ─── CTA ────────────────────────────────── */
+    .cta-section {
+      text-align: center;
+      padding: 22px var(--pad) 36px;
+    }
+    .cta-btn {
+      display: block; width: 100%;
+      padding: 22px 20px;
+      background: var(--white); color: var(--black);
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(1.6rem, 4.5vw, 4rem);
+      letter-spacing: 0.16em;
+      text-decoration: none; text-align: center;
+      transition: background 0.18s, color 0.18s;
+    }
+    .cta-btn:hover { background: transparent; color: var(--white); outline: 1px solid var(--white); }
+    .cta-sub {
+      margin-top: 12px;
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+      letter-spacing: 5px; color: var(--gray-dk); text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Session scripts load first -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/app.js"></script>
+  <script>
+    (function() {
+      const s = window.ph && window.ph.getSession();
+      if (!s) window.location.replace('./index.html');
+    })();
+  </script>
+
+  <header class="navbar">
+    <div class="nav-logo">◆ PARTY HOUSE</div>
+    <div class="nav-links">
+      <a class="nav-btn" href="./amenidades.html">Amenidades</a>
+      <button class="nav-btn" id="salirBtn">Salir</button>
+    </div>
+  </header>
+
+  <div class="page">
+
+    <p class="label-top">No todas las fiestas se viven igual</p>
+
+    <hr class="div">
+
+    <div class="title-block">
+      <span class="title-main">PARTY HOUSE</span>
+      <span class="title-script">first edition</span>
+    </div>
+
+    <hr class="div">
+
+    <!-- ═══ DANCING FIGURES ═══════════════════════════════════════════════
+         viewBox 600×120. Each dancer group has feet at its local (0,0),
+         head at (0,−58). Placed via translate(x, 90) so absolute feet y=90.
+         transform-box:fill-box makes transform-origin % relative to own bbox.
+         All arm/leg paths use straight lines — no wild bezier curves. -->
+    <div class="dance-section">
+      <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+
+        <!-- DANCER 1 — left arm spread, right arm up -->
+        <g class="d1" transform="translate(105,90)">
+          <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
+          <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="-18" y2="-33" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="16" y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="-12" y2="0" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="10" y2="0"  stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- DANCER 2 — both arms raised -->
+        <g class="d2" transform="translate(210,90)">
+          <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
+          <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="-16" y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="16"  y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="-10" y2="0"  stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="10"  y2="0"  stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- DJ BOOTH — centered at x=350 (translate 306 + booth half-width 44) -->
+        <g transform="translate(306,63)">
+          <!-- DJ figure -->
+          <ellipse cx="44" cy="-45" rx="7" ry="8" fill="none" stroke="#F1EEE8" stroke-width="1.5"/>
+          <!-- Headphones -->
+          <path d="M36,-53 Q36,-62 44,-62 Q52,-62 52,-53" fill="none" stroke="#F1EEE8" stroke-width="1.1"/>
+          <rect x="32" y="-56" width="5" height="6" rx="2" fill="none" stroke="#F1EEE8" stroke-width="1"/>
+          <rect x="51" y="-56" width="5" height="6" rx="2" fill="none" stroke="#F1EEE8" stroke-width="1"/>
+          <!-- Body -->
+          <line x1="44" y1="-37" x2="44" y2="-18" stroke="#F1EEE8" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Arms reaching to booth -->
+          <line x1="44" y1="-30" x2="22" y2="-8" stroke="#F1EEE8" stroke-width="1.3" stroke-linecap="round"/>
+          <line x1="44" y1="-30" x2="66" y2="-8" stroke="#F1EEE8" stroke-width="1.3" stroke-linecap="round"/>
+          <!-- Booth surface -->
+          <rect x="0" y="-5" width="88" height="32" fill="rgba(5,5,5,.92)" stroke="#F1EEE8" stroke-width="1.5"/>
+          <!-- Turntable L -->
+          <circle class="ttl" cx="17" cy="11" r="12" fill="none" stroke="#F1EEE8" stroke-width="1.2"/>
+          <circle cx="17" cy="11" r="4" fill="none" stroke="#F1EEE8" stroke-width=".8"/>
+          <circle cx="17" cy="11" r="1.8" fill="#F1EEE8"/>
+          <!-- Turntable R -->
+          <circle class="ttr" cx="71" cy="11" r="12" fill="none" stroke="#F1EEE8" stroke-width="1.2"/>
+          <circle cx="71" cy="11" r="4" fill="none" stroke="#F1EEE8" stroke-width=".8"/>
+          <circle cx="71" cy="11" r="1.8" fill="#F1EEE8"/>
+          <!-- Mixer -->
+          <rect x="37" y="2" width="14" height="19" fill="none" stroke="#F1EEE8" stroke-width=".9"/>
+          <line x1="40" y1="9"  x2="48" y2="9"  stroke="#F1EEE8" stroke-width=".7"/>
+          <line x1="40" y1="14" x2="48" y2="14" stroke="#F1EEE8" stroke-width=".7"/>
+          <!-- Booth legs -->
+          <line x1="8"  y1="27" x2="8"  y2="47" stroke="#F1EEE8" stroke-width="1.5"/>
+          <line x1="80" y1="27" x2="80" y2="47" stroke="#F1EEE8" stroke-width="1.5"/>
+        </g>
+
+        <!-- DANCER 4 — arms spread wide -->
+        <g class="d4" transform="translate(490,90)">
+          <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
+          <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="-20" y2="-44" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="20"  y2="-44" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="-10" y2="0"   stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="10"  y2="0"   stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- DANCER 5 — left arm up, right arm spread -->
+        <g class="d5" transform="translate(595,90)">
+          <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
+          <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="-16" y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-44" x2="18"  y2="-33" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="-10" y2="0"   stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+          <line x1="0" y1="-30" x2="12"  y2="0"   stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- Floor -->
+        <line x1="0" y1="97" x2="700" y2="97" stroke="#F1EEE8" stroke-width=".3" opacity=".12"/>
+        <!-- Spotlights -->
+        <circle cx="175" cy="8"  r="1.5" fill="#F1EEE8" opacity=".2"/>
+        <circle cx="350" cy="5"  r="2"   fill="#F1EEE8" opacity=".18"/>
+        <circle cx="525" cy="8"  r="1.5" fill="#F1EEE8" opacity=".2"/>
+      </svg>
+    </div>
+
+    <hr class="div">
+
+    <h2 class="has-sido">HAS SIDO SELECCIONADO</h2>
+
+    <hr class="div">
+
+    <div class="event-info">
+      <div class="info-col">
+        <span class="date-big">16.05</span>
+        <span class="info-sub">Ciudad de Guatemala</span>
+        <a class="loc-link" href="https://maps.google.com/?q=14.592153,-90.567311" target="_blank" rel="noopener">
+          <svg width="9" height="11" viewBox="0 0 9 11" fill="currentColor" aria-hidden="true">
+            <path d="M4.5 0C2.57 0 1 1.57 1 3.5 1 6.12 4.5 11 4.5 11S8 6.12 8 3.5C8 1.57 6.43 0 4.5 0z"/>
+            <circle cx="4.5" cy="3.5" r="1.3" fill="#050505"/>
+          </svg>
+          Z11, Guatemala
+        </a>
+      </div>
+      <div class="info-sep"></div>
+      <div class="info-col">
+        <span class="info-label">Line Up</span>
+        <div class="lineup-name">SOFI KORE<br>DJ NICK</div>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <div class="price-row">
+      <div class="price-col">
+        <strong>Q50</strong>Preventa en línea
+      </div>
+      <div class="price-sep"></div>
+      <div class="price-col">
+        <strong>Q75</strong>Día del evento
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <a class="cta-btn" href="./evento.html">Confirmar mi entrada</a>
+      <p class="cta-sub">Pago seguro · Q50 preventa</p>
+    </div>
+
+  </div><!-- /page -->
+
+  <script>
+    document.getElementById('salirBtn').addEventListener('click', () => {
+      window.ph.clearSession();
+      window.location.href = './index.html';
+    });
+  </script>
+</body>
+</html>
+                                                                          

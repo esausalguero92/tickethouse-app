@@ -3,12 +3,111 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Party House — Accede con tu código</title>
+  <title>Party House — Has Sido Seleccionado</title>
   <meta name="description" content="Party House — Experiencias exclusivas. Ingresa tu código de invitación." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@700&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    .hero-index {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px 60px;
+      position: relative;
+    }
+    .house-wrap {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(92vw, 420px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+    .house-wrap svg { width: 100%; height: auto; }
+    .house-content {
+      position: relative;
+      z-index: 2;
+      width: min(88vw, 290px);
+      text-align: center;
+      margin-top: 110px;
+    }
+    .has-sido-label {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+      letter-spacing: 5px;
+      color: var(--gray);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      display: block;
+    }
+    #code {
+      width: 100%;
+      padding: 14px 12px;
+      background: rgba(5,5,5,0.88);
+      border: 1px solid var(--gray-dk);
+      border-radius: 0;
+      color: var(--white);
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 1.6rem;
+      letter-spacing: 6px;
+      text-align: center;
+      text-transform: uppercase;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+      display: block;
+      box-sizing: border-box;
+    }
+    #code:focus { outline: none; border-color: var(--white); }
+    #code::placeholder { color: var(--gray-dk); font-size: 1rem; letter-spacing: 4px; }
+    .btn-enter {
+      width: 100%;
+      padding: 14px;
+      background: var(--white);
+      color: var(--black);
+      border: 1px solid var(--white);
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+    .btn-enter:hover { background: transparent; color: var(--white); }
+    .form-alert {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.85rem;
+      display: none;
+      background: rgba(80,0,0,0.35);
+      border: 1px solid #7a2020;
+      color: #dda0a0;
+    }
+    .form-alert.show { display: block; }
+    .btn-loc {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 18px;
+      padding: 9px 18px;
+      border: 1px solid var(--border-c);
+      color: var(--gray);
+      font-family: 'Oswald', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-loc:hover { border-color: var(--white); color: var(--white); }
+    .house-spacer { height: 310px; }
+  </style>
 </head>
 <body>
 
@@ -20,24 +119,59 @@
     </nav>
   </header>
 
-  <section class="hero">
-    <h1>Welcome to the<br/>Night Experience</h1>
-    <p class="tagline">Acceso solo con invitación · Exclusive</p>
+  <section class="hero-index">
+    <!-- Silueta de casa -->
+    <div class="house-wrap" aria-hidden="true">
+      <svg viewBox="0 0 340 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="rough">
+            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" result="noise"/>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+        </defs>
+        <polygon points="170,18 328,152 328,408 12,408 12,152"
+          fill="rgba(5,5,5,0.5)" stroke="#F1EEE8" stroke-width="1.4"
+          stroke-linejoin="round" filter="url(#rough)"/>
+        <line x1="170" y1="18" x2="12" y2="152" stroke="#F1EEE8" stroke-width="0.5" opacity="0.18"/>
+        <line x1="170" y1="18" x2="328" y2="152" stroke="#F1EEE8" stroke-width="0.5" opacity="0.18"/>
+        <line x1="12" y1="152" x2="328" y2="152" stroke="#F1EEE8" stroke-width="0.4" opacity="0.1"/>
+        <rect x="46" y="220" width="60" height="48" fill="none" stroke="#F1EEE8" stroke-width="0.7" opacity="0.22"/>
+        <line x1="76" y1="220" x2="76" y2="268" stroke="#F1EEE8" stroke-width="0.4" opacity="0.14"/>
+        <line x1="46" y1="244" x2="106" y2="244" stroke="#F1EEE8" stroke-width="0.4" opacity="0.14"/>
+        <rect x="234" y="220" width="60" height="48" fill="none" stroke="#F1EEE8" stroke-width="0.7" opacity="0.22"/>
+        <line x1="264" y1="220" x2="264" y2="268" stroke="#F1EEE8" stroke-width="0.4" opacity="0.14"/>
+        <line x1="234" y1="244" x2="294" y2="244" stroke="#F1EEE8" stroke-width="0.4" opacity="0.14"/>
+        <rect x="143" y="318" width="54" height="90" fill="none" stroke="#F1EEE8" stroke-width="0.8" opacity="0.28"/>
+        <path d="M143,336 Q170,310 197,336" fill="none" stroke="#F1EEE8" stroke-width="0.6" opacity="0.18"/>
+        <circle cx="152" cy="363" r="3" fill="#F1EEE8" opacity="0.18"/>
+      </svg>
+    </div>
 
-    <div class="card" style="margin-top:50px;">
-      <h2>Ingresa tu código</h2>
-      <p class="subtitle">Sin código, no hay fiesta. Pídelo a tu anfitrión.</p>
+    <!-- Formulario dentro de la casa -->
+    <div class="house-content">
+      <span class="has-sido-label">Has sido seleccionado</span>
 
-      <div id="alert" class="alert alert-error"></div>
+      <div id="alert" class="form-alert"></div>
 
       <form id="loginForm">
-        <div class="field">
-          <label for="code">Código de invitación</label>
-          <input type="text" id="code" name="code" placeholder="NOMBRE-####" required autocomplete="off" />
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;">Entrar</button>
+        <input type="text" id="code" name="code"
+          placeholder="TU CÓDIGO"
+          required autocomplete="off" maxlength="10"/>
+        <button type="submit" class="btn-enter">ENTRAR</button>
       </form>
+
+      <a class="btn-loc"
+         href="https://maps.google.com/?q=14.592153,-90.567311"
+         target="_blank" rel="noopener noreferrer">
+        <svg width="11" height="13" viewBox="0 0 11 13" fill="currentColor">
+          <path d="M5.5 0C3.01 0 1 2.01 1 4.5 1 7.88 5.5 13 5.5 13S10 7.88 10 4.5C10 2.01 7.99 0 5.5 0z"/>
+          <circle cx="5.5" cy="4.5" r="1.6" fill="#050505"/>
+        </svg>
+        Ver ubicación · Z11 Guatemala
+      </a>
     </div>
+
+    <div class="house-spacer"></div>
   </section>
 
   <section class="section" id="about">
@@ -60,20 +194,17 @@
 
   <footer id="contact">
     <div>© Party House · Todos los derechos reservados</div>
-    <div style="margin-top:8px;">Contacto: eventos@partyhouse.example</div>
+    <div style="margin-top:8px;">tickethouse.site</div>
   </footer>
 
-  <!-- Supabase JS SDK (vía CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./js/config.js"></script>
   <script src="./js/app.js"></script>
-
   <script>
-    // Si llega con ?c=CODIGO lo prellenamos
     const urlCode = new URLSearchParams(window.location.search).get('c');
     if (urlCode) document.getElementById('code').value = urlCode;
 
-    const form = document.getElementById('loginForm');
+    const form     = document.getElementById('loginForm');
     const alertBox = document.getElementById('alert');
 
     function showError(msg) {
@@ -87,32 +218,26 @@
       const code = document.getElementById('code').value.trim().toUpperCase();
       if (!code) return;
 
-      if (!window.ph?.supabase) {
-        showError('Configuración de Supabase incompleta.');
-        return;
-      }
+      if (!window.ph?.supabase) { showError('Configuración incompleta.'); return; }
 
       try {
         const { data, error } = await window.ph.supabase.rpc('rpc_validate_code', { p_code: code });
         if (error) { showError('Error consultando el código.'); return; }
 
         if (data.error === 'code_not_found' || data.error === 'code_required') {
-          showError('Código no reconocido.');
-          return;
+          showError('Código no reconocido.'); return;
         }
         if (data.error === 'code_inactive') {
-          showError('Código inactivo.');
-          return;
+          showError('Código inactivo.'); return;
         }
 
-        // Guardar "sesión" en sessionStorage
         window.ph.setSession(data);
 
-        // Redirigir según estado
         if (data.already_paid) {
           window.location.href = './ticket.html';
         } else {
-          window.location.href = './evento.html';
+          // Mostrar la página del evento antes del pago
+          window.location.href = './event-landing.html';
         }
       } catch (err) {
         console.error(err);

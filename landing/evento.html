@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Party House — Bienvenido</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@700&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
@@ -313,15 +313,4 @@
         done.style.display = 'block';
         const confirmedEmail = email || body.email;
         if (confirmedEmail) {
-          document.getElementById('emailNote').textContent = `Avisaremos a ${confirmedEmail} cuando esté listo.`;
-        }
-      } catch (err) {
-        showAlert('error', 'Error de red al registrar la transferencia.');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalLabel;
-      }
-    });
-  </script>
-</body>
-</html>
+          document.ge
