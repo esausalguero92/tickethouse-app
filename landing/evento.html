@@ -313,4 +313,15 @@
         done.style.display = 'block';
         const confirmedEmail = email || body.email;
         if (confirmedEmail) {
-          document.ge
+          document.getElementById('emailNote').textContent = `Avisaremos a ${confirmedEmail} cuando esté listo.`;
+        }
+      } catch (err) {
+        showAlert('error', 'Error de red al registrar la transferencia.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
+    });
+  </script>
+</body>
+</html>
