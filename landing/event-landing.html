@@ -108,28 +108,9 @@
       overflow: visible;
     }
 
-    /* transform-box: fill-box → transform-origin is relative to each
-       element's own bounding box, not the SVG viewport */
-    .d1, .d2, .d4, .d5 {
-      transform-box: fill-box;
-      transform-origin: center 92%;
-    }
-    .ttl, .ttr {
-      transform-box: fill-box;
-      transform-origin: center center;
-    }
-
-    @keyframes sw1 { 0%,100%{transform:rotate(-12deg)} 50%{transform:rotate(11deg)} }
-    @keyframes sw2 { 0%,100%{transform:rotate(10deg)}  50%{transform:rotate(-12deg)} }
-    @keyframes sw3 { 0%,100%{transform:rotate(-10deg)} 33%{transform:rotate(13deg)} 66%{transform:rotate(-7deg)} }
-    @keyframes sw4 { 0%,100%{transform:rotate(11deg)}  50%{transform:rotate(-13deg)} }
+    /* Turntable spin — only CSS animation needed; rotation is in SVG transform attrs */
+    .ttl, .ttr { transform-box: fill-box; transform-origin: center center; }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-
-    /* Dancers are static — each frozen in a distinct pose via transform */
-    .d1 { transform: rotate(-8deg); }
-    .d2 { transform: rotate(7deg); }
-    .d4 { transform: rotate(-6deg); }
-    .d5 { transform: rotate(9deg); }
     .ttl { animation: spin 2.2s linear infinite; }
     .ttr { animation: spin 2.2s linear infinite reverse; }
 
@@ -282,7 +263,7 @@
       <svg viewBox="0 0 700 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 
         <!-- DANCER 1 — left arm spread, right arm up -->
-        <g class="d1" transform="translate(105,90)">
+        <g class="d1" transform="translate(105,90) rotate(-8)">
           <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
           <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
           <line x1="0" y1="-44" x2="-18" y2="-33" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
@@ -292,7 +273,7 @@
         </g>
 
         <!-- DANCER 2 — both arms raised -->
-        <g class="d2" transform="translate(210,90)">
+        <g class="d2" transform="translate(210,90) rotate(7)">
           <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
           <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
           <line x1="0" y1="-44" x2="-16" y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
@@ -334,7 +315,7 @@
         </g>
 
         <!-- DANCER 4 — arms spread wide -->
-        <g class="d4" transform="translate(490,90)">
+        <g class="d4" transform="translate(490,90) rotate(-6)">
           <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
           <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
           <line x1="0" y1="-44" x2="-20" y2="-44" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
@@ -344,7 +325,7 @@
         </g>
 
         <!-- DANCER 5 — left arm up, right arm spread -->
-        <g class="d5" transform="translate(595,90)">
+        <g class="d5" transform="translate(595,90) rotate(9)">
           <circle cx="0" cy="-58" r="6" fill="none" stroke="#F1EEE8" stroke-width="2"/>
           <line x1="0" y1="-52" x2="0" y2="-30" stroke="#F1EEE8" stroke-width="2" stroke-linecap="round"/>
           <line x1="0" y1="-44" x2="-16" y2="-57" stroke="#F1EEE8" stroke-width="1.8" stroke-linecap="round"/>
