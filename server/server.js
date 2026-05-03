@@ -225,25 +225,44 @@ async function telegramCall(method, body) {
 }
 
 // Manda la foto con caption al ID de notificaciones de transferencia. Non-blocking.
-async function notifyAdminsNewTransfer({ photoUrl, guestName, code, eventName, amountUsd, reference, orderId }) {
+// Envía el buffer directamente (multipart) en lugar de pasar la URL firmada de Supabase,
+// ya que Telegram frecuentemente no puede descargar URLs largas/firmadas.
+async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestName, code, eventName, amountUsd, reference, orderId }) {
   if (!TELEGRAM_BOT_TOKEN || !TRANSFER_NOTIFY_ID) return;
   const lines = [
-    'Nueva transferencia pendiente',
+    '🔔 Nueva transferencia pendiente',
     '',
-    `Invitado: ${guestName}`,
-    `Código: ${code}`,
-    `Evento: ${eventName}`,
-    `Monto: USD ${Number(amountUsd).toFixed(2)}`,
-    reference ? `Folio: ${reference}` : 'Folio: (sin folio)',
+    `👤 ${guestName}`,
+    `🔑 Código: ${code}`,
+    `🎉 ${eventName}`,
+    `💵 USD ${Number(amountUsd).toFixed(2)} (~Q50)`,
+    reference ? `📋 Folio: ${reference}` : '📋 Sin folio',
     '',
-    `Revisar en: ${PUBLIC_BASE_URL}/admin.html`,
-    `Order: ${orderId}`
+    `🔗 ${PUBLIC_BASE_URL}/admin.html`
   ];
   const caption = lines.join('\n');
 
   try {
-    if (photoUrl) {
-      await telegramCall('sendPhoto', { chat_id: TRANSFER_NOTIFY_ID, photo: photoUrl, caption });
+    if (fileBuffer) {
+      // Subir el archivo directamente a Telegram vía multipart/form-data
+      const isImage = mimeType && mimeType.startsWith('image/');
+      const method = isImage ? 'sendPhoto' : 'sendDocument';
+      const fieldName = isImage ? 'photo' : 'document';
+      const blob = new Blob([fileBuffer], { type: mimeType || 'application/octet-stream' });
+      const form = new FormData();
+      form.append('chat_id', String(TRANSFER_NOTIFY_ID));
+      form.append('caption', caption);
+      form.append(fieldName, blob, fileName || (isImage ? 'comprobante.jpg' : 'comprobante'));
+      const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`, {
+        method: 'POST',
+        body: form
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) {
+        // Si falla el envío de archivo, mandar al menos el texto
+        console.warn(`[telegram.notify] ${method} falló (${j.description}) — enviando solo texto`);
+        await telegramCall('sendMessage', { chat_id: TRANSFER_NOTIFY_ID, text: caption });
+      }
     } else {
       await telegramCall('sendMessage', { chat_id: TRANSFER_NOTIFY_ID, text: caption });
     }
@@ -484,15 +503,18 @@ app.post('/api/transfer/submit', (req, res, next) => {
       await supabase.from('guests').update({ email }).eq('id', ctx.guest_id);
     }
 
-    // Notificar al admin (non-blocking: no romper la respuesta si falla Telegram)
+    // Notificar al admin vía Telegram (non-blocking)
+    // Se pasa el buffer directamente para evitar problemas con URLs firmadas de Supabase
     notifyAdminsNewTransfer({
-      photoUrl: file.mimetype.startsWith('image/') ? receiptUrl : null,
-      guestName: `${ctx.guest.first_name} ${ctx.guest.last_name || ''}`.trim(),
-      code: ctx.code,
-      eventName: ctx.event.name,
-      amountUsd: ctx.event.price_usd,
-      reference: reference || '',
-      orderId: data.order_id
+      fileBuffer: file.buffer,
+      fileName:   file.originalname || 'comprobante',
+      mimeType:   file.mimetype,
+      guestName:  `${ctx.guest.first_name} ${ctx.guest.last_name || ''}`.trim(),
+      code:        ctx.code,
+      eventName:   ctx.event.name,
+      amountUsd:   ctx.event.price_usd,
+      reference:   reference || '',
+      orderId:     data.order_id
     }).catch(e => console.error('[notify]', e.message || e));
 
     return res.json({
@@ -868,9 +890,6 @@ app.post('/api/tickets/validate', requireStaff, async (req, res) => {
     }
 
     if (ticket.status === 'redeemed') {
-      await supabase.from('validation_log').insert({
-        ticket_id: ticket.id, qr_scanned: qr, result: 'already_used'
-      });
       return res.json({ result: 'already_used', guest: ticket.guest, event: ticket.event });
     }
 
