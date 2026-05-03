@@ -224,11 +224,36 @@ async function telegramCall(method, body) {
   return j.result;
 }
 
-// Manda la foto con caption al ID de notificaciones de transferencia. Non-blocking.
-// Envía el buffer directamente (multipart) en lugar de pasar la URL firmada de Supabase,
-// ya que Telegram frecuentemente no puede descargar URLs largas/firmadas.
+// Construye un body multipart/form-data usando Buffers puros (compatible Node 14+).
+function buildTelegramMultipart(fields, fileBuffer, fileFieldName, fileName, mimeType) {
+  const boundary = 'TGBoundary' + Date.now() + Math.random().toString(36).slice(2);
+  const CRLF = '\r\n';
+  const chunks = [];
+  for (const [name, value] of Object.entries(fields)) {
+    chunks.push(Buffer.from(
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}` +
+      `${value}${CRLF}`
+    ));
+  }
+  chunks.push(Buffer.from(
+    `--${boundary}${CRLF}` +
+    `Content-Disposition: form-data; name="${fileFieldName}"; filename="${fileName}"${CRLF}` +
+    `Content-Type: ${mimeType}${CRLF}${CRLF}`
+  ));
+  chunks.push(fileBuffer);
+  chunks.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`));
+  return { body: Buffer.concat(chunks), contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
+// Notifica al admin cuando llega una transferencia. Non-blocking.
+// Usa TRANSFER_NOTIFY_ID si está seteado; si no, cae al primer ID de ADMIN_TELEGRAM_IDS.
 async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestName, code, eventName, amountUsd, reference, orderId }) {
-  if (!TELEGRAM_BOT_TOKEN || !TRANSFER_NOTIFY_ID) return;
+  const chatId = TRANSFER_NOTIFY_ID || ADMIN_TELEGRAM_IDS[0] || '';
+  if (!TELEGRAM_BOT_TOKEN || !chatId) {
+    console.warn('[telegram.notify] Sin destino: setea TRANSFER_NOTIFY_ID o ADMIN_TELEGRAM_IDS.');
+    return;
+  }
   const lines = [
     '🔔 Nueva transferencia pendiente',
     '',
@@ -244,30 +269,32 @@ async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestNa
 
   try {
     if (fileBuffer) {
-      // Subir el archivo directamente a Telegram vía multipart/form-data
       const isImage = mimeType && mimeType.startsWith('image/');
       const method = isImage ? 'sendPhoto' : 'sendDocument';
       const fieldName = isImage ? 'photo' : 'document';
-      const blob = new Blob([fileBuffer], { type: mimeType || 'application/octet-stream' });
-      const form = new FormData();
-      form.append('chat_id', String(TRANSFER_NOTIFY_ID));
-      form.append('caption', caption);
-      form.append(fieldName, blob, fileName || (isImage ? 'comprobante.jpg' : 'comprobante'));
+      const safeFileName = fileName || (isImage ? 'comprobante.jpg' : 'comprobante.pdf');
+      const { body, contentType } = buildTelegramMultipart(
+        { chat_id: String(chatId), caption },
+        fileBuffer, fieldName, safeFileName, mimeType || 'application/octet-stream'
+      );
       const r = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`, {
         method: 'POST',
-        body: form
+        headers: { 'Content-Type': contentType },
+        body
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) {
-        // Si falla el envío de archivo, mandar al menos el texto
         console.warn(`[telegram.notify] ${method} falló (${j.description}) — enviando solo texto`);
-        await telegramCall('sendMessage', { chat_id: TRANSFER_NOTIFY_ID, text: caption });
+        await telegramCall('sendMessage', { chat_id: chatId, text: caption });
+      } else {
+        console.log(`[telegram.notify] ${method} enviado a ${chatId} OK`);
       }
     } else {
-      await telegramCall('sendMessage', { chat_id: TRANSFER_NOTIFY_ID, text: caption });
+      await telegramCall('sendMessage', { chat_id: chatId, text: caption });
+      console.log(`[telegram.notify] sendMessage enviado a ${chatId} OK`);
     }
   } catch (e) {
-    console.error(`[telegram.notify.transfer ${TRANSFER_NOTIFY_ID}]`, e.message || e);
+    console.error(`[telegram.notify.transfer ${chatId}]`, e.message || e);
   }
 }
 
