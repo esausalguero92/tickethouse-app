@@ -34,7 +34,7 @@
       </div>
       <div style="margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
         <a id="downloadQrBtn" class="btn btn-primary" href="#">Descargar entrada (PDF)</a>
-        <button id="saveImageBtn" class="btn" type="button">Guardar QR (imagen)</button>
+        <a class="btn" href="https://maps.google.com/?q=14.592153,-90.567311" target="_blank" rel="noopener noreferrer">Ver ubicación</a>
       </div>
       <p style="margin-top:14px; color:var(--color-text-dim); font-size:0.85rem;">
         Presentá este QR al staff en la entrada.
@@ -138,29 +138,6 @@
         const dl = document.getElementById('downloadQrBtn');
         dl.href = '/api/qr/' + encodeURIComponent(session.code) + '/download';
 
-        // Botón "Guardar imagen" → toma el canvas/img en pantalla y dispara descarga.
-        document.getElementById('saveImageBtn').addEventListener('click', () => {
-          const wrap = document.getElementById('qrWrap');
-          const canvas = wrap.querySelector('canvas');
-          const img = wrap.querySelector('img');
-          let dataUrl = null;
-          if (canvas) {
-            try { dataUrl = canvas.toDataURL('image/png'); } catch (_) {}
-          } else if (img && img.src) {
-            dataUrl = img.src;
-          }
-          if (!dataUrl) {
-            // Fallback: mandar al endpoint del server
-            window.location.href = dl.href;
-            return;
-          }
-          const a = document.createElement('a');
-          a.href = dataUrl;
-          a.download = 'party-house-' + session.code + '.png';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-        });
       } catch (e) {
         console.error('[PH] loadTicket error:', e);
         ticketBox.innerHTML = '<p style="color:#ff7a9c;">Error cargando el ticket: ' + (e.message || e) + '</p>';
