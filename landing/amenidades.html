@@ -161,6 +161,7 @@
     <div class="nav-links">
       <a class="nav-btn" href="./event-landing.html">Mi invitación</a>
       <a class="nav-btn" href="./ticket.html">Mi ticket</a>
+      <button class="nav-btn" id="salirBtn">Salir</button>
     </div>
   </header>
 
@@ -271,6 +272,13 @@
     <p class="footer-note">Party House · First Edition · 16.05.2026</p>
 
   </div>
+
+  <script>
+    document.getElementById('salirBtn').addEventListener('click', () => {
+      window.ph && window.ph.clearSession();
+      window.location.href = './index.html';
+    });
+  </script>
 
 </body>
 </html>

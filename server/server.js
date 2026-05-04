@@ -386,8 +386,14 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
        .text('UBICACIÓN', 0, locY + 10, { align: 'center', width: W, characterSpacing: 2 });
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#9f98b3')
        .text('Z11, Ciudad de Guatemala', 0, locY + 22, { align: 'center', width: W });
-    doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
-       .text('maps.google.com/?q=14.592153,-90.567311', 0, locY + 36, { align: 'center', width: W });
+
+    // Botón clicable "Ver en Google Maps"
+    const mapsUrl = 'https://maps.google.com/?q=14.592153,-90.567311';
+    const btnW = 180, btnH = 24, btnX = (W - btnW) / 2, btnY = locY + 38;
+    doc.roundedRect(btnX, btnY, btnW, btnH, 4).fill('#ffffff');
+    doc.font('Helvetica-Bold').fontSize(8).fillColor('#000000')
+       .text('VER EN GOOGLE MAPS', btnX, btnY + 8,
+             { width: btnW, align: 'center', link: mapsUrl, underline: false });
 
     // Banda inferior
     doc.rect(0, H - 28, W, 28).fill('#111111');
