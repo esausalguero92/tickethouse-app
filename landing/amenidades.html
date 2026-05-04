@@ -1,65 +1,276 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Party House — Amenidades</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Dancing+Script:wght@700&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:   #050505;
+      --white:   #F1EEE8;
+      --gray:    #B7B3AA;
+      --gray-dk: #6e6b65;
+      --border:  #2a2622;
+      --pad:     5vw;
+    }
+    html, body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Barlow Condensed', sans-serif;
+      min-height: 100vh;
+    }
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 9999;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      opacity: 0.09; mix-blend-mode: screen;
+    }
+
+    /* ─── NAVBAR ─────────────────────────────── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px var(--pad);
+      background: rgba(5,5,5,0.97);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 17px; letter-spacing: 5px; color: var(--white);
+    }
+    .nav-links { display: flex; gap: 10px; align-items: center; }
+    .nav-btn {
+      font-family: 'Oswald', sans-serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gray); text-decoration: none;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      transition: color .2s, border-color .2s;
+      cursor: pointer; background: none;
+    }
+    .nav-btn:hover { color: var(--white); border-color: rgba(241,238,232,0.35); }
+
+    /* ─── PAGE ───────────────────────────────── */
+    .page { padding-top: 50px; width: 100%; }
+
+    hr.div {
+      border: none;
+      border-top: 1px solid var(--border);
+      opacity: .6;
+    }
+
+    /* ─── HEADER BLOCK ───────────────────────── */
+    .label-top {
+      font-family: 'Dancing Script', cursive;
+      font-size: clamp(1.1rem, 3vw, 2rem);
+      color: var(--gray);
+      text-align: center;
+      padding: 18px var(--pad) 6px;
+    }
+    .title-block {
+      text-align: center;
+      padding: 2px var(--pad) 10px;
+      overflow: hidden;
+    }
+    .title-main {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(3.5rem, 14vw, 14rem);
+      letter-spacing: 0.06em;
+      color: var(--white);
+      line-height: 0.86;
+      display: block;
+      white-space: nowrap;
+    }
+
+    /* ─── GRID ───────────────────────────────── */
+    .amenities-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-left: 1px solid var(--border);
+    }
+    @media (max-width: 700px) {
+      .amenities-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 420px) {
+      .amenities-grid { grid-template-columns: 1fr; }
+    }
+
+    .amenity-card {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 28px var(--pad);
+      display: flex; flex-direction: column; gap: 10px;
+      transition: background 0.2s;
+    }
+    .amenity-card:hover { background: rgba(241,238,232,0.03); }
+
+    .amenity-icon {
+      width: 36px; height: 36px;
+      stroke: var(--gray-dk);
+      fill: none;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .amenity-name {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(1.4rem, 4vw, 2.4rem);
+      letter-spacing: 0.06em;
+      color: var(--white);
+      line-height: 1;
+    }
+    .amenity-desc {
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.6rem, 1.8vw, 0.8rem);
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gray-dk);
+      line-height: 1.5;
+    }
+
+    /* ─── FOOTER NOTE ────────────────────────── */
+    .footer-note {
+      text-align: center;
+      padding: 24px var(--pad) 40px;
+      font-family: 'Oswald', sans-serif;
+      font-size: clamp(0.58rem, 1.6vw, 0.72rem);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--gray-dk);
+    }
+  </style>
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">◆ PARTY HOUSE</div>
-    <nav>
-      <a href="./evento.html">Mi evento</a>
-      <a href="./ticket.html">Mi ticket</a>
-      <a href="./index.html">Inicio</a>
-    </nav>
-  </header>
-
-  <section class="hero" style="min-height:auto; padding-top:140px;">
-    <h1>Amenidades</h1>
-    <p class="tagline">No todas las fiestas se viven igual.</p>
-  </section>
-
-  <section class="section">
-    <div class="grid" id="amenitiesGrid">
-      <div class="amenity"><h3>Cargando...</h3><p></p></div>
-    </div>
-  </section>
-
-  <footer><div>© Party House</div></footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./js/config.js"></script>
   <script src="./js/app.js"></script>
-  <script>
-    async function load() {
-      const session = window.ph.getSession();
-      const eventId = session?.event?.id;
-      const grid = document.getElementById('amenitiesGrid');
 
-      if (!eventId) {
-        grid.innerHTML = '<p style="color:var(--color-text-dim); text-align:center;">Ingresá con tu código para ver las amenidades.</p>';
-        return;
-      }
+  <header class="navbar">
+    <div class="nav-logo">◆ PARTY HOUSE</div>
+    <div class="nav-links">
+      <a class="nav-btn" href="./event-landing.html">Mi invitación</a>
+      <a class="nav-btn" href="./ticket.html">Mi ticket</a>
+    </div>
+  </header>
 
-      const { data, error } = await window.ph.supabase.rpc('rpc_get_amenities', { p_event_id: eventId });
-      if (error) { grid.innerHTML = '<p style="color:#ff7a9c;">No se pudieron cargar las amenidades.</p>'; return; }
+  <div class="page">
 
-      const items = Array.isArray(data) ? data : [];
-      if (!items.length) {
-        grid.innerHTML = '<p style="color:var(--color-text-dim); text-align:center;">Pronto publicaremos las amenidades del evento.</p>';
-        return;
-      }
-      grid.innerHTML = items.map(a => `
-        <div class="amenity">
-          <h3>${a.title}</h3>
-          <p>${a.description || ''}</p>
-        </div>
-      `).join('');
-    }
-    load();
-  </script>
+    <p class="label-top">No todas las fiestas se viven igual</p>
+
+    <hr class="div">
+
+    <div class="title-block">
+      <span class="title-main">AMENIDADES</span>
+    </div>
+
+    <hr class="div">
+
+    <div class="amenities-grid">
+
+      <!-- Billar -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <circle cx="8"  cy="28" r="4"/>
+          <circle cx="18" cy="28" r="4"/>
+          <circle cx="28" cy="28" r="4"/>
+          <circle cx="13" cy="20" r="4"/>
+          <circle cx="23" cy="20" r="4"/>
+          <circle cx="18" cy="12" r="4"/>
+          <line x1="32" y1="4" x2="6" y2="30"/>
+        </svg>
+        <div class="amenity-name">Billar</div>
+        <div class="amenity-desc">Mesa profesional disponible toda la noche</div>
+      </div>
+
+      <!-- Beer Pong -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <path d="M6 8 L10 30 L26 30 L30 8 Z"/>
+          <line x1="6" y1="8" x2="30" y2="8"/>
+          <circle cx="13" cy="16" r="2.5" fill="var(--gray-dk)" stroke="none"/>
+          <circle cx="23" cy="16" r="2.5" fill="var(--gray-dk)" stroke="none"/>
+          <circle cx="18" cy="22" r="2.5" fill="var(--gray-dk)" stroke="none"/>
+        </svg>
+        <div class="amenity-name">Beer Pong</div>
+        <div class="amenity-desc">Mesa y set completo incluidos</div>
+      </div>
+
+      <!-- DJ en vivo -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <circle cx="12" cy="20" r="8"/>
+          <circle cx="12" cy="20" r="3"/>
+          <circle cx="24" cy="20" r="8"/>
+          <circle cx="24" cy="20" r="3"/>
+          <path d="M8 12 Q18 6 28 12" />
+          <line x1="18" y1="6" x2="18" y2="2"/>
+          <circle cx="18" cy="2" r="1.5" fill="var(--gray-dk)" stroke="none"/>
+        </svg>
+        <div class="amenity-name">DJ en vivo</div>
+        <div class="amenity-desc">Set continuo · música electrónica y house</div>
+      </div>
+
+      <!-- Venta de comida -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <rect x="4" y="16" width="28" height="4" rx="2"/>
+          <path d="M8 16 Q8 8 18 8 Q28 8 28 16"/>
+          <rect x="6" y="20" width="24" height="3" rx="1"/>
+          <line x1="9"  y1="23" x2="9"  y2="30"/>
+          <line x1="27" y1="23" x2="27" y2="30"/>
+          <line x1="7"  y1="30" x2="29" y2="30"/>
+        </svg>
+        <div class="amenity-name">Venta de comida</div>
+        <div class="amenity-desc">Opciones disponibles durante el evento</div>
+      </div>
+
+      <!-- Barra de bebidas -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <path d="M10 6 L14 20 L22 20 L26 6 Z"/>
+          <line x1="8" y1="6" x2="28" y2="6"/>
+          <line x1="14" y1="20" x2="14" y2="30"/>
+          <line x1="22" y1="20" x2="22" y2="30"/>
+          <line x1="10" y1="30" x2="26" y2="30"/>
+          <circle cx="26" cy="10" r="5"/>
+          <line x1="24" y1="10" x2="28" y2="10"/>
+          <line x1="26" y1="8"  x2="26" y2="12"/>
+        </svg>
+        <div class="amenity-name">Barra de bebidas</div>
+        <div class="amenity-desc">Cocteles · cervezas · sin alcohol</div>
+      </div>
+
+      <!-- Área lounge -->
+      <div class="amenity-card">
+        <svg class="amenity-icon" viewBox="0 0 36 36">
+          <path d="M4 22 L4 18 Q4 14 8 14 L8 22"/>
+          <path d="M32 22 L32 18 Q32 14 28 14 L28 22"/>
+          <rect x="8" y="20" width="20" height="6" rx="2"/>
+          <rect x="6" y="26" width="24" height="3" rx="1"/>
+          <rect x="10" y="14" width="16" height="6" rx="2"/>
+        </svg>
+        <div class="amenity-name">Área lounge</div>
+        <div class="amenity-desc">Sofás y zona de descanso · ambiente exclusivo</div>
+      </div>
+
+    </div>
+
+    <hr class="div">
+
+    <p class="footer-note">Party House · First Edition · 16.05.2026</p>
+
+  </div>
+
 </body>
 </html>
