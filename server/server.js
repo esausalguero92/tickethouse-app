@@ -303,8 +303,103 @@ async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestNa
   }
 }
 
+// ---------- Generador de PDF del boleto (reutilizable) ----------
+// Devuelve un Buffer con el PDF completo. Se usa tanto en el endpoint de descarga
+// como al adjuntar el boleto en el email de confirmación.
+async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, eventVenue, guestName }) {
+  const qrPng = await QRCode.toBuffer(qrToken, {
+    width: 480, margin: 2, color: { dark: '#000000', light: '#FFFFFF' }
+  });
+
+  const eventDateStr = eventDate
+    ? new Date(eventDate).toLocaleString('es', { dateStyle: 'full', timeStyle: 'short' })
+    : '';
+
+  const W = 400, H = 720;
+  const doc = new PDFDocument({ size: [W, H], margin: 0, info: {
+    Title: `Entrada Party House — ${code}`,
+    Author: 'Party House'
+  }});
+
+  const chunks = [];
+  doc.on('data', c => chunks.push(c));
+
+  return new Promise((resolve, reject) => {
+    doc.on('end',   () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    // Fondo negro
+    doc.rect(0, 0, W, H).fill('#000000');
+
+    // "See you inside"
+    doc.font('Helvetica-BoldOblique').fontSize(26).fillColor('#ffffff')
+       .text('See you inside', 0, 22, { align: 'center', width: W });
+
+    // Separador superior
+    doc.rect(30, 62, W - 60, 1).fill('#333333');
+
+    // Fecha
+    let infoY = 74;
+    if (eventDateStr) {
+      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
+         .text(eventDateStr, 0, infoY, { align: 'center', width: W });
+      infoY += 16;
+    }
+
+    // Venue
+    if (eventVenue) {
+      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
+         .text(eventVenue, 0, infoY, { align: 'center', width: W });
+      infoY += 16;
+    }
+
+    // Invitado
+    if (guestName) {
+      doc.font('Helvetica').fontSize(11).fillColor('#c8c0e0')
+         .text(`Invitado: ${guestName}`, 0, infoY + 4, { align: 'center', width: W });
+      infoY += 22;
+    }
+
+    // Separador
+    doc.rect(30, infoY + 8, W - 60, 1).fill('#333333');
+
+    // Código de acceso
+    doc.font('Helvetica').fontSize(8).fillColor('#9f98b3')
+       .text('CÓDIGO DE ACCESO', 0, infoY + 18, { align: 'center', width: W, characterSpacing: 2 });
+    doc.font('Helvetica-Bold').fontSize(40).fillColor('#00f0ff')
+       .text(code, 0, infoY + 32, { align: 'center', width: W });
+
+    // QR centrado
+    const qrSize = 240;
+    const qrX = (W - qrSize) / 2;
+    const qrY = infoY + 88;
+    doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
+
+    // Instrucción bajo el QR
+    doc.font('Helvetica').fontSize(9).fillColor('#9f98b3')
+       .text('Presenta este QR en la entrada', 0, qrY + qrSize + 10, { align: 'center', width: W });
+
+    // Ubicación
+    const locY = qrY + qrSize + 30;
+    doc.rect(30, locY, W - 60, 1).fill('#222222');
+    doc.font('Helvetica').fontSize(8).fillColor('#6e6b65')
+       .text('UBICACIÓN', 0, locY + 10, { align: 'center', width: W, characterSpacing: 2 });
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#9f98b3')
+       .text('Z11, Ciudad de Guatemala', 0, locY + 22, { align: 'center', width: W });
+    doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
+       .text('maps.google.com/?q=14.592153,-90.567311', 0, locY + 36, { align: 'center', width: W });
+
+    // Banda inferior
+    doc.rect(0, H - 28, W, 28).fill('#111111');
+    doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
+       .text('(c) Party House - Entrada personal e intransferible', 0, H - 18, { align: 'center', width: W });
+
+    doc.end();
+  });
+}
+
 // ---------- Email helper (SMTP / nodemailer) ----------
-async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken }) {
+async function sendTicketEmail({ toEmail, guestName, eventName, eventDate, eventVenue, code, qrToken }) {
   if (!mailTransport) {
     console.warn('[mail] sendTicketEmail omitido — mailTransport es null (revisar SMTP_HOST/SMTP_USER/SMTP_PASS)');
     return { skipped: true };
@@ -314,8 +409,10 @@ async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken })
     return { skipped: true, reason: 'no_email' };
   }
   console.log(`[mail] enviando ticket a ${toEmail} (code=${code})`);
-  // QR estándar blanco/negro — máxima compatibilidad con lectores
+  // QR PNG para mostrar en el cuerpo del email (si el cliente soporta imágenes inline en texto)
   const png = await QRCode.toBuffer(qrToken, { width: 512, margin: 2 });
+  // PDF boleto — igual al descargable desde la web, con ubicación incluida
+  const pdfBuffer = await generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, eventVenue, guestName });
   const ticketUrl = `${PUBLIC_BASE_URL}/ticket.html?code=${encodeURIComponent(code)}`;
 
   const html = `<!DOCTYPE html>
@@ -422,7 +519,8 @@ async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken })
     html,
     text,
     attachments: [
-      { filename: `party-house-${code}.png`, content: png, contentType: 'image/png' }
+      { filename: `boleto-party-house-${code}.pdf`, content: pdfBuffer, contentType: 'application/pdf' },
+      { filename: `qr-party-house-${code}.png`,     content: png,       contentType: 'image/png' }
     ]
   });
   return { id: info.messageId };
@@ -537,6 +635,8 @@ app.post('/api/paypal/capture-order', async (req, res) => {
         toEmail: guestEmail,
         guestName: guestName || 'Invitado/a',
         eventName: ctx.event.name || 'Party House',
+        eventDate: ctx.event.event_date || null,
+        eventVenue: ctx.event.venue || '',
         code: ctx.code,
         qrToken
       })
@@ -769,6 +869,8 @@ app.post('/api/admin/transfers/:id/confirm', requireAdmin, async (req, res) => {
           toEmail: guestEmail,
           guestName: guestName || 'Invitado/a',
           eventName: extras?.event?.name || 'Party House',
+          eventDate: extras?.event?.event_date || null,
+          eventVenue: extras?.event?.venue || '',
           code: extras?.code || '',
           qrToken
         });
@@ -859,89 +961,19 @@ app.get('/api/qr/:code/download', async (req, res) => {
     const token = data.ticket?.qr_token;
     if (!token) return res.status(404).send('sin_qr_token');
 
-    // Generar QR como buffer PNG para embeber en el PDF
-    const qrPng = await QRCode.toBuffer(token, { width: 480, margin: 2,
-      color: { dark: '#000000', light: '#FFFFFF' } });
-
-    // Datos del evento / invitado para el boleto
     const eventName  = data.event?.name  || 'Party House';
-    const eventDate  = data.event?.event_date
-      ? new Date(data.event.event_date).toLocaleString('es', { dateStyle: 'full', timeStyle: 'short' })
-      : '';
     const eventVenue = data.event?.venue || '';
     const guestName  = `${data.guest?.first_name || ''} ${data.guest?.last_name || ''}`.trim();
 
-    // PDF vertical tipo boleto — 400 × 660 pt
-    const W = 400;
-    const H = 660;
-    const doc = new PDFDocument({ size: [W, H], margin: 0, info: {
-      Title: `Entrada Party House — ${code}`,
-      Author: 'Party House'
-    }});
+    // Generar PDF usando la función compartida (incluye ubicación)
+    const pdfBuffer = await generateTicketPdfBuffer({
+      code, qrToken: token,
+      eventName, eventDate: data.event?.event_date, eventVenue, guestName
+    });
 
     res.set('Content-Type', 'application/pdf');
     res.set('Content-Disposition', `attachment; filename="party-house-${code}.pdf"`);
-    doc.pipe(res);
-
-    // --- Fondo negro ---
-    doc.rect(0, 0, W, H).fill('#000000');
-
-    // --- "See you inside" — parte superior, letras blancas ---
-    doc.font('Helvetica-BoldOblique').fontSize(26).fillColor('#ffffff')
-       .text('See you inside', 0, 22, { align: 'center', width: W });
-
-    // --- Línea separadora bajo el título ---
-    doc.rect(30, 62, W - 60, 1).fill('#333333');
-
-    // --- Fecha ---
-    let infoY = 74;
-    if (eventDate) {
-      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
-         .text(eventDate, 0, infoY, { align: 'center', width: W });
-      infoY += 16;
-    }
-
-    // --- Venue ---
-    if (eventVenue) {
-      doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
-         .text(eventVenue, 0, infoY, { align: 'center', width: W });
-      infoY += 16;
-    }
-
-    // --- Invitado ---
-    if (guestName) {
-      doc.font('Helvetica').fontSize(11).fillColor('#c8c0e0')
-         .text(`Invitado: ${guestName}`, 0, infoY + 4, { align: 'center', width: W });
-      infoY += 22;
-    }
-
-    // --- Separador ---
-    doc.rect(30, infoY + 8, W - 60, 1).fill('#333333');
-
-    // --- Etiqueta CÓDIGO ---
-    doc.font('Helvetica').fontSize(8).fillColor('#9f98b3')
-       .text('CÓDIGO DE ACCESO', 0, infoY + 18, { align: 'center', width: W, characterSpacing: 2 });
-
-    // --- Código grande en cyan ---
-    doc.font('Helvetica-Bold').fontSize(40).fillColor('#00f0ff')
-       .text(code, 0, infoY + 32, { align: 'center', width: W });
-
-    // --- QR centrado ---
-    const qrSize = 260;
-    const qrX = (W - qrSize) / 2;
-    const qrY = infoY + 90;
-    doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
-
-    // --- Instrucción bajo el QR ---
-    doc.font('Helvetica').fontSize(9).fillColor('#9f98b3')
-       .text('Presenta este QR en la entrada', 0, qrY + qrSize + 10, { align: 'center', width: W });
-
-    // --- Banda inferior y pie ---
-    doc.rect(0, H - 28, W, 28).fill('#111111');
-    doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
-       .text('(c) Party House - Entrada personal e intransferible', 0, H - 18, { align: 'center', width: W });
-
-    doc.end();
+    res.end(pdfBuffer);
   } catch (e) {
     console.error('[qr.download]', e);
     if (!res.headersSent) return res.status(500).send(String(e.message || e));
