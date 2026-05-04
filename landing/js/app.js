@@ -174,7 +174,11 @@
     cfg,
     mock: mockActive,
     formatMoney: (v) => "USD " + Number(v || 0).toFixed(2),
-    formatDate: (iso) => new Date(iso).toLocaleString("es"),
+    formatDate: (iso) => new Date(iso).toLocaleString("es-GT", {
+      timeZone: "America/Guatemala",
+      day: "numeric", month: "numeric", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    }),
     getSession: () => { try { return JSON.parse(sessionStorage.getItem("ph_session") || "null"); } catch { return null; } },
     setSession: (s) => sessionStorage.setItem("ph_session", JSON.stringify(s)),
     clearSession: () => { const keep = sessionStorage.getItem("ph_mock"); sessionStorage.clear(); if (keep) sessionStorage.setItem("ph_mock", keep); },

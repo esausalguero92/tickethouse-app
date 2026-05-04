@@ -381,8 +381,8 @@
     </div>
 
     <div class="cta-section">
-      <a class="cta-btn" href="./evento.html">Confirmar mi entrada</a>
-      <p class="cta-sub">Pago seguro · Q50 preventa</p>
+      <a class="cta-btn" id="ctaBtn" href="./evento.html">Confirmar mi entrada</a>
+      <p class="cta-sub" id="ctaSub">Pago seguro · Q50 preventa</p>
     </div>
 
   </div><!-- /page -->
@@ -392,7 +392,30 @@
       window.ph.clearSession();
       window.location.href = './index.html';
     });
+
+    // Adaptar CTA según estado del invitado
+    (function() {
+      const s = window.ph && window.ph.getSession();
+      if (!s) return;
+      const btn = document.getElementById('ctaBtn');
+      const sub = document.getElementById('ctaSub');
+      const priceRow = document.querySelector('.price-row');
+
+      if (s.already_paid) {
+        btn.textContent = 'Ver mi entrada';
+        btn.href = './ticket.html';
+        sub.textContent = 'Tu entrada ya está confirmada';
+        if (priceRow) priceRow.style.display = 'none';
+      } else if (s.awaiting_review) {
+        btn.textContent = 'Entrada en revisión';
+        btn.href = './ticket.html';
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+        sub.textContent = 'El admin está revisando tu comprobante';
+        if (priceRow) priceRow.style.display = 'none';
+      }
+      // else: invitado normal sin pagar → CTA por defecto
+    })();
   </script>
 </body>
 </html>
-                                                                          

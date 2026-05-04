@@ -160,15 +160,6 @@
         <button type="submit" class="btn-enter">ENTRAR</button>
       </form>
 
-      <a class="btn-loc"
-         href="https://maps.google.com/?q=14.592153,-90.567311"
-         target="_blank" rel="noopener noreferrer">
-        <svg width="11" height="13" viewBox="0 0 11 13" fill="currentColor">
-          <path d="M5.5 0C3.01 0 1 2.01 1 4.5 1 7.88 5.5 13 5.5 13S10 7.88 10 4.5C10 2.01 7.99 0 5.5 0z"/>
-          <circle cx="5.5" cy="4.5" r="1.6" fill="#050505"/>
-        </svg>
-        Ver ubicación · Z11 Guatemala
-      </a>
     </div>
 
     <div class="house-spacer"></div>
@@ -232,13 +223,9 @@
         }
 
         window.ph.setSession(data);
-
-        if (data.already_paid) {
-          window.location.href = './ticket.html';
-        } else {
-          // Mostrar la página del evento antes del pago
-          window.location.href = './event-landing.html';
-        }
+        // Todos pasan por event-landing.html primero.
+        // Esa página decide si mostrar el CTA de pago o de ticket según already_paid.
+        window.location.href = './event-landing.html';
       } catch (err) {
         console.error(err);
         showError('Error de conexión. Intentá de nuevo.');
