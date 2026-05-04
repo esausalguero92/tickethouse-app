@@ -43,22 +43,22 @@
           <label for="guestEmail">Correo electrónico <span style="color:#ff3cf0;">*</span></label>
           <input type="email" id="guestEmail" placeholder="tu@correo.com" required
             style="width:100%; box-sizing:border-box;" />
-          <small style="color:var(--color-text-dim);">Te enviaremos tu QR a este correo cuando se confirme tu pago.</small>
+          <small style="color:var(--color-text-dim);">Te enviaremos tu QR a este correo. <strong style="color:#ff3cf0;">Obligatorio para recibir tu entrada.</strong></small>
         </div>
 
         <div class="pay-options">
-          <div class="pay-option active" data-method="paypal">
+          <div class="pay-option" data-method="paypal">
             <strong>PayPal</strong>
             <small>Tarjeta o cuenta PayPal</small>
           </div>
-          <div class="pay-option" data-method="transfer">
+          <div class="pay-option active" data-method="transfer">
             <strong>Transferencia</strong>
             <small>Validación manual</small>
           </div>
         </div>
 
         <!-- Panel PayPal -->
-        <div class="pay-panel active" id="panel-paypal">
+        <div class="pay-panel" id="panel-paypal">
           <p style="color:var(--color-text-dim); margin-bottom:16px; font-size:0.9rem;">
             Pago seguro procesado por PayPal. Acepta tarjetas de crédito/débito.
           </p>
@@ -69,7 +69,7 @@
         </div>
 
         <!-- Panel Transferencia -->
-        <div class="pay-panel" id="panel-transfer">
+        <div class="pay-panel active" id="panel-transfer">
           <p style="color:var(--color-text-dim); margin-bottom:16px; font-size:0.9rem;">
             Realizá la transferencia a la cuenta de abajo y subí la <strong>captura del comprobante</strong>.
             El administrador la revisa y te mandamos el QR por email apenas se confirme.
