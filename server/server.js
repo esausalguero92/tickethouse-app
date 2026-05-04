@@ -25,6 +25,7 @@ const PDFDocument = require('pdfkit');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
+const ws = require('ws');
 
 // ---------- Config ----------
 const PORT = process.env.PORT || 3000;
@@ -90,7 +91,10 @@ if (!N8N_WEBHOOK_SECRET) {
 }
 
 const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+      realtime: { transport: ws }
+    })
   : null;
 
 // Transporter SMTP (reutilizable; pool de conexiones para no re-auth cada vez).
