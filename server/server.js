@@ -1047,51 +1047,19 @@ app.post('/api/n8n/complimentary-ticket', async (req, res) => {
 // Devuelve un JWT con role='staff' que usa el validador para escanear QRs.
 app.post('/api/staff/login', async (req, res) => {
   try {
-    if (!supabase) return res.status(503).json({ error: 'supabase_not_configured' });
     const user = String(req.body.user || '').trim();
     const pin  = String(req.body.pin  || '').trim();
-    if (!user || !pin) return res.status(400).json({ error: 'user_and_pin_required' });
-
-    // Buscar por email, telegram_id o full_name
-    const { data: rows } = await supabase
-      .from('app_users')
-      .select('id, full_name, email, role, pin, telegram_id')
-      .or(`email.eq.${user},full_name.ilike.${user},telegram_id.eq.${Number(user) || 0}`)
-      .in('role', ['staff', 'admin', 'master_owner']);
-
-    const appUser = rows && rows.find(u =>
-      u.email === user ||
-      (u.full_name || '').toLowerCase() === user.toLowerCase() ||
-      String(u.telegram_id) === user
-    );
-
-    if (!appUser) return res.status(401).json({ error: 'credenciales_invalidas' });
-
-    // Staff: PIN plano o bcrypt; Admin/owner: bcrypt o STAFF_PIN global
-    let pinOk = false;
-    if (appUser.role === 'staff') {
-      pinOk = appUser.pin === pin || await bcrypt.compare(pin, appUser.pin || '').catch(() => false);
-    } else {
-      pinOk = await bcrypt.compare(pin, appUser.pin || '').catch(() => false) || pin === STAFF_PIN;
+    if (!pin) return res.status(400).json({ error: 'pin_required' });
+    if (pin !== STAFF_PIN) return res.status(401).json({ error: 'credenciales_invalidas' });
+    let event = null;
+    if (supabase) {
+      const { data } = await supabase.from('events').select('id, name, event_date')
+        .gte('event_date', new Date(Date.now() - 24*60*60*1000).toISOString())
+        .order('event_date', { ascending: true }).limit(1).maybeSingle();
+      event = data;
     }
-    if (!pinOk) return res.status(401).json({ error: 'credenciales_invalidas' });
-
-    // Obtener evento activo más próximo
-    const { data: event } = await supabase
-      .from('events')
-      .select('id, name, event_date')
-      .gte('event_date', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .order('event_date', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    const token = jwt.sign(
-      { sid: appUser.id, role: 'staff', name: appUser.full_name },
-      JWT_SECRET,
-      { expiresIn: '12h' }
-    );
-
-    return res.json({ ok: true, token, name: appUser.full_name, event: event || null });
+    const token = jwt.sign({ sid: user || 'staff', role: 'staff', name: user || 'Staff' }, JWT_SECRET, { expiresIn: '12h' });
+    return res.json({ ok: true, token, name: user || 'Staff', event: event || null });
   } catch (e) {
     console.error('[staff.login]', e);
     return res.status(500).json({ error: String(e.message || e) });
