@@ -625,7 +625,8 @@ app.post('/api/transfer/submit', (req, res, next) => {
       p_code: ctx.code,
       p_amount_usd: Number(ctx.event.price_usd),
       p_reference: reference || null,
-      p_receipt_url: receiptUrl
+      p_receipt_url: receiptUrl,
+      p_guest_email: email || null   // guardar email directo en la orden
     });
     if (error || (data && data.error)) {
       console.error('[rpc_create_transfer_order]', error, data);
@@ -733,7 +734,7 @@ app.post('/api/admin/transfers/:id/confirm', requireAdmin, async (req, res) => {
       })
       .eq('id', orderId)
       .eq('payment_status', 'awaiting_review')
-      .select('id, event_id, guest_id, code_id')
+      .select('id, event_id, guest_id, code_id, guest_email')
       .maybeSingle();
     if (upErr || !order) {
       return res.status(404).json({ error: 'order_not_found_or_not_pending' });
@@ -755,9 +756,12 @@ app.post('/api/admin/transfers/:id/confirm', requireAdmin, async (req, res) => {
       eventDate: extras?.event?.event_date
     });
 
-    // 4) Mandar email con el QR (non-blocking)
-    const guestEmail = extras?.guest?.email;
+    // 4) Mandar email con el QR
+    // Fuente preferida: guest_email guardado en la orden al momento del submit.
+    // Fallback: guests.email (por compatibilidad con órdenes antiguas).
+    const guestEmail = order.guest_email || extras?.guest?.email || null;
     const guestName = `${extras?.guest?.first_name || ''} ${extras?.guest?.last_name || ''}`.trim();
+    console.log(`[email.confirm] orderId=${orderId} guestEmail=${guestEmail} mailTransport=${!!mailTransport}`);
     let emailStatus = 'skipped';
     if (guestEmail && mailTransport) {
       try {
