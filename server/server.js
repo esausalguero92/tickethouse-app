@@ -97,18 +97,19 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
     })
   : null;
 
-// Transporter SMTP (reutilizable; pool de conexiones para no re-auth cada vez).
+// Transporter SMTP — sin pool para máxima compatibilidad con Hostinger.
+// Pool reutiliza conexiones que el servidor cierra y falla silenciosamente.
 const mailTransport = (SMTP_HOST && SMTP_USER && SMTP_PASS)
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_SECURE, // true=puerto 465 (SSL), false=puerto 587 (STARTTLS)
       auth: { user: SMTP_USER, pass: SMTP_PASS },
-      pool: true,
-      maxConnections: 3,
-      maxMessages: 50,
-      // Aceptar certificados self-signed/shared-hosting (muchos hostings los usan)
-      tls: { rejectUnauthorized: false }
+      // NO pool — conexión fresca por cada email (más confiable con hosting compartido)
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     })
   : null;
 
@@ -304,8 +305,15 @@ async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestNa
 
 // ---------- Email helper (SMTP / nodemailer) ----------
 async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken }) {
-  if (!mailTransport) return { skipped: true };
-  if (!toEmail) return { skipped: true, reason: 'no_email' };
+  if (!mailTransport) {
+    console.warn('[mail] sendTicketEmail omitido — mailTransport es null (revisar SMTP_HOST/SMTP_USER/SMTP_PASS)');
+    return { skipped: true };
+  }
+  if (!toEmail) {
+    console.warn('[mail] sendTicketEmail omitido — toEmail vacío');
+    return { skipped: true, reason: 'no_email' };
+  }
+  console.log(`[mail] enviando ticket a ${toEmail} (code=${code})`);
   // QR estándar blanco/negro — máxima compatibilidad con lectores
   const png = await QRCode.toBuffer(qrToken, { width: 512, margin: 2 });
   const ticketUrl = `${PUBLIC_BASE_URL}/ticket.html?code=${encodeURIComponent(code)}`;
@@ -771,6 +779,31 @@ app.post('/api/admin/transfers/:id/confirm', requireAdmin, async (req, res) => {
   } catch (e) {
     console.error('[admin.confirm]', e);
     return res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+// ─── Test de email (solo admin) ──────────────────────────────────────────────
+// POST /api/admin/test-email  body: { to: "correo@ejemplo.com" }
+// Envía un email de prueba para verificar que SMTP funciona correctamente.
+app.post('/api/admin/test-email', requireAdmin, async (req, res) => {
+  if (!mailTransport) {
+    return res.status(503).json({ ok: false, error: 'SMTP no configurado (SMTP_HOST/SMTP_USER/SMTP_PASS vacíos)' });
+  }
+  const to = String(req.body.to || '').trim();
+  if (!to) return res.status(400).json({ ok: false, error: 'Campo "to" requerido' });
+  try {
+    const info = await mailTransport.sendMail({
+      from: MAIL_FROM,
+      to,
+      subject: '✅ Party House — Test de email',
+      text: `Este es un correo de prueba enviado desde Party House server.\nSMTP: ${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}\nFecha: ${new Date().toISOString()}`,
+      html: `<p style="font-family:sans-serif;">✅ <strong>Party House — Test de email</strong><br/>SMTP: ${SMTP_HOST}:${SMTP_PORT} secure=${SMTP_SECURE}<br/>Fecha: ${new Date().toISOString()}</p>`
+    });
+    console.log(`[mail.test] enviado a ${to} — id: ${info.messageId}`);
+    return res.json({ ok: true, messageId: info.messageId });
+  } catch (e) {
+    console.error('[mail.test] falló:', e.message || e);
+    return res.status(500).json({ ok: false, error: e.message || String(e) });
   }
 });
 
