@@ -16,7 +16,7 @@
         "conditions": {
           "boolean": [
             {
-              "value1": "={{ ['7360106479'].includes(String($json.message.from.id)) }}",
+              "value1": "={{ ['8232396943','6360831708','7360106479'].includes(String($json.message.from.id)) }}",
               "value2": true
             }
           ]
@@ -26,7 +26,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [420, 400],
-      "notes": "Para sumar admins, editá el array: ['7360106479', 'OTRO_ID', ...]"
+      "notes": "Admins autorizados: 8232396943, 6360831708, 7360106479. Para agregar más, añadí el ID al array."
     },
     {
       "parameters": {
