@@ -306,35 +306,113 @@ async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestNa
 async function sendTicketEmail({ toEmail, guestName, eventName, code, qrToken }) {
   if (!mailTransport) return { skipped: true };
   if (!toEmail) return { skipped: true, reason: 'no_email' };
+  // QR estándar blanco/negro — máxima compatibilidad con lectores
   const png = await QRCode.toBuffer(qrToken, { width: 512, margin: 2 });
   const ticketUrl = `${PUBLIC_BASE_URL}/ticket.html?code=${encodeURIComponent(code)}`;
-  const html = `
-    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;padding:24px;background:#0b0815;color:#f5f3fa;">
-      <h1 style="color:#ff3cf0;margin:0 0 8px 0;">Party House</h1>
-      <p style="color:#9f98b3;margin:0 0 24px 0;">Tu entrada está lista.</p>
-      <p>Hola ${guestName},</p>
-      <p>Se confirmó tu transferencia para <strong>${eventName}</strong>. Tu código de acceso es <strong>${code}</strong>.</p>
-      <p>En el archivo adjunto está el QR que vas a mostrar en la puerta. Si lo preferís, también podés descargarlo desde la web:</p>
-      <p><a href="${ticketUrl}" style="display:inline-block;background:linear-gradient(90deg,#ff3cf0,#00f0ff);color:#0b0815;font-weight:700;text-decoration:none;padding:12px 20px;border-radius:8px;">Ver y descargar mi QR</a></p>
-      <p style="color:#9f98b3;font-size:12px;margin-top:24px;">Si no reconocés esta compra, ignorá este email.</p>
-    </div>
-  `;
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background:#0a0908;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0908;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#050505;border:1px solid #2a2622;">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="padding:28px 32px 20px;border-bottom:1px solid #2a2622;">
+            <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:11px;letter-spacing:5px;text-transform:uppercase;color:#6e6b65;">◆ PARTY HOUSE</p>
+            <h1 style="margin:10px 0 0;font-family:'Bebas Neue',Impact,Arial,sans-serif;font-size:48px;letter-spacing:4px;color:#F1EEE8;line-height:1;">TU ENTRADA<br>EST&Aacute; LISTA</h1>
+          </td>
+        </tr>
+
+        <!-- GREETING -->
+        <tr>
+          <td style="padding:24px 32px 0;">
+            <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#6e6b65;">Hola,</p>
+            <p style="margin:4px 0 0;font-family:'Bebas Neue',Impact,Arial,sans-serif;font-size:32px;letter-spacing:3px;color:#F1EEE8;">${guestName}</p>
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr><td style="padding:20px 32px 0;"><hr style="border:none;border-top:1px solid #2a2622;margin:0;"/></td></tr>
+
+        <!-- EVENT INFO -->
+        <tr>
+          <td style="padding:20px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="width:50%;vertical-align:top;">
+                  <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#6e6b65;">Evento</p>
+                  <p style="margin:4px 0 0;font-family:'Bebas Neue',Impact,Arial,sans-serif;font-size:22px;letter-spacing:2px;color:#F1EEE8;">${eventName}</p>
+                </td>
+                <td style="width:1px;background:#2a2622;">&nbsp;</td>
+                <td style="width:50%;vertical-align:top;padding-left:20px;">
+                  <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#6e6b65;">C&oacute;digo de acceso</p>
+                  <p style="margin:4px 0 0;font-family:'Bebas Neue',Impact,Arial,sans-serif;font-size:22px;letter-spacing:4px;color:#F1EEE8;">${code}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr><td style="padding:0 32px;"><hr style="border:none;border-top:1px solid #2a2622;margin:0;"/></td></tr>
+
+        <!-- QR NOTE -->
+        <tr>
+          <td align="center" style="padding:28px 32px;">
+            <p style="margin:0 0 8px;font-family:'Oswald',Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#6e6b65;">Tu QR va adjunto en este email</p>
+            <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:10px;letter-spacing:2px;color:#6e6b65;">Tambi&eacute;n pod&eacute;s verlo y descargarlo desde la web</p>
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr><td style="padding:0 32px;"><hr style="border:none;border-top:1px solid #2a2622;margin:0;"/></td></tr>
+
+        <!-- CTA -->
+        <tr>
+          <td align="center" style="padding:28px 32px;">
+            <a href="${ticketUrl}" style="display:inline-block;background:#F1EEE8;color:#050505;font-family:'Bebas Neue',Impact,Arial,sans-serif;font-size:18px;letter-spacing:4px;text-decoration:none;padding:16px 40px;">VER MI ENTRADA</a>
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr><td style="padding:0 32px;"><hr style="border:none;border-top:1px solid #2a2622;margin:0;"/></td></tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="padding:20px 32px 28px;">
+            <p style="margin:0;font-family:'Oswald',Arial,sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#6e6b65;">&copy; Party House &middot; First Edition &middot; 16.05.2026</p>
+            <p style="margin:6px 0 0;font-family:'Oswald',Arial,sans-serif;font-size:10px;color:#3a3835;">Si no reconoc&eacute;s esta compra, ignor&aacute; este email.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
   const text =
-    `Party House — Tu entrada está lista.\n\n` +
+    `PARTY HOUSE — Tu entrada está lista\n\n` +
     `Hola ${guestName},\n\n` +
-    `Se confirmó tu transferencia para ${eventName}. Tu código de acceso es ${code}.\n\n` +
-    `En el archivo adjunto va el QR. También podés descargarlo desde: ${ticketUrl}\n`;
+    `Tu entrada para ${eventName} está confirmada.\n` +
+    `Código de acceso: ${code}\n\n` +
+    `Ver tu entrada: ${ticketUrl}\n\n` +
+    `El QR va adjunto en este email. Presentalo al staff en la entrada.\n\n` +
+    `© Party House`;
+
   const info = await mailTransport.sendMail({
     from: MAIL_FROM,
     to: toEmail,
-    subject: `Tu entrada confirmada - ${eventName}`,
+    subject: `🎟 Tu entrada para ${eventName}`,
     html,
     text,
-    headers: {
-      'X-Priority': '3',
-      'X-Mailer': 'Party House Tickets',
-      'List-Unsubscribe': `<mailto:info@tickethouse.site?subject=unsubscribe>`
-    },
     attachments: [
       { filename: `party-house-${code}.png`, content: png, contentType: 'image/png' }
     ]
@@ -442,6 +520,23 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       code: ctx.code,
       eventDate: ctx.event.event_date
     });
+
+    // Enviar email con el QR al invitado
+    const guestEmail = email || ctx.guest.email || null;
+    const guestName = `${ctx.guest.first_name || ''} ${ctx.guest.last_name || ''}`.trim();
+    if (guestEmail && mailTransport) {
+      sendTicketEmail({
+        toEmail: guestEmail,
+        guestName: guestName || 'Invitado/a',
+        eventName: ctx.event.name || 'Party House',
+        code: ctx.code,
+        qrToken
+      })
+        .then(r => console.log(`[email.paypal] enviado a ${guestEmail} — id: ${r?.id || 'skipped'}`))
+        .catch(e => console.error('[email.paypal] falló:', e.message || e));
+    } else {
+      console.warn(`[email.paypal] sin email o sin SMTP — guestEmail=${guestEmail} mailTransport=${!!mailTransport}`);
+    }
 
     return res.json({ ok: true, qr_token: qrToken, ticket_url: './ticket.html' });
   } catch (e) {
@@ -834,89 +929,21 @@ app.post('/api/n8n/complimentary-ticket', async (req, res) => {
     const code = String(req.body.code || '').toUpperCase().trim();
     if (!code) return res.status(400).json({ error: 'code_required' });
 
-    // Crear orden gratuita vía RPC
-    const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', {
-      p_code: code
-    });
-    if (rpcErr || (rpcData && rpcData.error)) {
-      console.error('[complimentary]', rpcErr, rpcData);
-      return res.status(500).json({ error: rpcData?.error || 'complimentary_order_failed' });
-    }
-
-    // Cargar contexto para el ticket
-    const ctx = await loadCodeContext(code);
-    if (!ctx) return res.status(400).json({ error: 'code_context_failed' });
-
-    // Emitir ticket JWT
-    const qrToken = await createTicketForOrder({
-      orderId: rpcData.order_id,
-      eventId: rpcData.event_id,
-      guestId: rpcData.guest_id,
-      code,
-      eventDate: ctx.event?.event_date
-    });
-
-    const ticketUrl = `${PUBLIC_BASE_URL}/ticket.html`;
-    console.log(`[complimentary] Ticket emitido para invitado especial: ${code}`);
-    return res.json({ ok: true, qr_token: qrToken, ticket_url: ticketUrl, code });
-  } catch (e) {
-    console.error('[complimentary]', e);
-    return res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-// =====================================================
-// F) STAFF (puerta) — login + validación
-// =====================================================
-
-app.post('/api/staff/login', async (req, res) => {
-  try {
-    const { user, pin } = req.body || {};
-    if (!user || !pin) return res.status(400).json({ error: 'user_pin_required' });
-
-    let authed = false;
-    if (supabase) {
-      const { data } = await supabase
-        .from('app_users')
-        .select('id, pin, active, role, full_name')
-        .eq('role', 'staff')
-        .eq('active', true)
-        .eq('pin', String(pin))
-        .maybeSingle();
-      if (data) authed = true;
-    }
-    // Fallback: PIN compartido por env var (útil en dev)
-    if (!authed && String(pin) === String(STAFF_PIN)) authed = true;
-
-    if (!authed) return res.status(401).json({ error: 'credenciales_invalidas' });
-
-    const token = signJwt({ sid: String(user), role: 'staff' }, { expiresIn: '12h' });
-    return res.json({ token, staff: { id: String(user), role: 'staff' } });
-  } catch (e) {
-    console.error('[staff.login]', e);
-    return res.status(500).json({ error: String(e.message || e) });
-  }
-});
-
-app.post('/api/tickets/validate', requireStaff, async (req, res) => {
-  try {
-    if (!supabase) return res.status(503).json({ error: 'supabase_not_configured' });
-    const qr = String(req.body.qr || '');
-    const payload = verifyJwt(qr);
+    const payload = verifyJwt(code);
 
     if (!payload) {
-      await supabase.from('validation_log').insert({ qr_scanned: qr, result: 'invalid' });
+      await supabase.from('validation_log').insert({ qr_scanned: code, result: 'invalid' });
       return res.json({ result: 'invalid' });
     }
 
     const { data: ticket } = await supabase
       .from('tickets')
       .select('*, guest:guests(*), event:events(*)')
-      .eq('qr_token', qr)
+      .eq('qr_token', code)
       .maybeSingle();
 
     if (!ticket) {
-      await supabase.from('validation_log').insert({ qr_scanned: qr, result: 'invalid' });
+      await supabase.from('validation_log').insert({ qr_scanned: code, result: 'invalid' });
       return res.json({ result: 'invalid' });
     }
 
@@ -928,7 +955,7 @@ app.post('/api/tickets/validate', requireStaff, async (req, res) => {
       .update({ status: 'redeemed', redeemed_at: new Date().toISOString() })
       .eq('id', ticket.id);
     await supabase.from('validation_log').insert({
-      ticket_id: ticket.id, qr_scanned: qr, result: 'valid'
+      ticket_id: ticket.id, qr_scanned: code, result: 'valid'
     });
     return res.json({ result: 'valid', guest: ticket.guest, event: ticket.event });
   } catch (e) {
@@ -940,7 +967,7 @@ app.post('/api/tickets/validate', requireStaff, async (req, res) => {
 // Health check
 app.get('/api/health', (_, res) => res.json({ ok: true, version: '0.4.0' }));
 
-// Config pública expuesta al frontend (evita hardcodear PayPal client id en js/config.js)
+// Config pública expuesta al frontend
 app.get('/api/public-config', (_req, res) => {
   res.json({
     paypal_client_id: PAYPAL_CLIENT_ID || '',
