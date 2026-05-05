@@ -315,7 +315,7 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
   });
 
   const eventDateStr = eventDate
-    ? new Date(eventDate).toLocaleString('es', { dateStyle: 'full', timeStyle: 'short' })
+    ? new Date(eventDate).toLocaleString('es', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala' })
     : '';
 
   const W = 400, H = 720;
