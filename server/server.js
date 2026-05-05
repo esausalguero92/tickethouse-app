@@ -401,8 +401,8 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
              { width: btnW, align: 'center', link: mapsUrl, underline: false });
 
     // "See you inside" antes del footer
-    doc.font(FONT_DANCING).fontSize(20).fillColor('#9f98b3')
-       .text('See you inside', 0, H - 52, { align: 'center', width: W });
+    doc.font(FONT_DANCING).fontSize(30).fillColor('#9f98b3')
+       .text('See you inside', 0, H - 72, { align: 'center', width: W });
 
     // Banda inferior
     doc.rect(0, H - 28, W, 28).fill('#111111');
