@@ -331,15 +331,17 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
     // Fondo negro
     doc.rect(0, 0, W, H).fill('#000000');
 
-    // "See you inside"
-    doc.font('Helvetica-BoldOblique').fontSize(26).fillColor('#ffffff')
-       .text('See you inside', 0, 22, { align: 'center', width: W });
+    // Header: "PARTY HOUSE" bold + "first edition" script
+    doc.font('Helvetica-Bold').fontSize(38).fillColor('#ffffff')
+       .text('PARTY HOUSE', 0, 18, { align: 'center', width: W, characterSpacing: 3 });
+    doc.font('Helvetica-BoldOblique').fontSize(14).fillColor('#9f98b3')
+       .text('first edition', 0, 62, { align: 'center', width: W });
 
     // Separador superior
-    doc.rect(30, 62, W - 60, 1).fill('#333333');
+    doc.rect(30, 84, W - 60, 1).fill('#333333');
 
     // Fecha
-    let infoY = 74;
+    let infoY = 96;
     if (eventDateStr) {
       doc.font('Helvetica').fontSize(10).fillColor('#9f98b3')
          .text(eventDateStr, 0, infoY, { align: 'center', width: W });
