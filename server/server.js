@@ -400,6 +400,10 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
        .text('ABRIR EN WAZE', btnX, btnY + 8,
              { width: btnW, align: 'center', link: mapsUrl, underline: false });
 
+    // "See you inside" antes del footer
+    doc.font(FONT_DANCING).fontSize(20).fillColor('#9f98b3')
+       .text('See you inside', 0, H - 52, { align: 'center', width: W });
+
     // Banda inferior
     doc.rect(0, H - 28, W, 28).fill('#111111');
     doc.font('Helvetica').fontSize(8).fillColor('#4a4060')
