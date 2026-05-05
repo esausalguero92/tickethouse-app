@@ -1003,7 +1003,7 @@ app.get('/api/qr/:code/download', async (req, res) => {
 
 app.post('/api/n8n/complimentary-ticket', async (req, res) => {
   try {
-    // Verificar secret
+    // Verificar secret compartido con N8N
     const incoming = req.header('x-n8n-secret') || '';
     if (N8N_WEBHOOK_SECRET && incoming !== N8N_WEBHOOK_SECRET) {
       return res.status(401).json({ error: 'unauthorized' });
@@ -1013,37 +1013,62 @@ app.post('/api/n8n/complimentary-ticket', async (req, res) => {
     const code = String(req.body.code || '').toUpperCase().trim();
     if (!code) return res.status(400).json({ error: 'code_required' });
 
-    const payload = verifyJwt(code);
+    // Cargar contexto del código (guest + event)
+    const ctx = await loadCodeContext(code);
+    if (!ctx) return res.status(400).json({ error: 'code_invalid' });
 
-    if (!payload) {
-      await supabase.from('validation_log').insert({ qr_scanned: code, result: 'invalid' });
-      return res.json({ result: 'invalid' });
-    }
-
-    const { data: ticket } = await supabase
-      .from('tickets')
-      .select('*, guest:guests(*), event:events(*)')
-      .eq('qr_token', code)
+    // Verificar si ya tiene un ticket emitido (idempotente)
+    const { data: existing } = await supabase
+      .from('orders')
+      .select('id, payment_status')
+      .eq('code_id', ctx.id)
+      .in('payment_status', ['paid'])
       .maybeSingle();
-
-    if (!ticket) {
-      await supabase.from('validation_log').insert({ qr_scanned: code, result: 'invalid' });
-      return res.json({ result: 'invalid' });
+    if (existing) {
+      console.log(`[complimentary] ${code} ya tiene orden paid — omitiendo`);
+      return res.json({ ok: true, skipped: true, reason: 'already_issued' });
     }
 
-    if (ticket.status === 'redeemed') {
-      return res.json({ result: 'already_used', guest: ticket.guest, event: ticket.event });
-    }
-
-    await supabase.from('tickets')
-      .update({ status: 'redeemed', redeemed_at: new Date().toISOString() })
-      .eq('id', ticket.id);
-    await supabase.from('validation_log').insert({
-      ticket_id: ticket.id, qr_scanned: code, result: 'valid'
+    // Crear orden gratuita en Supabase
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', {
+      p_code: ctx.code
     });
-    return res.json({ result: 'valid', guest: ticket.guest, event: ticket.event });
+    if (rpcErr || !rpcData || rpcData.error) {
+      console.error('[complimentary] rpc_create_complimentary_order error:', rpcErr, rpcData);
+      return res.status(500).json({ error: rpcData?.error || 'db_order_failed' });
+    }
+
+    // Emitir ticket JWT
+    const qrToken = await createTicketForOrder({
+      orderId: rpcData.order_id,
+      eventId: ctx.event_id,
+      guestId: ctx.guest_id,
+      code: ctx.code,
+      eventDate: ctx.event.event_date
+    });
+
+    const guestName = `${ctx.guest.first_name || ''} ${ctx.guest.last_name || ''}`.trim();
+    console.log(`[complimentary] ticket emitido para ${guestName} (${code})`);
+
+    // Enviar email si hay dirección disponible
+    const guestEmail = ctx.guest.email || null;
+    if (guestEmail && mailTransport) {
+      sendTicketEmail({
+        toEmail: guestEmail,
+        guestName: guestName || 'Invitado/a',
+        eventName: ctx.event.name || 'Party House',
+        eventDate: ctx.event.event_date || null,
+        eventVenue: ctx.event.venue || '',
+        code: ctx.code,
+        qrToken
+      })
+        .then(r => console.log(`[email.complimentary] enviado a ${guestEmail} — id: ${r?.id || 'skipped'}`))
+        .catch(e => console.error('[email.complimentary] falló:', e.message || e));
+    }
+
+    return res.json({ ok: true, code: ctx.code, guest: guestName });
   } catch (e) {
-    console.error('[tickets.validate]', e);
+    console.error('[complimentary-ticket]', e);
     return res.status(500).json({ error: String(e.message || e) });
   }
 });
