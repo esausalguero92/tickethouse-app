@@ -928,6 +928,42 @@ app.post('/api/admin/test-email', requireAdmin, async (req, res) => {
   }
 });
 
+// POST /api/admin/complimentary/:code — emite orden+ticket gratis para un código existente
+// Útil para arreglar invitados especiales creados antes del fix del endpoint N8N.
+app.post('/api/admin/complimentary/:code', requireAdmin, async (req, res) => {
+  try {
+    if (!supabase) return res.status(503).json({ error: 'supabase_not_configured' });
+    const code = String(req.params.code || '').toUpperCase().trim();
+    if (!code) return res.status(400).json({ error: 'code_required' });
+
+    const ctx = await loadCodeContext(code);
+    if (!ctx) return res.status(404).json({ error: 'code_not_found_or_inactive' });
+
+    // Idempotente: si ya tiene orden pagada, devolver ok
+    const { data: existing } = await supabase
+      .from('orders').select('id, payment_status')
+      .eq('code_id', ctx.id).in('payment_status', ['paid']).maybeSingle();
+    if (existing) return res.json({ ok: true, skipped: true, reason: 'already_issued' });
+
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', { p_code: ctx.code });
+    if (rpcErr || !rpcData || rpcData.error) {
+      return res.status(500).json({ error: rpcData?.error || rpcErr?.message || 'db_order_failed' });
+    }
+
+    const qrToken = await createTicketForOrder({
+      orderId: rpcData.order_id, eventId: ctx.event_id,
+      guestId: ctx.guest_id, code: ctx.code, eventDate: ctx.event.event_date
+    });
+
+    const guestName = `${ctx.guest.first_name || ''} ${ctx.guest.last_name || ''}`.trim();
+    console.log(`[admin.complimentary] ticket emitido para ${guestName} (${code})`);
+    return res.json({ ok: true, code: ctx.code, guest: guestName, qr_token: qrToken });
+  } catch (e) {
+    console.error('[admin.complimentary]', e);
+    return res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 // Rechaza una transferencia
 app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req, res) => {
   try {
