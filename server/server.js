@@ -306,6 +306,9 @@ async function notifyAdminsNewTransfer({ fileBuffer, fileName, mimeType, guestNa
 // ---------- Generador de PDF del boleto (reutilizable) ----------
 // Devuelve un Buffer con el PDF completo. Se usa tanto en el endpoint de descarga
 // como al adjuntar el boleto en el email de confirmación.
+const FONT_BEBAS   = path.join(__dirname, 'fonts', 'BebasNeue-Regular.ttf');
+const FONT_DANCING = path.join(__dirname, 'fonts', 'DancingScript-Bold.ttf');
+
 async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, eventVenue, guestName }) {
   const qrPng = await QRCode.toBuffer(qrToken, {
     width: 480, margin: 2, color: { dark: '#000000', light: '#FFFFFF' }
@@ -332,10 +335,10 @@ async function generateTicketPdfBuffer({ code, qrToken, eventName, eventDate, ev
     doc.rect(0, 0, W, H).fill('#000000');
 
     // Header: "PARTY HOUSE" bold + "first edition" script
-    doc.font('Helvetica-Bold').fontSize(38).fillColor('#ffffff')
-       .text('PARTY HOUSE', 0, 18, { align: 'center', width: W, characterSpacing: 3 });
-    doc.font('Helvetica-BoldOblique').fontSize(14).fillColor('#9f98b3')
-       .text('first edition', 0, 62, { align: 'center', width: W });
+    doc.font(FONT_BEBAS).fontSize(52).fillColor('#ffffff')
+       .text('PARTY HOUSE', 0, 14, { align: 'center', width: W, characterSpacing: 2 });
+    doc.font(FONT_DANCING).fontSize(18).fillColor('#9f98b3')
+       .text('first edition', 0, 66, { align: 'center', width: W });
 
     // Separador superior
     doc.rect(30, 84, W - 60, 1).fill('#333333');

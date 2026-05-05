@@ -1,7 +1,7 @@
 {
   "name": "party-house-server",
-  "version": "0.3.0",
-  "description": "Party House — Backend (PayPal, transferencias, admin panel, QR, validación en puerta). N8N solo genera códigos desde Telegram.",
+  "version": "0.4.0",
+  "description": "Party House — Backend (PayPal, transferencias, admin panel, QR, validación en puerta).",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -9,6 +9,8 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
+    "@fontsource/bebas-neue": "^5.2.7",
+    "@fontsource/dancing-script": "^5.2.8",
     "@supabase/supabase-js": "^2.45.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
