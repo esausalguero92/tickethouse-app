@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#050505"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <title>Validador — Party House</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <link rel="stylesheet" href="/css/animations.css"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <!-- jsQR for camera scanning -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js" crossorigin="anonymous"></script>
+  <style>
+    /* ── Overall layout ───────────────────────────── */
+    body { overflow: hidden; }
+
+    .vld-page {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      max-width: 480px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* ── Login ───────────────────────────────────── */
+    .vld-login {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100dvh;
+      padding: var(--sp-8);
+    }
+
+    .vld-login__box {
+      width: 100%;
+      max-width: 320px;
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-8) var(--sp-6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vld-login__box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--grad-brand);
+    }
+
+    .vld-login__wordmark {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      letter-spacing: 0.06em;
+      color: var(--ph-white);
+    }
+
+    .vld-login__role {
+      font-size: 10px;
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-purple);
+      margin-bottom: var(--sp-8);
+    }
+
+    /* ── App header ──────────────────────────────── */
+    .vld-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-4) var(--sp-5);
+      border-bottom: 1px solid var(--ph-border);
+      background: rgba(5,5,5,0.95);
+      backdrop-filter: blur(10px);
+      flex-shrink: 0;
+    }
+
+    .vld-header__title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      letter-spacing: 0.06em;
+      color: var(--ph-white);
+    }
+
+    .vld-header__logout {
+      font-size: var(--text-xs);
+      letter-spacing: var(--track-wide);
+      text-transform: uppercase;
+      color: var(--ph-text-dim);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: var(--font-body);
+      padding: var(--sp-2);
+    }
+
+    /* ── Tabs ────────────────────────────────────── */
+    .vld-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--ph-border);
+      flex-shrink: 0;
+    }
+
+    .vld-tab {
+      flex: 1;
+      padding: var(--sp-3);
+      border: none;
+      background: transparent;
+      color: var(--ph-text-dim);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      letter-spacing: var(--track-wide);
+      text-transform: uppercase;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--dur-fast);
+    }
+
+    .vld-tab.active {
+      color: var(--ph-blue);
+      border-bottom-color: var(--ph-blue);
+    }
+
+    /* ── Panels ──────────────────────────────────── */
+    .vld-panels {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .vld-panel {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .vld-panel.active { display: flex; flex-direction: column; }
+
+    /* ── Camera panel ────────────────────────────── */
+    .cam-wrap {
+      position: relative;
+      flex: 1;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #cam-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Scanner frame overlay */
+    .cam-frame {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+    }
+
+    .cam-frame::before,
+    .cam-frame::after,
+    .cam-frame__tr,
+    .cam-frame__bl {
+      content: '';
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--ph-blue);
+      border-style: solid;
+    }
+
+    /* Corners */
+    .cam-frame::before  { top:0;    left:0;    border-width: 3px 0 0 3px; }
+    .cam-frame::after   { top:0;    right:0;   border-width: 3px 3px 0 0; }
+    .cam-frame__tr      { bottom:0; right:0;   border-width: 0 3px 3px 0; }
+    .cam-frame__bl      { bottom:0; left:0;    border-width: 0 0 3px 3px; }
+
+    /* Scan line inside frame */
+    .cam-scan {
+      position: absolute;
+      left: 4px; right: 4px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--ph-blue), transparent);
+      box-shadow: 0 0 8px var(--ph-blue);
+      animation: scanLine 2.5s ease-in-out infinite;
+      top: 4px;
+    }
+
+    .cam-hint {
+      position: absolute;
+      bottom: var(--sp-6);
+      left: 0; right: 0;
+      text-align: center;
+      font-size: var(--text-xs);
+      letter-spacing: var(--track-wide);
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* Cam start */
+    .cam-start-btn {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      z-index: 10;
+    }
+
+    /* ── Manual tab ──────────────────────────────── */
+    .manual-wrap {
+      padding: var(--sp-6) var(--sp-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-6);
+    }
+
+    .manual-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+    }
+
+    .manual-section__label {
+      font-size: 10px;
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-text-dim);
+    }
+
+    .manual-section__label span {
+      color: var(--ph-blue);
+      margin-right: var(--sp-2);
+    }
+
+    .manual-correlative-input {
+      font-family: var(--font-mono);
+      font-size: var(--text-2xl);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      text-align: center;
+      width: 100%;
+      padding: var(--sp-4) var(--sp-4);
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-md);
+      color: var(--ph-white);
+      transition: border-color var(--dur-fast);
+      outline: none;
+    }
+
+    .manual-correlative-input:focus {
+      border-color: var(--ph-blue);
+      box-shadow: 0 0 0 3px rgba(29, 79, 255, 0.15);
+    }
+
+    .manual-correlative-input::placeholder {
+      color: var(--ph-text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    .manual-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+
+    .manual-divider::before,
+    .manual-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--ph-border);
+    }
+
+    .manual-divider span {
+      font-size: 10px;
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-text-dim);
+    }
+
+    .manual-jwt-input {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.6;
+      resize: none;
+      width: 100%;
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-md);
+      color: var(--ph-text-mute);
+      transition: border-color var(--dur-fast);
+      outline: none;
+    }
+
+    .manual-jwt-input:focus {
+      border-color: var(--ph-purple);
+      box-shadow: 0 0 0 3px rgba(93, 45, 145, 0.15);
+    }
+
+    .manual-jwt-input::placeholder {
+      color: var(--ph-text-dim);
+    }
+
+    /* ── Manual result card ──────────────────────── */
+    .manual-result {
+      border-radius: var(--radius-md);
+      padding: var(--sp-4) var(--sp-5);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      border: 1px solid;
+      animation: fadeInUp 0.25s var(--ease-out) both;
+    }
+
+    .manual-result[hidden] { display: none; }
+
+    .manual-result--valid {
+      background: rgba(34, 211, 238, 0.07);
+      border-color: rgba(34, 211, 238, 0.35);
+    }
+    .manual-result--used {
+      background: rgba(255, 46, 154, 0.07);
+      border-color: rgba(255, 46, 154, 0.35);
+    }
+    .manual-result--invalid,
+    .manual-result--not_found {
+      background: rgba(93, 45, 145, 0.07);
+      border-color: rgba(93, 45, 145, 0.3);
+    }
+
+    .manual-result__icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .manual-result__body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .manual-result__state {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      letter-spacing: 0.08em;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .manual-result--valid   .manual-result__state { color: #22d3ee; }
+    .manual-result--used    .manual-result__state { color: var(--ph-magenta); }
+    .manual-result--invalid .manual-result__state,
+    .manual-result--not_found .manual-result__state { color: var(--ph-purple); }
+
+    .manual-result__code {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      letter-spacing: var(--track-wide);
+      color: var(--ph-text-mute);
+    }
+
+    .manual-result__buyer {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--ph-white);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .manual-result__meta {
+      font-size: 10px;
+      letter-spacing: var(--track-wide);
+      color: var(--ph-text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── Result overlay ──────────────────────────── */
+    #result-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-8);
+      text-align: center;
+      transition: opacity var(--dur-fast);
+    }
+
+    #result-overlay[hidden] { display: none; }
+
+    .result-overlay__icon {
+      font-size: 72px;
+      line-height: 1;
+      margin-bottom: var(--sp-4);
+    }
+
+    .result-overlay__state {
+      font-family: var(--font-display);
+      font-size: clamp(48px, 14vw, var(--text-5xl));
+      letter-spacing: 0.06em;
+      line-height: 1;
+      margin-bottom: var(--sp-4);
+    }
+
+    .result-overlay__buyer {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: var(--sp-2);
+    }
+
+    .result-overlay__correlative {
+      font-family: var(--font-mono);
+      font-size: var(--text-base);
+      letter-spacing: var(--track-wide);
+      margin-bottom: var(--sp-2);
+    }
+
+    .result-overlay__meta {
+      font-size: var(--text-sm);
+      color: rgba(255,255,255,0.5);
+      margin-bottom: var(--sp-8);
+    }
+
+    /* State colours */
+    .result--valid   { background: rgba(5,5,5,0.97); }
+    .result--used    { background: rgba(5,5,5,0.97); }
+    .result--invalid { background: rgba(5,5,5,0.97); }
+
+    .state--valid   { color: #22d3ee; }
+    .state--used    { color: var(--ph-magenta); }
+    .state--invalid { color: var(--ph-magenta); }
+
+    /* Log */
+    .vld-log {
+      padding: var(--sp-4) var(--sp-5);
+      flex: 1;
+    }
+
+    .vld-log__title {
+      font-size: 10px;
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-text-dim);
+      margin-bottom: var(--sp-3);
+    }
+
+    .vld-log__list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+    }
+
+    .vld-log__item {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      animation: slideInRight 0.3s var(--ease-out) both;
+    }
+
+    .vld-log__dot {
+      width: 8px; height: 8px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+    }
+    .dot--valid   { background: #22d3ee; }
+    .dot--used    { background: var(--ph-magenta); }
+    .dot--invalid { background: var(--ph-text-dim); }
+
+    .vld-log__code {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--ph-blue);
+    }
+
+    .vld-log__name {
+      color: var(--ph-text-mute);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .vld-log__time {
+      font-size: 10px;
+      color: var(--ph-text-dim);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────────── -->
+<div id="vld-login-screen" class="vld-login">
+  <div class="vld-login__box anim-fade-in-scale">
+    <p class="vld-login__wordmark">PARTY HOUSE</p>
+    <p class="vld-login__role">✦ Validador de acceso</p>
+
+    <form id="staff-form" autocomplete="off" novalidate>
+      <div class="ph-form-group">
+        <label class="ph-form-group__label" for="staff-pin">PIN de staff</label>
+        <input type="password" id="staff-pin" class="ph-input" inputmode="numeric" maxlength="8" autocomplete="one-time-code"/>
+        <span class="ph-form-group__error" id="staff-err" hidden></span>
+      </div>
+      <button type="submit" class="ph-btn ph-btn--primary" id="staff-btn" style="width:100%;margin-top:var(--sp-4)">
+        <span id="staff-btn-text">INGRESAR</span>
+        <span class="ph-spinner" id="staff-spinner" hidden></span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── VALIDADOR APP ───────────────────────────────────────── -->
+<div id="vld-app" class="vld-page" hidden>
+
+  <header class="vld-header">
+    <span class="vld-header__title">VALIDADOR</span>
+    <button class="vld-header__logout" id="vld-logout">Salir</button>
+  </header>
+
+  <div class="vld-tabs" role="tablist">
+    <button class="vld-tab active" data-tab="tab-scan" role="tab" aria-selected="true">📷 Escaner</button>
+    <button class="vld-tab" data-tab="tab-manual" role="tab" aria-selected="false">⌨ Manual</button>
+    <button class="vld-tab" data-tab="tab-log" role="tab" aria-selected="false">📋 Log</button>
+  </div>
+
+  <div class="vld-panels">
+
+    <!-- SCAN PANEL -->
+    <div id="tab-scan" class="vld-panel active">
+      <div class="cam-wrap">
+        <video id="cam-video" playsinline autoplay muted></video>
+        <canvas id="cam-canvas" hidden></canvas>
+
+        <!-- Frame overlay -->
+        <div class="cam-frame">
+          <div class="cam-scan"></div>
+          <div class="cam-frame__tr"></div>
+          <div class="cam-frame__bl"></div>
+        </div>
+
+        <p class="cam-hint">Apunta al código QR de la entrada</p>
+
+        <!-- Start button (before permissions) -->
+        <div id="cam-start-wrap" class="cam-start-btn">
+          <button class="ph-btn ph-btn--primary" id="cam-start-btn">ACTIVAR CÁMARA</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANUAL PANEL -->
+    <div id="tab-manual" class="vld-panel">
+      <div class="manual-wrap">
+
+        <!-- Sección 1: Correlativo -->
+        <div class="manual-section">
+          <p class="manual-section__label"><span>01</span>Código correlativo</p>
+          <input
+            type="text"
+            id="manual-code"
+            class="manual-correlative-input"
+            placeholder="TH-PH001"
+            maxlength="20"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          />
+          <span class="ph-form-group__error" id="manual-err" hidden></span>
+          <button class="ph-btn ph-btn--primary" id="manual-submit-btn" style="width:100%">VALIDAR CÓDIGO</button>
+        </div>
+
+        <!-- Resultado de última validación -->
+        <div id="manual-result" class="manual-result" hidden>
+          <div class="manual-result__icon" id="mr-icon"></div>
+          <div class="manual-result__body">
+            <div class="manual-result__state" id="mr-state"></div>
+            <div class="manual-result__buyer" id="mr-buyer"></div>
+            <div class="manual-result__code" id="mr-code"></div>
+            <div class="manual-result__meta" id="mr-meta"></div>
+          </div>
+        </div>
+
+        <!-- Divisor -->
+        <div class="manual-divider"><span>o pega el JWT del QR</span></div>
+
+        <!-- Sección 2: JWT -->
+        <div class="manual-section">
+          <p class="manual-section__label"><span>02</span>Token JWT (desde QR)</p>
+          <textarea
+            id="manual-jwt"
+            class="manual-jwt-input"
+            rows="4"
+            placeholder="eyJhbGci…"
+          ></textarea>
+          <button class="ph-btn ph-btn--ghost" id="jwt-submit-btn" style="width:100%">VALIDAR JWT</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LOG PANEL -->
+    <div id="tab-log" class="vld-panel">
+      <div class="vld-log">
+        <p class="vld-log__title">Historial de validaciones (esta sesión)</p>
+        <ul class="vld-log__list" id="vld-log-list">
+          <li style="text-align:center;color:var(--ph-text-dim);font-size:var(--text-sm);padding:var(--sp-8)">Sin validaciones aún</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /vld-panels -->
+
+</div><!-- /vld-app -->
+
+<!-- ── RESULT OVERLAY ──────────────────────────────────────── -->
+<div id="result-overlay" hidden>
+  <div class="result-overlay__icon" id="result-icon"></div>
+  <div class="result-overlay__state" id="result-state"></div>
+  <div class="result-overlay__buyer" id="result-buyer"></div>
+  <div class="result-overlay__correlative" id="result-correlative"></div>
+  <div class="result-overlay__meta" id="result-meta"></div>
+  <button class="ph-btn ph-btn--ghost" id="result-close">CERRAR</button>
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+'use strict';
+
+const { api, formatDate } = window.PH;
+const STAFF_TOKEN_KEY = 'ph_staff_token';
+
+let staffToken   = null;
+let cameraActive = false;
+let scanLoop     = null;
+let scanning     = false;
+let log          = [];
+
+// ── Vibration helper ─────────────────────────────────────────────
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+// ── Staff login ──────────────────────────────────────────────────
+document.getElementById('staff-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pin     = document.getElementById('staff-pin').value;
+  const errEl   = document.getElementById('staff-err');
+  const btnText = document.getElementById('staff-btn-text');
+  const spinner = document.getElementById('staff-spinner');
+  const btn     = document.getElementById('staff-btn');
+
+  btnText.textContent = 'VERIFICANDO';
+  spinner.hidden = false;
+  btn.disabled   = true;
+  errEl.hidden   = true;
+
+  try {
+    const data = await api('POST', '/api/staff/login', { pin });
+    staffToken = data.token;
+    sessionStorage.setItem(STAFF_TOKEN_KEY, staffToken);
+    enterApp();
+  } catch {
+    errEl.textContent = 'PIN incorrecto.';
+    errEl.hidden = false;
+    btnText.textContent = 'INGRESAR';
+    spinner.hidden = true;
+    btn.disabled   = false;
+  }
+});
+
+document.getElementById('vld-logout').addEventListener('click', () => {
+  sessionStorage.removeItem(STAFF_TOKEN_KEY);
+  staffToken = null;
+  stopCamera();
+  document.getElementById('vld-app').hidden = true;
+  document.getElementById('vld-login-screen').hidden = false;
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+function init() {
+  const saved = sessionStorage.getItem(STAFF_TOKEN_KEY);
+  if (saved) { staffToken = saved; enterApp(); }
+}
+
+function enterApp() {
+  document.getElementById('vld-login-screen').hidden = true;
+  document.getElementById('vld-app').hidden = false;
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────
+document.querySelectorAll('.vld-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.vld-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+    document.querySelectorAll('.vld-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    tab.setAttribute('aria-selected','true');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Camera ───────────────────────────────────────────────────────
+document.getElementById('cam-start-btn').addEventListener('click', startCamera);
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('cam-video');
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('cam-start-wrap').hidden = true;
+    cameraActive = true;
+    startScanLoop();
+  } catch (err) {
+    alert('No se pudo acceder a la cámara. Usa la validación manual.');
+  }
+}
+
+function stopCamera() {
+  if (scanLoop) cancelAnimationFrame(scanLoop);
+  const video = document.getElementById('cam-video');
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+  cameraActive = false;
+}
+
+function startScanLoop() {
+  const video  = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+
+  function tick() {
+    if (!cameraActive) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA && !scanning) {
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+      if (code?.data) {
+        scanning = true;
+        validateToken(code.data).finally(() => {
+          setTimeout(() => { scanning = false; }, 3000);
+        });
+      }
+    }
+    scanLoop = requestAnimationFrame(tick);
+  }
+
+  scanLoop = requestAnimationFrame(tick);
+}
+
+// ── Manual validation ─────────────────────────────────────────────
+document.getElementById('manual-code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); submitManual(); }
+});
+document.getElementById('manual-submit-btn').addEventListener('click', submitManual);
+document.getElementById('jwt-submit-btn').addEventListener('click', submitJwt);
+
+document.getElementById('manual-code').addEventListener('input', (e) => {
+  e.target.value = e.target.value.toUpperCase();
+});
+
+async function submitManual() {
+  const code = document.getElementById('manual-code').value.trim().toUpperCase();
+  const errEl = document.getElementById('manual-err');
+  if (!code) { errEl.textContent = 'Ingresa el código.'; errEl.hidden = false; return; }
+  errEl.hidden = true;
+  await validateByCorrelative(code);
+}
+
+async function submitJwt() {
+  const token = document.getElementById('manual-jwt').value.trim();
+  if (!token) return;
+  await validateToken(token);
+}
+
+// ── Validate: JWT token (from QR) ────────────────────────────────
+async function validateToken(token) {
+  try {
+    const data = await api('POST', '/api/tickets/validate', { token }, { 'x-staff-token': staffToken });
+    showResult({
+      state:       'valid',
+      buyer:       data.buyer_name || data.name || '—',
+      correlative: data.correlative_code || '—',
+      event:       data.event_name || '—',
+      meta:        data.redeemed_at ? `Validado: ${formatDate(data.redeemed_at)}` : '',
+    });
+  } catch (err) {
+    const code = err.data?.error || '';
+    const stateMap = {
+      ticket_already_used: 'used',
+      ticket_not_found:    'invalid',
+      token_invalid:       'invalid',
+      token_expired:       'invalid',
+    };
+    showResult({
+      state:       stateMap[code] || 'invalid',
+      correlative: err.data?.correlative_code || '—',
+      buyer:       err.data?.buyer_name || '',
+      meta:        err.data?.message || 'Acceso denegado',
+    });
+  }
+}
+
+// ── Validate: correlative code ────────────────────────────────────
+async function validateByCorrelative(code) {
+  try {
+    const data = await api('POST', '/api/tickets/validate-code', { correlative_code: code }, { 'x-staff-token': staffToken });
+    const result = {
+      state:       'valid',
+      buyer:       data.buyer_name || '—',
+      correlative: data.correlative_code || code,
+      event:       data.event_name || '—',
+      meta:        '',
+    };
+    showResult(result);
+    showManualResult(result);
+    document.getElementById('manual-code').value = '';
+  } catch (err) {
+    const code2 = err.data?.error || '';
+    const stateMap = {
+      ticket_already_used: 'used',
+      ticket_not_found:    'not_found',
+    };
+    const metaText = code2 === 'ticket_already_used' && err.data?.message
+      ? `Validada: ${formatDate(err.data.message)}`
+      : code2 === 'ticket_not_found'
+        ? 'Código no registrado'
+        : 'Acceso denegado';
+    const result = {
+      state:       stateMap[code2] || 'invalid',
+      correlative: code,
+      buyer:       err.data?.buyer_name || '',
+      meta:        metaText,
+    };
+    showResult(result);
+    showManualResult(result);
+  }
+}
+
+// ── Resultado persistente en panel manual ─────────────────────────
+const MANUAL_RESULT_CFG = {
+  valid:     { icon: '✦', label: 'VÁLIDA'        },
+  used:      { icon: '✕', label: 'YA USADA'      },
+  invalid:   { icon: '!', label: 'INVÁLIDA'      },
+  not_found: { icon: '?', label: 'NO ENCONTRADA' },
+};
+
+function showManualResult({ state, buyer, correlative, meta }) {
+  const cfg = MANUAL_RESULT_CFG[state] || MANUAL_RESULT_CFG.invalid;
+  const el  = document.getElementById('manual-result');
+
+  el.className = `manual-result manual-result--${state}`;
+  el.removeAttribute('hidden');
+
+  document.getElementById('mr-icon').textContent  = cfg.icon;
+  document.getElementById('mr-state').textContent = cfg.label;
+  document.getElementById('mr-buyer').textContent = buyer || '';
+  document.getElementById('mr-code').textContent  = correlative ? `#${correlative}` : '';
+  document.getElementById('mr-meta').textContent  = meta || '';
+}
+
+// ── Result overlay ────────────────────────────────────────────────
+const RESULT_CONFIG = {
+  valid:     { icon: '✦', label: 'VÁLIDA',     bg: 'rgba(5,5,5,0.97)', color: '#22d3ee', vibrate: [100] },
+  used:      { icon: '✕', label: 'YA USADA',   bg: 'rgba(5,5,5,0.97)', color: '#FF2E9A', vibrate: [200,100,200] },
+  invalid:   { icon: '!', label: 'INVÁLIDA',   bg: 'rgba(5,5,5,0.97)', color: '#FF2E9A', vibrate: [300] },
+  not_found: { icon: '?', label: 'NO ENCONTRADA', bg: 'rgba(5,5,5,0.97)', color: '#5D2D91', vibrate: [200,100,200] },
+};
+
+function showResult({ state, buyer, correlative, event, meta }) {
+  const cfg = RESULT_CONFIG[state] || RESULT_CONFIG.invalid;
+  vibrate(cfg.vibrate);
+
+  const overlay = document.getElementById('result-overlay');
+  overlay.style.background = cfg.bg;
+  overlay.className = '';
+  overlay.removeAttribute('hidden');
+
+  document.getElementById('result-icon').textContent       = cfg.icon;
+  document.getElementById('result-icon').style.color       = cfg.color;
+  document.getElementById('result-state').textContent      = cfg.label;
+  document.getElementById('result-state').style.color      = cfg.color;
+  document.getElementById('result-buyer').textContent      = buyer || '';
+  document.getElementById('result-correlative').textContent = correlative ? `#${correlative}` : '';
+  document.getElementById('result-correlative').style.color = cfg.color;
+  document.getElementById('result-meta').textContent       = event ? `${event}${meta ? ' · ' + meta : ''}` : (meta || '');
+
+  // Auto-close after 4s for valid, 6s for others
+  const delay = state === 'valid' ? 4000 : 6000;
+  const timer = setTimeout(closeResult, delay);
+  document.getElementById('result-close')._timer = timer;
+
+  // Log
+  addLog({ state, buyer, correlative, time: new Date() });
+}
+
+document.getElementById('result-close').addEventListener('click', closeResult);
+
+function closeResult() {
+  const btn = document.getElementById('result-close');
+  if (btn._timer) clearTimeout(btn._timer);
+  document.getElementById('result-overlay').hidden = true;
+}
+
+// ── Log ───────────────────────────────────────────────────────────
+function addLog(entry) {
+  log.unshift(entry);
+  const list = document.getElementById('vld-log-list');
+  if (log.length === 1) list.innerHTML = '';
+
+  const li = document.createElement('li');
+  li.className = 'vld-log__item';
+  li.innerHTML = `
+    <span class="vld-log__dot dot--${entry.state}"></span>
+    <span class="vld-log__code">${esc(entry.correlative || '?')}</span>
+    <span class="vld-log__name">${esc(entry.buyer || '—')}</span>
+    <span class="vld-log__time">${entry.time.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}</span>
+  `;
+  list.prepend(li);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+init();
+</script>
+</body>
+</html>

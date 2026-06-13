@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#050505"/>
+  <title>Party House</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+
+    /* ── Flyer cubre toda la pantalla ── */
+    .flyer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      z-index: 1;
+    }
+
+    /* ── CTA — desktop: encima del espacio negro del flyer ── */
+    .cta-wrap {
+      position: fixed;
+      z-index: 20;
+      top: 73%;
+      left: 7%;
+      width: 42%;
+      max-width: 400px;
+    }
+
+    .cta-btn {
+      display: block;
+      width: 100%;
+      padding: 14px 16px;
+      background: linear-gradient(90deg, #1D4FFF 0%, #5D2D91 50%, #FF2E9A 100%);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(15px, 1.8vw, 22px);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity .15s, transform .15s;
+      box-shadow: 0 0 24px rgba(29,79,255,.4), 0 0 48px rgba(255,46,154,.2);
+    }
+    .cta-btn:hover  { opacity: .88; transform: translateY(-1px); }
+    .cta-btn:active { opacity: 1;   transform: translateY(0); }
+
+    /* ── Mobile: flyer vertical, botón fijo al fondo ── */
+    @media (max-width: 640px) {
+      .flyer {
+        content: url('/img/vertical.png');
+        object-position: center center;
+      }
+
+      .cta-wrap {
+        top: auto;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 40px);
+        max-width: none;
+      }
+
+      .cta-btn {
+        font-size: 18px;
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Flyer full-screen -->
+  <img class="flyer" src="/img/landing.png" alt="Party House"/>
+
+  <!-- Botón de compra -->
+  <div class="cta-wrap">
+    <a href="#" class="cta-btn" id="cta-btn">CONSEGUIR MI ENTRADA →</a>
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    const { getParam } = window.PH;
+    const code = getParam('c') || sessionStorage.getItem('ph_event_code') || '';
+    document.getElementById('cta-btn').href =
+      `/evento.html?c=${encodeURIComponent(code)}`;
+  })();
+  </script>
+</body>
+</html>

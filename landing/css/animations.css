@@ -1,0 +1,138 @@
+/*
+ * PARTY HOUSE — Animations CSS v2.0
+ * Glows, transiciones, keyframes, efectos de carga.
+ * Sensación: premium, cinematográfica. Nunca gaming.
+ */
+
+/* ── Keyframes ────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(29,79,255,0.2); }
+  50%       { box-shadow: 0 0 40px rgba(29,79,255,0.4); }
+}
+
+@keyframes glowMagentaPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,46,154,0.2); }
+  50%       { box-shadow: 0 0 40px rgba(255,46,154,0.45); }
+}
+
+@keyframes brandTopBar {
+  from { width: 0; opacity: 0; }
+  to   { width: 100%; opacity: 1; }
+}
+
+@keyframes scanLine {
+  0%   { top: 0; }
+  50%  { top: calc(100% - 3px); }
+  100% { top: 0; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes confettiDrop {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+}
+
+/* ── Clases de animación ──────────────────────────────────────── */
+.anim-fade-in        { animation: fadeIn 0.35s var(--ease-out) both; }
+.anim-fade-in-up     { animation: fadeInUp 0.45s var(--ease-out) both; }
+.anim-fade-in-scale  { animation: fadeInScale 0.3s var(--ease-spring) both; }
+.anim-slide-right    { animation: slideInRight 0.35s var(--ease-out) both; }
+
+/* Delays escalonados para stagger */
+.anim-delay-1 { animation-delay: 0.05s; }
+.anim-delay-2 { animation-delay: 0.10s; }
+.anim-delay-3 { animation-delay: 0.15s; }
+.anim-delay-4 { animation-delay: 0.20s; }
+.anim-delay-5 { animation-delay: 0.25s; }
+
+/* ── Glow animado ─────────────────────────────────────────────── */
+.glow-pulse-blue    { animation: glowPulse 2.5s ease-in-out infinite; }
+.glow-pulse-magenta { animation: glowMagentaPulse 2.5s ease-in-out infinite; }
+
+/* ── QR scan line ─────────────────────────────────────────────── */
+.ph-scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ph-blue), transparent);
+  animation: scanLine 2.5s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--ph-blue);
+}
+
+/* ── Brand top bar animation ──────────────────────────────────── */
+.ph-card__top-bar {
+  animation: brandTopBar 0.6s var(--ease-out) both;
+}
+
+/* ── Reducir movimiento (accesibilidad) ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Transition helpers ───────────────────────────────────────── */
+.tr-all     { transition: all var(--dur-normal) var(--ease-out); }
+.tr-colors  { transition: color var(--dur-fast), background-color var(--dur-fast), border-color var(--dur-fast); }
+.tr-opacity { transition: opacity var(--dur-normal) var(--ease-out); }
+.tr-transform { transition: transform var(--dur-normal) var(--ease-out); }
+
+/* ── Loading state ────────────────────────────────────────────── */
+.ph-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,5,5,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.ph-loading-overlay__text {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: var(--track-widest);
+  color: var(--ph-text-mute);
+  text-transform: uppercase;
+}
+
+/* Spinner grande */
+.ph-spinner--lg {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+}
+
+/* ── Transición de página ─────────────────────────────────────── */
+.ph-page-enter {
+  animation: fadeInUp 0.4s var(--ease-out) both;
+}

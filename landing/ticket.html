@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#050505"/>
+  <title>Acceso Confirmado — Party House</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <link rel="stylesheet" href="/css/animations.css"/>
+  <style>
+    .tk-page {
+      min-height: 100dvh;
+      padding: var(--sp-6) var(--sp-4) var(--sp-16);
+      max-width: var(--max-form);
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .tk-header {
+      text-align: center;
+      margin-bottom: var(--sp-8);
+      animation: fadeInUp 0.5s var(--ease-out) both;
+    }
+
+    .tk-header__wordmark {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      letter-spacing: 0.06em;
+      color: var(--ph-white);
+      margin-bottom: var(--sp-6);
+    }
+
+    .tk-header__confirmed {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 10vw, var(--text-5xl));
+      letter-spacing: 0.06em;
+      color: var(--ph-white);
+      line-height: 1;
+      margin-bottom: var(--sp-2);
+    }
+
+    .tk-header__confirmed em {
+      font-style: normal;
+      background: var(--grad-brand);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tk-header__sub {
+      font-size: var(--text-sm);
+      color: var(--ph-text-mute);
+      letter-spacing: var(--track-wide);
+    }
+
+    /* Ticket card */
+    .tk-ticket {
+      position: relative;
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: var(--sp-4);
+    }
+
+    .tk-ticket::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--grad-brand);
+    }
+
+    .tk-ticket__body {
+      padding: var(--sp-6) var(--sp-6) var(--sp-5);
+    }
+
+    .tk-ticket__num {
+      font-size: var(--text-xs);
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-text-dim);
+      margin-bottom: var(--sp-2);
+    }
+
+    .tk-ticket__correlative {
+      font-family: var(--font-mono);
+      font-size: var(--text-xl);
+      color: var(--ph-blue);
+      font-weight: 600;
+      letter-spacing: var(--track-wide);
+      margin-bottom: var(--sp-4);
+    }
+
+    .tk-ticket__name {
+      font-size: var(--text-sm);
+      color: var(--ph-text-mute);
+      margin-bottom: 2px;
+    }
+
+    .tk-ticket__buyer {
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--ph-text);
+      margin-bottom: var(--sp-4);
+    }
+
+    .tk-ticket__footer {
+      padding: var(--sp-4) var(--sp-6);
+      border-top: 1px solid var(--ph-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+
+    .tk-ticket__event {
+      font-size: var(--text-sm);
+      color: var(--ph-text-mute);
+    }
+
+    /* Download button */
+    .tk-download-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+      padding: var(--sp-2) var(--sp-4);
+      border: 1px solid var(--ph-blue);
+      border-radius: var(--radius-sm);
+      background: rgba(29,79,255,0.08);
+      color: var(--ph-blue);
+      font-size: var(--text-xs);
+      font-family: var(--font-body);
+      letter-spacing: var(--track-wide);
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background var(--dur-fast), border-color var(--dur-fast);
+    }
+
+    .tk-download-btn:hover {
+      background: rgba(29,79,255,0.18);
+      border-color: var(--ph-blue);
+    }
+
+    /* Info section */
+    .tk-info-card {
+      background: var(--ph-surface);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-5) var(--sp-6);
+      margin-bottom: var(--sp-4);
+      animation: fadeInUp 0.5s var(--ease-out) 0.15s both;
+    }
+
+    .tk-info-card__label {
+      font-size: var(--text-xs);
+      letter-spacing: var(--track-widest);
+      text-transform: uppercase;
+      color: var(--ph-purple);
+      margin-bottom: var(--sp-3);
+    }
+
+    .tk-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: var(--text-sm);
+      padding: var(--sp-2) 0;
+      border-bottom: 1px solid var(--ph-border);
+    }
+
+    .tk-info-row:last-child { border-bottom: none; }
+
+    .tk-info-row span:first-child { color: var(--ph-text-dim); }
+    .tk-info-row span:last-child  { color: var(--ph-text); font-weight: 500; }
+
+    /* Instructions */
+    .tk-tip {
+      padding: var(--sp-4);
+      background: rgba(93,45,145,0.08);
+      border: 1px solid rgba(93,45,145,0.2);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      color: var(--ph-text-mute);
+      line-height: 1.6;
+      margin-bottom: var(--sp-4);
+    }
+
+    .tk-tip strong {
+      color: var(--ph-purple);
+      font-weight: 600;
+    }
+
+    /* Pending state */
+    .tk-pending {
+      text-align: center;
+      padding: var(--sp-12) var(--sp-4);
+    }
+
+    .tk-pending__icon {
+      font-size: 48px;
+      margin-bottom: var(--sp-5);
+    }
+
+    .tk-pending__title {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      color: var(--ph-white);
+      letter-spacing: 0.06em;
+      margin-bottom: var(--sp-3);
+    }
+
+    .tk-pending__sub {
+      font-size: var(--text-sm);
+      color: var(--ph-text-mute);
+      line-height: 1.6;
+      max-width: 300px;
+      margin: 0 auto var(--sp-8);
+    }
+
+    /* Loading */
+    .tk-loading {
+      text-align: center;
+      padding: var(--sp-16) var(--sp-4);
+    }
+
+    /* Footer */
+    .tk-footer {
+      text-align: center;
+      margin-top: var(--sp-10);
+      animation: fadeIn 0.4s var(--ease-out) 0.5s both;
+    }
+
+    .tk-footer__tagline {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      letter-spacing: 0.08em;
+      color: var(--ph-text-dim);
+    }
+
+    .tk-footer__tagline span {
+      background: var(--grad-brand);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stagger tickets */
+    .tk-ticket {
+      animation: fadeInUp 0.5s var(--ease-out) both;
+    }
+    .tk-ticket:nth-child(1) { animation-delay: 0.2s; }
+    .tk-ticket:nth-child(2) { animation-delay: 0.3s; }
+    .tk-ticket:nth-child(3) { animation-delay: 0.4s; }
+    .tk-ticket:nth-child(4) { animation-delay: 0.5s; }
+    .tk-ticket:nth-child(5) { animation-delay: 0.6s; }
+  </style>
+</head>
+<body>
+  <div class="tk-page" id="page-root">
+
+    <!-- Loading -->
+    <div id="loading-state" class="tk-loading">
+      <div class="ph-spinner ph-spinner--lg" style="margin:0 auto var(--sp-4)"></div>
+      <p style="font-family:var(--font-display);letter-spacing:var(--track-widest);color:var(--ph-text-dim);text-transform:uppercase;font-size:var(--text-xl)">Cargando tus entradas…</p>
+    </div>
+
+    <!-- Pending state (transferencia) -->
+    <div id="pending-state" hidden>
+      <div class="tk-header">
+        <p class="tk-header__wordmark">PARTY HOUSE</p>
+      </div>
+      <div class="tk-pending">
+        <div class="tk-pending__icon">⏳</div>
+        <h1 class="tk-pending__title">COMPROBANTE RECIBIDO</h1>
+        <p class="tk-pending__sub">
+          Revisaremos tu transferencia y te enviaremos las entradas a tu correo electrónico en un plazo máximo de 24 horas.
+        </p>
+        <p style="font-size:var(--text-xs);color:var(--ph-text-dim);letter-spacing:var(--track-wide);text-transform:uppercase;margin-bottom:var(--sp-8)">
+          Revisa también tu carpeta de spam.
+        </p>
+        <a href="/" class="ph-btn ph-btn--ghost">Volver al inicio</a>
+      </div>
+      <div class="tk-footer">
+        <p class="tk-footer__tagline">FOR THOSE WHO <span>KNOW.</span></p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-state" hidden style="text-align:center;padding:var(--sp-16) var(--sp-4)">
+      <p style="font-family:var(--font-display);font-size:var(--text-3xl);color:var(--ph-magenta);letter-spacing:0.06em;margin-bottom:var(--sp-3)">ERROR</p>
+      <p style="font-size:var(--text-sm);color:var(--ph-text-mute);margin-bottom:var(--sp-8)" id="error-msg"></p>
+      <a href="/" class="ph-btn ph-btn--ghost">Volver al inicio</a>
+    </div>
+
+    <!-- Main: Acceso confirmado -->
+    <div id="main-content" hidden>
+
+      <div class="tk-header">
+        <p class="tk-header__wordmark">PARTY HOUSE</p>
+        <h1 class="tk-header__confirmed">ACCESO<br/><em>CONFIRMADO</em></h1>
+        <p class="tk-header__sub" id="tk-intro"></p>
+        <a href="/" style="
+          display: inline-flex;
+          align-items: center;
+          gap: var(--sp-2);
+          margin-top: var(--sp-6);
+          padding: var(--sp-3) var(--sp-5);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: var(--radius-md);
+          background: rgba(255,255,255,0.06);
+          color: var(--ph-text-mute);
+          font-family: var(--font-body);
+          font-size: var(--text-sm);
+          font-weight: 500;
+          letter-spacing: var(--track-wide);
+          text-decoration: none;
+          text-transform: uppercase;
+          transition: background 0.2s, border-color 0.2s, color 0.2s;
+        " onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color=''">
+          ← Salir
+        </a>
+      </div>
+
+      <!-- Tip -->
+      <div class="tk-tip">
+        <strong>Guarda este código QR.</strong> Se te pedirá en la entrada del evento junto con tu identificación oficial. Presentar la pantalla o el PDF impreso — ambos son válidos.
+      </div>
+
+      <!-- Tickets container -->
+      <div id="tickets-container"></div>
+
+      <!-- Info del pedido -->
+      <div class="tk-info-card">
+        <p class="tk-info-card__label">Resumen del acceso</p>
+        <div class="tk-info-row"><span>Comprador</span><span id="info-buyer"></span></div>
+        <div class="tk-info-row"><span>Correo</span><span id="info-email"></span></div>
+        <div class="tk-info-row"><span>Entradas</span><span id="info-qty"></span></div>
+        <div class="tk-info-row"><span>Evento</span><span id="info-event"></span></div>
+        <div class="tk-info-row"><span>Fecha</span><span id="info-date"></span></div>
+        <div class="tk-info-row"><span>Lugar</span><span id="info-venue"></span></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="tk-footer">
+        <p class="tk-footer__tagline">FOR THOSE WHO <span>KNOW.</span></p>
+      </div>
+
+    </div><!-- /main-content -->
+
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+  'use strict';
+
+  const { api, getParam, navigate, formatDate, formatUSD, renderQR } = window.PH;
+
+  async function init() {
+    // ¿Es estado pendiente (transferencia)?
+    const estado = getParam('estado');
+    if (estado === 'pendiente' || sessionStorage.getItem('ph_transfer_pending') === 'true') {
+      sessionStorage.removeItem('ph_transfer_pending');
+      document.getElementById('loading-state').hidden  = true;
+      document.getElementById('pending-state').hidden  = false;
+      return;
+    }
+
+    // Obtener download token
+    const token = getParam('ot') || sessionStorage.getItem('ph_download_token');
+    if (!token) {
+      return showError('No se encontró información de tu compra. Revisa el correo que recibiste.');
+    }
+
+    try {
+      const data = await api('GET', `/api/download/order/${encodeURIComponent(token)}`);
+      renderSuccess(data, token);
+    } catch (err) {
+      const msgs = {
+        token_invalid:  'El enlace de descarga no es válido o ha expirado.',
+        token_expired:  'Este enlace de descarga ha expirado. Revisa tu correo para un nuevo enlace.',
+        order_not_found:'No se encontró tu pedido. Contacta a soporte.',
+      };
+      showError(msgs[err.data?.error] || 'Error al cargar tus entradas. Intenta con el enlace de tu correo.');
+    }
+  }
+
+  function renderSuccess(data, downloadToken) {
+    document.getElementById('loading-state').hidden = true;
+    document.getElementById('main-content').hidden  = false;
+
+    const { order, tickets, event } = data;
+    const qty = tickets.length;
+
+    // Intro
+    document.getElementById('tk-intro').textContent =
+      `${qty} ${qty === 1 ? 'entrada confirmada' : 'entradas confirmadas'} para ${event?.name || 'el evento'}`;
+
+    // Info
+    document.getElementById('info-buyer').textContent = order.buyer_name || '—';
+    document.getElementById('info-email').textContent = order.buyer_email || '—';
+    document.getElementById('info-qty').textContent   = `${qty} ${qty === 1 ? 'entrada' : 'entradas'}`;
+    document.getElementById('info-event').textContent = event?.name || '—';
+    document.getElementById('info-date').textContent  = event?.event_date ? formatDate(event.event_date) : '—';
+    document.getElementById('info-venue').textContent = event?.venue || event?.location || '—';
+
+    // Render tickets
+    const container = document.getElementById('tickets-container');
+    tickets.forEach((ticket, i) => {
+      const card = buildTicketCard(ticket, i + 1, qty, downloadToken, event);
+      container.appendChild(card);
+    });
+  }
+
+  function buildTicketCard(ticket, num, total, downloadToken, event) {
+    const el = document.createElement('div');
+    el.className = 'tk-ticket';
+    el.innerHTML = `
+      <div class="tk-ticket__body">
+        <p class="tk-ticket__num">Entrada ${num} de ${total}</p>
+        <p class="tk-ticket__correlative">${ticket.correlative_code || '—'}</p>
+        <p class="tk-ticket__name">Titular</p>
+        <p class="tk-ticket__buyer">${escHtml(ticket.buyer_name || '—')}</p>
+      </div>
+      <div class="tk-ticket__footer">
+        <span class="tk-ticket__event">${escHtml(event?.name || 'Party House')}</span>
+        <a
+          href="/api/download/ticket/${encodeURIComponent(downloadToken)}/${encodeURIComponent(ticket.correlative_code)}"
+          class="tk-download-btn"
+          download="ticket-${ticket.correlative_code}.pdf"
+          target="_blank"
+          rel="noopener"
+        >⬇ Descargar PDF</a>
+      </div>
+    `;
+    return el;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function showError(msg) {
+    document.getElementById('loading-state').hidden = true;
+    document.getElementById('error-state').hidden   = false;
+    document.getElementById('error-msg').textContent = msg || 'Error desconocido.';
+  }
+
+  init();
+  </script>
+</body>
+</html>

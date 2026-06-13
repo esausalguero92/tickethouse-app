@@ -1,0 +1,195 @@
+{
+  "name": "Party House - Master Owner Bot (consultas vía Supabase RPC)",
+  "nodes": [
+    {
+      "parameters": { "updates": ["message"] },
+      "name": "Telegram Trigger (Owner)",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": { "telegramApi": "PH_OWNER_BOT" }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{$json['message']['from']['id']}}", "operation": "containsAny", "value2": "={{$env.OWNER_TELEGRAM_IDS}}" }
+          ]
+        }
+      },
+      "name": "¿Owner autorizado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json['message']['chat']['id']}}",
+        "text": "⛔ No tienes permiso para usar este bot."
+      },
+      "name": "Rechazar",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [640, 460],
+      "credentials": { "telegramApi": "PH_OWNER_BOT" }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { text: $json.message.text || '', chat_id: $json.message.chat.id } }];"
+      },
+      "name": "Preparar contexto",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [640, 260]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [
+            { "role": "system", "content": "Eres el asistente del Master Owner de Party House. Tu rol es traducir preguntas en lenguaje natural a uno de estos kinds de consulta: event_summary (resumen del evento actual: códigos, pagos, tickets, recaudación) o pending_transfers (transferencias que esperan revisión). Responde SOLO con JSON, sin texto fuera. Formato: {\"kind\":\"event_summary\"} o {\"kind\":\"pending_transfers\"} o {\"kind\":\"chat\",\"reply\":\"...\"} si la pregunta no encaja." },
+            { "role": "user", "content": "={{$json.text}}" }
+          ]
+        },
+        "jsonOutput": true
+      },
+      "name": "IA Owner",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [860, 260],
+      "credentials": { "openAiApi": "OpenAI" }
+    },
+    {
+      "parameters": {
+        "functionCode": "let parsed;\ntry { parsed = JSON.parse($json.message.content); }\ncatch(e) { parsed = { kind: 'chat', reply: $json.message.content }; }\nreturn [{ json: { ...parsed, _chat_id: $node['Preparar contexto'].json.chat_id } }];"
+      },
+      "name": "Parsear kind",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1080, 260]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            { "value2": "event_summary", "output": 0 },
+            { "value2": "pending_transfers", "output": 1 },
+            { "value2": "chat", "output": 2 }
+          ]
+        },
+        "value1": "={{$json.kind}}"
+      },
+      "name": "Switch kind",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1300, 260]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/rpc_event_summary",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "p_event_id", "value": "={{$env.PH_CURRENT_EVENT_ID}}" }
+        ]}
+      },
+      "name": "Supabase: rpc_event_summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1520, 120]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$node['Parsear kind'].json._chat_id}}",
+        "text": "=📊 *Resumen del evento*\n\n• Códigos creados: *{{$json.codes}}*\n• Códigos usados: *{{$json.codes_used}}*\n• Pagos confirmados: *{{$json.paid}}*\n• Transferencias pendientes: *{{$json.awaiting}}*\n• Tickets emitidos: *{{$json.tickets}}*\n• Tickets escaneados: *{{$json.redeemed}}*\n• Recaudación: *USD {{$json.revenue_usd}}*",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "name": "Responder resumen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1740, 120],
+      "credentials": { "telegramApi": "PH_OWNER_BOT" }
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/rpc_pending_transfers",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Authorization", "value": "=Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ]},
+        "sendBody": true,
+        "jsonBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "p_event_id", "value": "={{$env.PH_CURRENT_EVENT_ID}}" }
+        ]}
+      },
+      "name": "Supabase: rpc_pending_transfers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1520, 280]
+    },
+    {
+      "parameters": {
+        "functionCode": "const list = $json || [];\nif (!list.length) return [{ json: { _chat_id: $node['Parsear kind'].json._chat_id, text: '✅ No hay transferencias pendientes.' } }];\nconst lines = list.map((o,i) => `${i+1}. *${o.guest.first_name} ${o.guest.last_name}* — USD ${o.amount_usd}\\n   Ref: \\`${o.reference || '—'}\\`\\n   Orden: \\`${o.order_id}\\`\\n   Comprobante: ${o.receipt_url || '—'}`).join('\\n\\n');\nreturn [{ json: { _chat_id: $node['Parsear kind'].json._chat_id, text: `💸 *${list.length} transferencia(s) pendiente(s)*\\n\\n${lines}\\n\\n_Aprobá con_ \\`/aprobar <orden>\\` _en el bot Admin._` } }];"
+      },
+      "name": "Formatear pendientes",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1740, 280]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json._chat_id}}",
+        "text": "={{$json.text}}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "name": "Responder pendientes",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1960, 280],
+      "credentials": { "telegramApi": "PH_OWNER_BOT" }
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json._chat_id}}",
+        "text": "={{$json.reply}}"
+      },
+      "name": "Responder chat libre",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1520, 440],
+      "credentials": { "telegramApi": "PH_OWNER_BOT" }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger (Owner)": { "main": [[{ "node": "¿Owner autorizado?", "type": "main", "index": 0 }]] },
+    "¿Owner autorizado?": { "main": [
+      [{ "node": "Preparar contexto", "type": "main", "index": 0 }],
+      [{ "node": "Rechazar", "type": "main", "index": 0 }]
+    ]},
+    "Preparar contexto": { "main": [[{ "node": "IA Owner", "type": "main", "index": 0 }]] },
+    "IA Owner": { "main": [[{ "node": "Parsear kind", "type": "main", "index": 0 }]] },
+    "Parsear kind": { "main": [[{ "node": "Switch kind", "type": "main", "index": 0 }]] },
+    "Switch kind": { "main": [
+      [{ "node": "Supabase: rpc_event_summary", "type": "main", "index": 0 }],
+      [{ "node": "Supabase: rpc_pending_transfers", "type": "main", "index": 0 }],
+      [{ "node": "Responder chat libre", "type": "main", "index": 0 }]
+    ]},
+    "Supabase: rpc_event_summary": { "main": [[{ "node": "Responder resumen", "type": "main", "index": 0 }]] },
+    "Supabase: rpc_pending_transfers": { "main": [[{ "node": "Formatear pendientes", "type": "main", "index": 0 }]] },
+    "Formatear pendientes": { "main": [[{ "node": "Responder pendientes", "type": "main", "index": 0 }]] }
+  }
+}
