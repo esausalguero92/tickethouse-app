@@ -800,4 +800,371 @@ let summary    = null;
 // ── Auth ───────────────────────────────────────────────────────────
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const user    = documen
+  const user    = document.getElementById('adm-user').value.trim();
+  const pass    = document.getElementById('adm-pass').value;
+  const errEl   = document.getElementById('login-err');
+  const btnText = document.getElementById('login-btn-text');
+  const spinner = document.getElementById('login-spinner');
+  const btn     = document.getElementById('login-btn');
+
+  if (!pass) {
+    errEl.textContent = 'Ingresa la contraseña.';
+    errEl.hidden = false;
+    return;
+  }
+
+  btnText.textContent = 'VERIFICANDO';
+  spinner.hidden = false;
+  btn.disabled   = true;
+  errEl.hidden   = true;
+
+  try {
+    const data = await api('POST', '/api/admin/login', { user: user || undefined, password: pass });
+    adminToken = data.token;
+    sessionStorage.setItem(ADM_TOKEN_KEY, adminToken);
+    enterAdmin(data.admin?.name);
+  } catch {
+    errEl.textContent = 'Usuario o contraseña incorrectos.';
+    errEl.hidden = false;
+    btnText.textContent = 'INGRESAR';
+    spinner.hidden = true;
+    btn.disabled   = false;
+  }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  sessionStorage.removeItem(ADM_TOKEN_KEY);
+  adminToken = null;
+  document.getElementById('admin-layout').hidden = true;
+  document.getElementById('login-screen').hidden = false;
+});
+
+// ── Mobile sidebar ─────────────────────────────────────────────────
+const sidebar        = document.getElementById('adm-sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const hamburgerBtn   = document.getElementById('hamburger-btn');
+
+function openSidebar() {
+  sidebar.classList.add('open');
+  sidebarOverlay.classList.add('open');
+}
+
+function closeSidebar() {
+  sidebar.classList.remove('open');
+  sidebarOverlay.classList.remove('open');
+}
+
+hamburgerBtn.addEventListener('click', openSidebar);
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+// ── Init ───────────────────────────────────────────────────────────
+function init() {
+  const saved = sessionStorage.getItem(ADM_TOKEN_KEY);
+  if (saved) {
+    adminToken = saved;
+    enterAdmin();
+  }
+}
+
+function enterAdmin(name) {
+  document.getElementById('login-screen').hidden = true;
+  document.getElementById('admin-layout').hidden = false;
+  loadAll();
+}
+
+// ── Nav ────────────────────────────────────────────────────────────
+document.querySelectorAll('.adm-nav__item[data-panel]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.adm-nav__item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).classList.add('active');
+    closeSidebar();
+  });
+});
+
+document.getElementById('refresh-btn').addEventListener('click', loadAll);
+
+// ── Load all data ──────────────────────────────────────────────────
+async function loadAll() {
+  const h = { 'x-admin-token': adminToken };
+  const errBanner = document.getElementById('dashboard-error');
+  errBanner.hidden = true;
+
+  try {
+    const [sumData, ordersData, ticketsData, transfersData] = await Promise.all([
+      api('GET', '/api/admin/event-summary',    null, h),
+      api('GET', '/api/admin/orders',           null, h),
+      api('GET', '/api/admin/tickets',          null, h),
+      api('GET', '/api/admin/pending-transfers',null, h),
+    ]);
+
+    summary    = sumData;
+    allOrders  = ordersData.orders  || [];
+    allTickets = ticketsData.tickets || [];
+
+    renderDashboard(sumData, allOrders);
+    renderOrders(allOrders);
+    renderTickets(allTickets);
+    renderTransfers(transfersData.transfers || []);
+
+    const pendCount = (transfersData.transfers || []).filter(
+      t => t.payment_status === 'awaiting_review' || t.payment_status === 'pending'
+    ).length;
+    const badge = document.getElementById('transfer-badge');
+    if (pendCount > 0) {
+      badge.textContent = pendCount;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+
+  } catch (err) {
+    if (err.status === 401 || err.status === 403) {
+      sessionStorage.removeItem(ADM_TOKEN_KEY);
+      adminToken = null;
+      document.getElementById('admin-layout').hidden = true;
+      document.getElementById('login-screen').hidden = false;
+    } else {
+      errBanner.textContent = 'Error al cargar datos. Verifica que el servidor esté activo y vuelve a intentarlo.';
+      errBanner.hidden = false;
+    }
+  }
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────
+function renderDashboard(sum, orders) {
+  document.getElementById('stat-sold').textContent     = sum.tickets_sold ?? '—';
+  document.getElementById('stat-capacity').textContent = `de ${sum.max_capacity ?? '?'} capacidad`;
+  document.getElementById('stat-orders').textContent   = sum.paid_orders ?? '—';
+  document.getElementById('stat-pending').textContent  = sum.pending_transfers ?? '—';
+  document.getElementById('stat-redeemed').textContent = sum.redeemed_today ?? '—';
+
+  renderOrdersTable('recent-orders-wrap', orders.slice(0, 10), false);
+}
+
+// ── Orders ─────────────────────────────────────────────────────────
+function renderOrders(orders) {
+  renderOrdersTable('orders-wrap', orders, true);
+}
+
+function statusBadge(st) {
+  const map = {
+    paid:           ['paid',     'Pagado'],
+    awaiting_review:['awaiting', 'Pendiente'],
+    pending:        ['pending',  'Pendiente'],
+    rejected:       ['rejected', 'Rechazado'],
+  };
+  const [cls, label] = map[st] || ['pending', st || '—'];
+  return `<span class="badge badge--${cls}">${label}</span>`;
+}
+
+function renderOrdersTable(wrapperId, orders, showActions) {
+  const wrap = document.getElementById(wrapperId);
+  if (!orders.length) {
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">📋</span>Sin pedidos</div>';
+    return;
+  }
+
+  const rows = orders.map(o => `
+    <tr>
+      <td><span class="adm-id">${(o.id || '').slice(0,8)}…</span></td>
+      <td style="color:var(--ph-text);font-weight:600">${esc(o.buyer_name || '—')}</td>
+      <td style="color:var(--ph-text-mute)">${esc(o.buyer_email || '—')}</td>
+      <td style="text-align:center;font-weight:600;color:var(--ph-text)">${o.quantity ?? '—'}</td>
+      <td>${statusBadge(o.payment_status)}</td>
+      <td><span class="correlative">${o.correlative_codes?.join(', ') || '—'}</span></td>
+      <td style="color:var(--ph-text-dim);font-size:11px">${o.created_at ? formatDate(o.created_at) : '—'}</td>
+    </tr>
+  `).join('');
+
+  wrap.innerHTML = `
+    <table class="adm-table">
+      <thead><tr>
+        <th>ID</th><th>Comprador</th><th>Email</th><th>Qty</th><th>Estado</th><th>Códigos</th><th>Fecha</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ── Tickets ────────────────────────────────────────────────────────
+function renderTickets(tickets) {
+  const wrap = document.getElementById('tickets-wrap');
+  if (!tickets.length) {
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">✦</span>Sin entradas emitidas</div>';
+    return;
+  }
+
+  const rows = tickets.map(t => `
+    <tr>
+      <td><span class="correlative">${esc(t.correlative_code || '—')}</span></td>
+      <td style="color:var(--ph-text);font-weight:600">${esc(t.buyer_name || '—')}</td>
+      <td style="color:var(--ph-text-mute)">${esc(t.buyer_email || '—')}</td>
+      <td><span class="badge badge--${t.status === 'redeemed' ? 'redeemed' : 'issued'}">${t.status === 'redeemed' ? 'Usada' : 'Válida'}</span></td>
+      <td style="font-size:11px;color:var(--ph-text-dim)">${t.redeemed_at ? formatDate(t.redeemed_at) : '—'}</td>
+      <td style="font-size:11px;color:var(--ph-text-dim)">${t.created_at ? formatDate(t.created_at) : '—'}</td>
+    </tr>
+  `).join('');
+
+  wrap.innerHTML = `
+    <table class="adm-table">
+      <thead><tr>
+        <th>Código</th><th>Titular</th><th>Email</th><th>Estado</th><th>Validado</th><th>Emitida</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+// ── Transfers ──────────────────────────────────────────────────────
+function renderTransfers(transfers) {
+  const wrap = document.getElementById('transfers-wrap');
+
+  if (!transfers.length) {
+    wrap.innerHTML = `<div class="adm-empty"><span class="adm-empty__icon">💳</span>Sin transferencias pendientes</div>`;
+    return;
+  }
+
+  const isPdf = url => url && (url.includes('.pdf') || url.includes('application%2Fpdf'));
+
+  const cards = transfers.map(t => {
+    const receiptHtml = t.transfer_receipt_url
+      ? isPdf(t.transfer_receipt_url)
+        ? `<a href="${esc(t.transfer_receipt_url)}" target="_blank" rel="noopener" class="transfer-card__receipt-pdf">📄</a>`
+        : `<a href="${esc(t.transfer_receipt_url)}" target="_blank" rel="noopener" class="transfer-card__receipt-link">
+             <img src="${esc(t.transfer_receipt_url)}" class="transfer-card__receipt-img" alt="Comprobante"/>
+           </a>`
+      : '<span style="color:var(--ph-text-dim);font-size:12px">Sin comprobante</span>';
+
+    const actionsHtml = t.payment_status !== 'paid'
+      ? `<div class="transfer-card__actions">
+           <button class="adm-btn-sm confirm" onclick="confirmTransfer('${esc(t.id)}', this)">✓ Confirmar</button>
+           ${t.payment_status !== 'rejected'
+             ? `<button class="adm-btn-sm reject" onclick="rejectTransfer('${esc(t.id)}', this)">✕ Rechazar</button>`
+             : ''}
+         </div>`
+      : '';
+
+    return `
+      <div class="transfer-card">
+        <div class="transfer-card__main">
+          <div>
+            <span class="transfer-card__buyer">${esc(t.buyer_name || '—')}</span>
+            ${statusBadge(t.payment_status)}
+          </div>
+          <div class="transfer-card__meta">
+            <div class="transfer-card__meta-item">
+              <span class="transfer-card__meta-label">Email</span>
+              <span>${esc(t.buyer_email || '—')}</span>
+            </div>
+            <div class="transfer-card__meta-item">
+              <span class="transfer-card__meta-label">Entradas</span>
+              <span style="font-weight:600;color:var(--ph-text)">${t.quantity ?? '—'}</span>
+            </div>
+            <div class="transfer-card__meta-item">
+              <span class="transfer-card__meta-label">Folio</span>
+              <span style="font-family:var(--font-mono)">${esc(t.transfer_reference || '—')}</span>
+            </div>
+            <div class="transfer-card__meta-item">
+              <span class="transfer-card__meta-label">Fecha</span>
+              <span>${t.created_at ? formatDate(t.created_at) : '—'}</span>
+            </div>
+          </div>
+          ${actionsHtml}
+        </div>
+        <div class="transfer-card__aside">
+          <span class="transfer-card__amount">$${Number(t.amount_usd || 0).toFixed(2)}</span>
+          ${receiptHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  wrap.innerHTML = `<div class="transfer-cards">${cards}</div>`;
+}
+
+// ── Transfer actions ───────────────────────────────────────────────
+async function confirmTransfer(orderId, btn) {
+  if (!confirm('¿Confirmar esta transferencia y emitir las entradas?')) return;
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    await api('POST', '/api/admin/confirm-transfer', { order_id: orderId }, { 'x-admin-token': adminToken });
+    loadAll();
+  } catch (err) {
+    showToast(err.data?.error || err.message || 'Error al confirmar.', 'error');
+    btn.disabled = false;
+    btn.textContent = '✓ Confirmar';
+  }
+}
+
+async function rejectTransfer(orderId, btn) {
+  const reason = prompt('Razón del rechazo (opcional):') ?? '';
+  btn.disabled = true;
+  try {
+    await api('POST', '/api/admin/reject-transfer', { order_id: orderId, reason }, { 'x-admin-token': adminToken });
+    loadAll();
+  } catch (err) {
+    showToast(err.data?.error || err.message || 'Error al rechazar.', 'error');
+    btn.disabled = false;
+  }
+}
+
+// ── Filters ────────────────────────────────────────────────────────
+document.getElementById('orders-search').addEventListener('input', filterOrders);
+document.getElementById('orders-status').addEventListener('change', filterOrders);
+
+function filterOrders() {
+  const q  = document.getElementById('orders-search').value.toLowerCase();
+  const st = document.getElementById('orders-status').value;
+  const filtered = allOrders.filter(o => {
+    const matchQ  = !q  || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
+    const matchSt = !st || o.payment_status === st;
+    return matchQ && matchSt;
+  });
+  renderOrdersTable('orders-wrap', filtered, true);
+}
+
+document.getElementById('tickets-search').addEventListener('input', filterTickets);
+document.getElementById('tickets-status').addEventListener('change', filterTickets);
+
+function filterTickets() {
+  const q  = document.getElementById('tickets-search').value.toLowerCase();
+  const st = document.getElementById('tickets-status').value;
+  const filtered = allTickets.filter(t => {
+    const matchQ  = !q  || (t.correlative_code||'').toLowerCase().includes(q) || (t.buyer_name||'').toLowerCase().includes(q);
+    const matchSt = !st || t.status === st;
+    return matchQ && matchSt;
+  });
+  renderTickets(filtered);
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+let _toastTimer;
+function showToast(msg, type = 'error') {
+  let el = document.getElementById('adm-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'adm-toast';
+    document.body.appendChild(el);
+  }
+  el.className = type;
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.hidden = true; }, 4000);
+}
+
+// ── Utils ──────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
