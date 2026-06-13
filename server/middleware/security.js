@@ -1,15 +1,10 @@
 'use strict';
-/**
- * Middleware de seguridad global.
- * Orden de aplicación: helmet → cors → rateLimiter → sanitize
- */
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { validationResult } = require('express-validator');
 const env = require('../config/env');
 
-// ---- Helmet ----
 const helmetMiddleware = helmet({
   contentSecurityPolicy: {
     directives: {
@@ -42,17 +37,16 @@ const helmetMiddleware = helmet({
   hsts: env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
 });
 
-// ---- Rate limiters ----
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutos
+  windowMs: 15 * 60 * 1000,
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'too_many_requests', message: 'Demasiadas solicitudes. Intenta más tarde.' },
+  message: { error: 'too_many_requests', message: 'Demasiadas solicitudes. Intenta mas tarde.' },
 });
 
 const paymentLimiter = rateLimit({
-  windowMs: 60 * 1000,  // 1 minuto
+  windowMs: 60 * 1000,
   max: 8,
   message: { error: 'payment_rate_limit', message: 'Demasiados intentos de pago.' },
 });
@@ -60,7 +54,7 @@ const paymentLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  message: { error: 'auth_rate_limit', message: 'Demasiados intentos de autenticación.' },
+  message: { error: 'auth_rate_limit', message: 'Demasiados intentos de autenticacion.' },
 });
 
 const purchaseLimiter = rateLimit({
@@ -69,7 +63,6 @@ const purchaseLimiter = rateLimit({
   message: { error: 'purchase_rate_limit', message: 'Demasiados intentos de compra.' },
 });
 
-// ---- Sanitizador de strings (anti-XSS básico) ----
 function sanitizeString(val) {
   if (typeof val !== 'string') return val;
   return val
@@ -98,4 +91,23 @@ function sanitizeInputs(req, _res, next) {
   next();
 }
 
-// ---- Validador de express-valid
+function validateRequest(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      error: 'validation_error',
+      details: errors.array().map(function(e) { return { field: e.path, message: e.msg }; }),
+    });
+  }
+  next();
+}
+
+module.exports = {
+  helmetMiddleware,
+  globalLimiter,
+  paymentLimiter,
+  authLimiter,
+  purchaseLimiter,
+  sanitizeInputs,
+  validateRequest,
+};
