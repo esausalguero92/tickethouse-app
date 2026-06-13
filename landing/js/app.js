@@ -1,12 +1,12 @@
 /**
- * Party House — App JS v2.0
- * Helpers compartidos entre todas las páginas.
+ * Party House - App JS v2.0
+ * Helpers compartidos entre todas las paginas.
  */
 
 (function () {
 'use strict';
 
-// ── API helper ─────────────────────────────────────────────────────
+// API helper
 async function api(method, path, body = null, headers = {}) {
   const opts = {
     method,
@@ -19,15 +19,15 @@ async function api(method, path, body = null, headers = {}) {
   return json;
 }
 
-// ── Session helpers ────────────────────────────────────────────────
+// Session helpers
 const Session = {
-  set: (key, val) => sessionStorage.setItem(`ph_${key}`, JSON.stringify(val)),
-  get: (key) => { try { return JSON.parse(sessionStorage.getItem(`ph_${key}`) || 'null'); } catch { return null; } },
-  del: (key) => sessionStorage.removeItem(`ph_${key}`),
+  set: (key, val) => sessionStorage.setItem('ph_' + key, JSON.stringify(val)),
+  get: (key) => { try { return JSON.parse(sessionStorage.getItem('ph_' + key) || 'null'); } catch { return null; } },
+  del: (key) => sessionStorage.removeItem('ph_' + key),
   clear: () => Object.keys(sessionStorage).filter(k => k.startsWith('ph_')).forEach(k => sessionStorage.removeItem(k)),
 };
 
-// ── DOM helpers ────────────────────────────────────────────────────
+// DOM helpers
 const $ = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
@@ -40,7 +40,7 @@ function showError(el, msg) {
   el.hidden = !msg;
 }
 
-// ── Format helpers ─────────────────────────────────────────────────
+// Format helpers
 function formatUSD(amount) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
@@ -54,16 +54,14 @@ function formatDate(isoStr) {
   }).format(new Date(isoStr));
 }
 
-// ── Loading overlay ────────────────────────────────────────────────
-let _overlay = null;
-function showLoading(text = 'Procesando...') {
+// Loading overlay
+var _overlay = null;
+function showLoading(text) {
+  text = text || 'Procesando...';
   if (_overlay) return;
   _overlay = document.createElement('div');
   _overlay.className = 'ph-loading-overlay';
-  _overlay.innerHTML = `
-    <div class="ph-spinner ph-spinner--lg"></div>
-    <p class="ph-loading-overlay__text">${text}</p>
-  `;
+  _overlay.innerHTML = '<div class="ph-spinner ph-spinner--lg"></div><p class="ph-loading-overlay__text">' + text + '</p>';
   document.body.appendChild(_overlay);
 }
 
@@ -71,11 +69,12 @@ function hideLoading() {
   if (_overlay) { _overlay.remove(); _overlay = null; }
 }
 
-// ── QR renderer (usando qrcode.js via CDN) ─────────────────────────
-function renderQR(container, token, size = 200) {
+// QR renderer (qrcode.js via CDN)
+function renderQR(container, token, size) {
+  size = size || 200;
   container.innerHTML = '';
   if (typeof QRCode === 'undefined') {
-    container.textContent = '[QR no disponible — activa JavaScript]';
+    container.textContent = '[QR no disponible - activa JavaScript]';
     return;
   }
   new QRCode(container, {
@@ -88,15 +87,18 @@ function renderQR(container, token, size = 200) {
   });
 }
 
-// ── URL param helper ───────────────────────────────────────────────
+// URL param helper
 function getParam(name) {
   return new URLSearchParams(window.location.search).get(name) || '';
 }
 
-// ── Navigate ───────────────────────────────────────────────────────
+// Navigate
 function navigate(url) {
   window.location.href = url;
 }
 
-// ── Export (para módulos o uso global) ────────────────────────────
-window.PH = { api, Session, $, $$, show, hide, setText, showEr
+// Export global
+window.PH = { api, Session, $, $$, show, hide, setText, showError,
+               formatUSD, formatDate, showLoading, hideLoading,
+               renderQR, getParam, navigate };
+})();
