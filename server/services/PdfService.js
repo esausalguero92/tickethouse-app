@@ -1,14 +1,14 @@
 'use strict';
 /**
- * Party House — PDF Service
- * Genera PDFs con diseño de invitación premium.
+ * Party House -- PDF Service
+ * Genera PDFs con diseno de invitacion premium.
  * NO es un boleto de transporte. NO es una factura.
- * Es una invitación digital de la experiencia PARTY HOUSE.
+ * Es una invitacion digital de la experiencia PARTY HOUSE.
  *
  * Paleta Social Neon:
  *   Fondo:    #050505
  *   Azul:     #1D4FFF
- *   Púrpura:  #5D2D91
+ *   Purpura:  #5D2D91
  *   Magenta:  #FF2E9A
  *   Texto:    #FFFFFF / #8B8A99
  */
@@ -69,9 +69,9 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
     size: [W, H],
     margin: 0,
     info: {
-      Title: `Party House — ${correlativeCode}`,
+      Title: 'Party House - ' + correlativeCode,
       Author: 'Party House',
-      Subject: `Entrada para ${eventName}`,
+      Subject: 'Entrada para ' + eventName,
     },
   });
 
@@ -82,40 +82,40 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
     doc.on('end',   () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // ── Fondo completo ───────────────────────────────────────────────
+    // -- Fondo completo --
     doc.rect(0, 0, W, H).fill(C.bg);
 
-    // ── Banda superior triple (linea gráfica) ────────────────────────
-    // Blue | Purple | Magenta — 3 segmentos proporcionales
+    // -- Banda superior triple (linea grafica) --
+    // Blue | Purple | Magenta -- 3 segmentos proporcionales
     const barH = 6;
     const seg = Math.floor(W / 3);
     doc.rect(0, 0, seg, barH).fill(C.blue);
     doc.rect(seg, 0, seg, barH).fill(C.purple);
     doc.rect(seg * 2, 0, W - seg * 2, barH).fill(C.magenta);
 
-    // Línea de brillo debajo de la banda
+    // Linea de brillo debajo de la banda
     doc.rect(0, barH, W, 1).fill(C.border).opacity(0.8);
     doc.opacity(1);
 
-    // ── PARTY HOUSE ──────────────────────────────────────────────────
+    // -- PARTY HOUSE --
     tryFont(doc, FONT_BEBAS, 'Helvetica-Bold');
     doc.fontSize(60).fillColor(C.white)
        .text('PARTY HOUSE', 0, 16, { align: 'center', width: W, characterSpacing: 4 });
 
-    // Subtítulo — línea gráfica Party House
+    // Subtitulo -- linea grafica Party House
     tryFont(doc, FONT_BEBAS, 'Helvetica');
     doc.fontSize(13).fillColor(C.purple)
        .text('FOR THOSE WHO KNOW', 0, 76, { align: 'center', width: W, characterSpacing: 6 });
 
-    // ── Separador decorativo ─────────────────────────────────────────
-    // Línea azul con puntos de color en los extremos
+    // -- Separador decorativo --
+    // Linea azul con puntos de color en los extremos
     const sep1Y = 100;
     doc.rect(32, sep1Y, W - 64, 1).fill(C.blue).opacity(0.3);
     doc.circle(32, sep1Y + 0.5, 2).fill(C.blue).opacity(0.6);
     doc.circle(W - 32, sep1Y + 0.5, 2).fill(C.magenta).opacity(0.6);
     doc.opacity(1);
 
-    // ── Info del evento ───────────────────────────────────────────────
+    // -- Info del evento --
     let infoY = 112;
 
     if (eventDateStr) {
@@ -135,12 +135,12 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
       infoY += 20;
     }
 
-    // ── Separador fino ────────────────────────────────────────────────
+    // -- Separador fino --
     const sep2Y = infoY + 6;
     doc.rect(48, sep2Y, W - 96, 1).fill(C.purple).opacity(0.2);
     doc.opacity(1);
 
-    // ── QR (protagonista visual) ──────────────────────────────────────
+    // -- QR (protagonista visual) --
     const qrSize = 252;
     const qrX    = (W - qrSize) / 2;
     const qrY    = sep2Y + 16;
@@ -179,13 +179,13 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
 
     doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
 
-    // Instrucción bajo QR
+    // Instruccion bajo QR
     const afterQr = qrY + qrSize + 12;
     tryFont(doc, FONT_BEBAS, 'Helvetica');
     doc.fontSize(9).fillColor(C.muted)
        .text('PRESENTA ESTE QR EN LA ENTRADA', 0, afterQr, { align: 'center', width: W, characterSpacing: 2 });
 
-    // ── Código correlativo ────────────────────────────────────────────
+    // -- Codigo correlativo --
     const corrY = afterQr + 18;
 
     tryFont(doc, FONT_BEBAS, 'Helvetica');
@@ -196,4 +196,48 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
     doc.fontSize(26).fillColor(C.blue)
        .text(correlativeCode, 0, corrY + 12, { align: 'center', width: W, characterSpacing: 2 });
 
-    // ── Separador ────────────────�
+    // -- Separador --
+    const locSepY = corrY + 44;
+    doc.rect(48, locSepY, W - 96, 1).fill(C.purple).opacity(0.15);
+    doc.opacity(1);
+
+    // -- Ubicacion --
+    const locY = locSepY + 10;
+    tryFont(doc, FONT_BEBAS, 'Helvetica');
+    doc.fontSize(10).fillColor(C.purple)
+       .text('UBICACIÓN', 0, locY, { align: 'center', width: W, characterSpacing: 4 });
+
+    if (eventVenue) {
+      doc.font('Helvetica').fontSize(9).fillColor(C.muted)
+         .text(eventVenue, 0, locY + 14, { align: 'center', width: W });
+    }
+
+    // Boton Waze
+    const mapsUrl = 'https://ul.waze.com/ul?ll=14.59188200%2C-90.56757700&navigate=yes';
+    const btnW = 160, btnH = 24;
+    const btnX = (W - btnW) / 2;
+    const btnY = locY + (eventVenue ? 30 : 18);
+    doc.roundedRect(btnX, btnY, btnW, btnH, 4).fill(C.surface);
+    doc.roundedRect(btnX, btnY, btnW, btnH, 4).stroke(C.blue).lineWidth(0.8).opacity(0.6);
+    doc.opacity(1);
+    tryFont(doc, FONT_BEBAS, 'Helvetica-Bold');
+    doc.fontSize(9).fillColor(C.white)
+       .text('ABRIR EN WAZE', btnX, btnY + 8, { width: btnW, align: 'center', characterSpacing: 2, link: mapsUrl });
+
+    // -- Footer copyright strip --
+    doc.rect(0, H - 22, W, 22).fill(C.surface);
+    doc.font('Helvetica').fontSize(6.5).fillColor(C.dim)
+       .text('© PARTY HOUSE · ENTRADA PERSONAL E INTRANSFERIBLE', 0, H - 14,
+             { align: 'center', width: W, characterSpacing: 0.5 });
+
+    // -- Banda inferior triple (espejo del header) --
+    doc.rect(0, H - 5, seg, 5).fill(C.magenta).opacity(0.7);
+    doc.rect(seg, H - 5, seg, 5).fill(C.purple).opacity(0.7);
+    doc.rect(seg * 2, H - 5, W - seg * 2, 5).fill(C.blue).opacity(0.7);
+    doc.opacity(1);
+
+    doc.end();
+  });
+}
+
+module.exports = { generateTicketPdf };
