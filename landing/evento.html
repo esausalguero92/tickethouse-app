@@ -774,7 +774,6 @@
               <p class="ev-left__price-label">Precio por entrada</p>
               <p class="ev-left__price-value" id="ev-price">&mdash;</p>
             </div>
-            <span class="ev-left__availability" id="ev-availability"></span>
           </div>
         </div>
       </div>
@@ -1021,15 +1020,6 @@
     document.getElementById('ev-venue').textContent   = event.venue || event.location || '-';
     document.getElementById('ev-price').textContent   = 'Q' + GTQ_PER_TICKET.toFixed(2);
 
-    const availEl = document.getElementById('ev-availability');
-    if (available === null) {
-      availEl.textContent = '';
-    } else if (available <= 20) {
-      availEl.textContent = 'Solo quedan ' + available + '!';
-      availEl.classList.add('low');
-    } else {
-      availEl.textContent = available + ' disponibles';
-    }
 
     document.getElementById('main-content').hidden = false;
     updateSummary();
