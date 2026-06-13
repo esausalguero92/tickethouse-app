@@ -53,7 +53,4 @@ app.use(errorHandler);
 
 // ── Boot ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, '0.0.0.0', () => {
-  console.log(`[boot] Party House server v2.0.0 — port ${env.PORT} — ${env.NODE_ENV}`);
-});
-
-module.exports = app;
+  console.log(`[boot] Party House server v2.0.0 — p

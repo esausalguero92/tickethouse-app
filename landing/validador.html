@@ -564,7 +564,7 @@
           <div class="cam-frame__bl"></div>
         </div>
 
-        <p class="cam-hint">Apunta al código QR de la entrada</p>
+        <p class="cam-hint" id="cam-hint">Apunta al código QR de la entrada</p>
 
         <!-- Start button (before permissions) -->
         <div id="cam-start-wrap" class="cam-start-btn">
@@ -758,19 +758,37 @@ function startScanLoop() {
   const video  = document.getElementById('cam-video');
   const canvas = document.getElementById('cam-canvas');
   const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  const hint   = document.getElementById('cam-hint');
+  let frameCnt = 0;
 
   function tick() {
     if (!cameraActive) return;
+    frameCnt++;
+
     if (video.readyState === video.HAVE_ENOUGH_DATA && !scanning) {
-      canvas.width  = video.videoWidth;
-      canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+      const vw = video.videoWidth  || 1280;
+      const vh = video.videoHeight || 720;
+      if (canvas.width !== vw || canvas.height !== vh) {
+        canvas.width  = vw;
+        canvas.height = vh;
+      }
+      ctx.drawImage(video, 0, 0, vw, vh);
+      const imgData = ctx.getImageData(0, 0, vw, vh);
+      const code = jsQR(imgData.data, vw, vh, { inversionAttempts: 'attemptBoth' });
+
+      // Pulsa el hint cada ~90 frames para confirmar que el loop está activo
+      if (frameCnt % 90 === 0 && hint && !scanning) {
+        hint.textContent = 'Apunta al código QR de la entrada';
+      }
+
       if (code?.data) {
         scanning = true;
+        if (hint) hint.textContent = '✓ Código detectado…';
         validateToken(code.data).finally(() => {
-          setTimeout(() => { scanning = false; }, 3000);
+          setTimeout(() => {
+            scanning = false;
+            if (hint) hint.textContent = 'Apunta al código QR de la entrada';
+          }, 3000);
         });
       }
     }
@@ -802,160 +820,4 @@ async function submitManual() {
 async function submitJwt() {
   const token = document.getElementById('manual-jwt').value.trim();
   if (!token) return;
-  await validateToken(token);
-}
-
-// ── Validate: JWT token (from QR) ────────────────────────────────
-async function validateToken(token) {
-  try {
-    const data = await api('POST', '/api/tickets/validate', { token }, { 'x-staff-token': staffToken });
-    showResult({
-      state:       'valid',
-      buyer:       data.buyer_name || data.name || '—',
-      correlative: data.correlative_code || '—',
-      event:       data.event_name || '—',
-      meta:        data.redeemed_at ? `Validado: ${formatDate(data.redeemed_at)}` : '',
-    });
-  } catch (err) {
-    const code = err.data?.error || '';
-    const stateMap = {
-      ticket_already_used: 'used',
-      ticket_not_found:    'invalid',
-      token_invalid:       'invalid',
-      token_expired:       'invalid',
-    };
-    showResult({
-      state:       stateMap[code] || 'invalid',
-      correlative: err.data?.correlative_code || '—',
-      buyer:       err.data?.buyer_name || '',
-      meta:        err.data?.message || 'Acceso denegado',
-    });
-  }
-}
-
-// ── Validate: correlative code ────────────────────────────────────
-async function validateByCorrelative(code) {
-  try {
-    const data = await api('POST', '/api/tickets/validate-code', { correlative_code: code }, { 'x-staff-token': staffToken });
-    const result = {
-      state:       'valid',
-      buyer:       data.buyer_name || '—',
-      correlative: data.correlative_code || code,
-      event:       data.event_name || '—',
-      meta:        '',
-    };
-    showResult(result);
-    showManualResult(result);
-    document.getElementById('manual-code').value = '';
-  } catch (err) {
-    const code2 = err.data?.error || '';
-    const stateMap = {
-      ticket_already_used: 'used',
-      ticket_not_found:    'not_found',
-    };
-    const metaText = code2 === 'ticket_already_used' && err.data?.message
-      ? `Validada: ${formatDate(err.data.message)}`
-      : code2 === 'ticket_not_found'
-        ? 'Código no registrado'
-        : 'Acceso denegado';
-    const result = {
-      state:       stateMap[code2] || 'invalid',
-      correlative: code,
-      buyer:       err.data?.buyer_name || '',
-      meta:        metaText,
-    };
-    showResult(result);
-    showManualResult(result);
-  }
-}
-
-// ── Resultado persistente en panel manual ─────────────────────────
-const MANUAL_RESULT_CFG = {
-  valid:     { icon: '✦', label: 'VÁLIDA'        },
-  used:      { icon: '✕', label: 'YA USADA'      },
-  invalid:   { icon: '!', label: 'INVÁLIDA'      },
-  not_found: { icon: '?', label: 'NO ENCONTRADA' },
-};
-
-function showManualResult({ state, buyer, correlative, meta }) {
-  const cfg = MANUAL_RESULT_CFG[state] || MANUAL_RESULT_CFG.invalid;
-  const el  = document.getElementById('manual-result');
-
-  el.className = `manual-result manual-result--${state}`;
-  el.removeAttribute('hidden');
-
-  document.getElementById('mr-icon').textContent  = cfg.icon;
-  document.getElementById('mr-state').textContent = cfg.label;
-  document.getElementById('mr-buyer').textContent = buyer || '';
-  document.getElementById('mr-code').textContent  = correlative ? `#${correlative}` : '';
-  document.getElementById('mr-meta').textContent  = meta || '';
-}
-
-// ── Result overlay ────────────────────────────────────────────────
-const RESULT_CONFIG = {
-  valid:     { icon: '✦', label: 'VÁLIDA',     bg: 'rgba(5,5,5,0.97)', color: '#22d3ee', vibrate: [100] },
-  used:      { icon: '✕', label: 'YA USADA',   bg: 'rgba(5,5,5,0.97)', color: '#FF2E9A', vibrate: [200,100,200] },
-  invalid:   { icon: '!', label: 'INVÁLIDA',   bg: 'rgba(5,5,5,0.97)', color: '#FF2E9A', vibrate: [300] },
-  not_found: { icon: '?', label: 'NO ENCONTRADA', bg: 'rgba(5,5,5,0.97)', color: '#5D2D91', vibrate: [200,100,200] },
-};
-
-function showResult({ state, buyer, correlative, event, meta }) {
-  const cfg = RESULT_CONFIG[state] || RESULT_CONFIG.invalid;
-  vibrate(cfg.vibrate);
-
-  const overlay = document.getElementById('result-overlay');
-  overlay.style.background = cfg.bg;
-  overlay.className = '';
-  overlay.removeAttribute('hidden');
-
-  document.getElementById('result-icon').textContent       = cfg.icon;
-  document.getElementById('result-icon').style.color       = cfg.color;
-  document.getElementById('result-state').textContent      = cfg.label;
-  document.getElementById('result-state').style.color      = cfg.color;
-  document.getElementById('result-buyer').textContent      = buyer || '';
-  document.getElementById('result-correlative').textContent = correlative ? `#${correlative}` : '';
-  document.getElementById('result-correlative').style.color = cfg.color;
-  document.getElementById('result-meta').textContent       = event ? `${event}${meta ? ' · ' + meta : ''}` : (meta || '');
-
-  // Auto-close after 4s for valid, 6s for others
-  const delay = state === 'valid' ? 4000 : 6000;
-  const timer = setTimeout(closeResult, delay);
-  document.getElementById('result-close')._timer = timer;
-
-  // Log
-  addLog({ state, buyer, correlative, time: new Date() });
-}
-
-document.getElementById('result-close').addEventListener('click', closeResult);
-
-function closeResult() {
-  const btn = document.getElementById('result-close');
-  if (btn._timer) clearTimeout(btn._timer);
-  document.getElementById('result-overlay').hidden = true;
-}
-
-// ── Log ───────────────────────────────────────────────────────────
-function addLog(entry) {
-  log.unshift(entry);
-  const list = document.getElementById('vld-log-list');
-  if (log.length === 1) list.innerHTML = '';
-
-  const li = document.createElement('li');
-  li.className = 'vld-log__item';
-  li.innerHTML = `
-    <span class="vld-log__dot dot--${entry.state}"></span>
-    <span class="vld-log__code">${esc(entry.correlative || '?')}</span>
-    <span class="vld-log__name">${esc(entry.buyer || '—')}</span>
-    <span class="vld-log__time">${entry.time.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit', second:'2-digit' })}</span>
-  `;
-  list.prepend(li);
-}
-
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-init();
-</script>
-</body>
-</html>
+  await validateT

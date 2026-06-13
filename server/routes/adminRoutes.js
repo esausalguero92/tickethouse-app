@@ -408,24 +408,4 @@ router.post('/complimentary/:code',
       return res.status(500).json({ error: rpcData?.error || 'db_order_failed' });
     }
 
-    const guestName = `${ctx.guest?.first_name || ''} ${ctx.guest?.last_name || ''}`.trim();
-    try {
-      const result = await issueTickets({
-        orderId:    rpcData.order_id,
-        eventId:    ctx.event_id,
-        buyerId:    null,
-        buyerName:  guestName || 'Invitado/a',
-        buyerEmail: ctx.guest?.email || null,
-        quantity:   1,
-        eventName:  ctx.event?.name || 'Party House',
-        eventDate:  ctx.event?.event_date || null,
-        eventVenue: ctx.event?.venue || '',
-      });
-      return res.json({ ok: true, code: ctx.code, guest: guestName, correlative_codes: result.correlativeCodes });
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    }
-  })
-);
-
-module.exports = router;
+    const guestName = `${ctx.guest?.fir

@@ -338,13 +338,4 @@ router.post('/transfer/submit',
       buyerName:  order.buyer_name || order.buyer?.full_name || 'Comprador',
       quantity:   order.quantity,
       eventName:  order.event?.name || 'Party House',
-      amountUsd:  order.amount_usd,
-      reference:  safeRef,
-      orderId:    order_id,
-    }).catch(e => console.error('[transfer.notify]', e.message));
-
-    return res.json({ ok: true, order_id });
-  })
-);
-
-module.exports = router;
+   

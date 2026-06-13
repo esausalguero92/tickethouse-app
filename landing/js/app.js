@@ -99,7 +99,4 @@ function navigate(url) {
 }
 
 // ── Export (para módulos o uso global) ────────────────────────────
-window.PH = { api, Session, $, $$, show, hide, setText, showError,
-               formatUSD, formatDate, showLoading, hideLoading,
-               renderQR, getParam, navigate };
-})();
+window.PH = { api, Session, $, $$, show, hide, setText, showEr

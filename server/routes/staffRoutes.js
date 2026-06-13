@@ -266,32 +266,4 @@ router.post('/tickets/validate-code',
       return ticketError(res, { status: 410, error: 'ticket_revoked', correlativeCode: ticket.correlative_code });
     }
 
-    const { data: updated, error: updErr } = await supabase
-      .from('tickets')
-      .update({ status: 'redeemed', redeemed_at: new Date().toISOString() })
-      .eq('id', ticket.id)
-      .in('status', ['issued', 'valid']) // guard race condition
-      .select('id')
-      .maybeSingle();
-
-    if (updErr || !updated) {
-      return ticketError(res, {
-        status: 409,
-        error: 'ticket_already_used',
-        correlativeCode: ticket.correlative_code,
-        buyerName,
-      });
-    }
-
-    await logValidation(supabase, { ticketId: ticket.id, qrScanned: correlative, result: 'valid', ip });
-
-    return res.json({
-      ok: true,
-      correlative_code: ticket.correlative_code,
-      buyer_name:       buyerName,
-      event_name:       ticket.event?.name || null,
-    });
-  })
-);
-
-module.exports = router;
+    const { da

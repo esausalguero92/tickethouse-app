@@ -196,48 +196,4 @@ async function generateTicketPdf({ correlativeCode, qrToken, eventName, eventDat
     doc.fontSize(26).fillColor(C.blue)
        .text(correlativeCode, 0, corrY + 12, { align: 'center', width: W, characterSpacing: 2 });
 
-    // ── Separador ─────────────────────────────────────────────────────
-    const locSepY = corrY + 44;
-    doc.rect(48, locSepY, W - 96, 1).fill(C.purple).opacity(0.15);
-    doc.opacity(1);
-
-    // ── Ubicación ─────────────────────────────────────────────────────
-    const locY = locSepY + 10;
-    tryFont(doc, FONT_BEBAS, 'Helvetica');
-    doc.fontSize(10).fillColor(C.purple)
-       .text('UBICACIÓN', 0, locY, { align: 'center', width: W, characterSpacing: 4 });
-
-    if (eventVenue) {
-      doc.font('Helvetica').fontSize(9).fillColor(C.muted)
-         .text(eventVenue, 0, locY + 14, { align: 'center', width: W });
-    }
-
-    // Botón Waze
-    const mapsUrl = 'https://ul.waze.com/ul?ll=14.59188200%2C-90.56757700&navigate=yes';
-    const btnW = 160, btnH = 24;
-    const btnX = (W - btnW) / 2;
-    const btnY = locY + (eventVenue ? 30 : 18);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 4).fill(C.surface);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 4).stroke(C.blue).lineWidth(0.8).opacity(0.6);
-    doc.opacity(1);
-    tryFont(doc, FONT_BEBAS, 'Helvetica-Bold');
-    doc.fontSize(9).fillColor(C.white)
-       .text('ABRIR EN WAZE', btnX, btnY + 8, { width: btnW, align: 'center', characterSpacing: 2, link: mapsUrl });
-
-    // ── Footer copyright strip
-    doc.rect(0, H - 22, W, 22).fill(C.surface);
-    doc.font('Helvetica').fontSize(6.5).fillColor(C.dim)
-       .text('© PARTY HOUSE · ENTRADA PERSONAL E INTRANSFERIBLE', 0, H - 14,
-             { align: 'center', width: W, characterSpacing: 0.5 });
-
-    // ── Banda inferior triple (espejo del header) ────────────────────
-    doc.rect(0, H - 5, seg, 5).fill(C.magenta).opacity(0.7);
-    doc.rect(seg, H - 5, seg, 5).fill(C.purple).opacity(0.7);
-    doc.rect(seg * 2, H - 5, W - seg * 2, 5).fill(C.blue).opacity(0.7);
-    doc.opacity(1);
-
-    doc.end();
-  });
-}
-
-module.exports = { generateTicketPdf };
+    // ── Separador ────────────────�

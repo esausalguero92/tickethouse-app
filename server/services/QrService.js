@@ -52,33 +52,4 @@ function generateTicketTokens({ orderId, eventId, buyerId, quantity, correlative
  */
 function generateDownloadToken(orderId) {
   return jwt.sign(
-    { t: 'ph.download', oid: orderId },
-    env.JWT_SECRET,
-    { expiresIn: '24h', algorithm: 'HS256' }
-  );
-}
-
-/**
- * Verifica un token genérico (QR o download).
- */
-function verifyToken(token) {
-  try {
-    return jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Genera un Buffer PNG del QR a partir de un JWT string.
- */
-async function generateQrBuffer(token, size = 480) {
-  return QRCode.toBuffer(token, {
-    width: size,
-    margin: 2,
-    color: { dark: '#000000', light: '#FFFFFF' },
-    errorCorrectionLevel: 'M',
-  });
-}
-
-module.exports = { generateTicketTokens, generateDownloadToken, verifyToken, generateQrBuffer };
+    {

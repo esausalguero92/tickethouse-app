@@ -102,10 +102,4 @@
   (function () {
     'use strict';
     const { getParam } = window.PH;
-    const code = getParam('c') || sessionStorage.getItem('ph_event_code') || '';
-    document.getElementById('cta-btn').href =
-      `/evento.html?c=${encodeURIComponent(code)}`;
-  })();
-  </script>
-</body>
-</html>
+    const code = getParam('c') || sessionSt
