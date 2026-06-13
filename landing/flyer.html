@@ -56,25 +56,32 @@
     .cta-btn:hover  { opacity: .88; transform: translateY(-1px); }
     .cta-btn:active { opacity: 1;   transform: translateY(0); }
 
-    /* ── Mobile: flyer vertical, botón fijo al fondo ── */
+    /* ── Mobile: flyer ocupa pantalla, botón debajo sin tapar ── */
     @media (max-width: 640px) {
+      html, body { overflow: auto; height: auto; }
+
       .flyer {
+        position: relative;
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: contain;
         content: url('/img/vertical.png');
-        object-position: center center;
       }
 
       .cta-wrap {
+        position: relative;
         top: auto;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: calc(100% - 40px);
+        left: auto;
+        transform: none;
+        width: calc(100% - 32px);
         max-width: none;
+        margin: 16px auto 32px;
       }
 
       .cta-btn {
         font-size: 18px;
-        padding: 14px;
+        padding: 16px;
       }
     }
   </style>

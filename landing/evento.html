@@ -908,6 +908,12 @@
               </div>
 
               <div id="panel-transfer" hidden>
+                <div style="background:rgba(29,79,255,0.08);border:1px solid rgba(29,79,255,0.25);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
+                  <p style="margin:0 0 4px;font-size:13px;color:var(--ph-text-dim)">Precio en transferencia</p>
+                  <p style="margin:0;font-size:15px;font-weight:600;color:var(--ph-text)">
+                    Q50.00 por entrada &nbsp;·&nbsp; Total: <span id="transfer-total-gtq">Q50.00</span>
+                  </p>
+                </div>
                 <div class="transfer-info-box">
                   <p class="transfer-info-box__label">Datos para transferir</p>
                   <div class="transfer-info-row"><span>Banco</span><span id="ti-bank">—</span></div>
@@ -1055,6 +1061,8 @@
     update();
   }
 
+  const GTQ_PER_TICKET = 50;
+
   function updateSummary() {
     const price = event?.price || 0;
     const total = price * quantity;
@@ -1067,6 +1075,10 @@
     const mt = document.getElementById('mini-summary-total');
     if (ml) ml.textContent = label;
     if (mt) mt.textContent = formatUSD(total);
+
+    // Total en Quetzales para transferencia
+    const gtqEl = document.getElementById('transfer-total-gtq');
+    if (gtqEl) gtqEl.textContent = `Q${(GTQ_PER_TICKET * quantity).toFixed(2)}`;
   }
 
   // ── Tabs ─────────────────────────────────────────────────────────
