@@ -765,33 +765,39 @@ function startScanLoop() {
     if (!cameraActive) return;
     frameCnt++;
 
-    if (video.readyState === video.HAVE_ENOUGH_DATA && !scanning) {
-      const vw = video.videoWidth  || 1280;
-      const vh = video.videoHeight || 720;
-      if (canvas.width !== vw || canvas.height !== vh) {
-        canvas.width  = vw;
-        canvas.height = vh;
-      }
-      ctx.drawImage(video, 0, 0, vw, vh);
-      const imgData = ctx.getImageData(0, 0, vw, vh);
-      const code = jsQR(imgData.data, vw, vh, { inversionAttempts: 'attemptBoth' });
+    try {
+      if (video.readyState === video.HAVE_ENOUGH_DATA && !scanning) {
+        const vw = video.videoWidth  || 640;
+        const vh = video.videoHeight || 480;
+        if (canvas.width !== vw || canvas.height !== vh) {
+          canvas.width  = vw;
+          canvas.height = vh;
+        }
+        ctx.drawImage(video, 0, 0, vw, vh);
+        const imgData = ctx.getImageData(0, 0, vw, vh);
+        const code = (typeof jsQR === 'function')
+          ? jsQR(imgData.data, vw, vh, { inversionAttempts: 'dontInvert' })
+          : null;
 
-      // Pulsa el hint cada ~90 frames para confirmar que el loop está activo
-      if (frameCnt % 90 === 0 && hint && !scanning) {
-        hint.textContent = 'Apunta al código QR de la entrada';
-      }
+        if (frameCnt % 90 === 0 && hint && !scanning) {
+          hint.textContent = 'Apunta al codigo QR de la entrada';
+        }
 
-      if (code?.data) {
-        scanning = true;
-        if (hint) hint.textContent = '✓ Código detectado…';
-        validateToken(code.data).finally(() => {
-          setTimeout(() => {
-            scanning = false;
-            if (hint) hint.textContent = 'Apunta al código QR de la entrada';
-          }, 3000);
-        });
+        if (code && code.data) {
+          scanning = true;
+          if (hint) hint.textContent = 'Codigo detectado...';
+          validateToken(code.data).finally(function() {
+            setTimeout(function() {
+              scanning = false;
+              if (hint) hint.textContent = 'Apunta al codigo QR de la entrada';
+            }, 3000);
+          });
+        }
       }
+    } catch (e) {
+      console.error('[scan] tick error:', e);
     }
+
     scanLoop = requestAnimationFrame(tick);
   }
 
