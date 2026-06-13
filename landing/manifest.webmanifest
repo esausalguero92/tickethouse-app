@@ -1,0 +1,10 @@
+{
+  "name": "Party House Validator",
+  "short_name": "PH Validator",
+  "start_url": "./validador.html",
+  "display": "standalone",
+  "background_color": "#050509",
+  "theme_color": "#050509",
+  "description": "Validador de entradas QR para Party House",
+  "icons": []
+}
