@@ -13,12 +13,14 @@ const router = Router();
 
 async function logValidation(supabase, params) {
   var ticketId = params.ticketId; var qrScanned = params.qrScanned; var result = params.result; var ip = params.ip;
-  await supabase.from('validation_log').insert({
-    ticket_id:  ticketId || null,
-    qr_scanned: (qrScanned || '').substring(0, 500),
-    result,
-    ip_address: ip || null,
-  }).catch(function() {});
+  try {
+    await supabase.from('validation_log').insert({
+      ticket_id:  ticketId || null,
+      qr_scanned: (qrScanned || '').substring(0, 500),
+      result,
+      ip_address: ip || null,
+    });
+  } catch (_) {}
 }
 
 function ticketError(res, params) {
