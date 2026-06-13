@@ -14,16 +14,7 @@
   <style>
     html, body { height: 100%; }
 
-    .ev-shell {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      min-height: 100dvh;
-      background: var(--ph-bg);
-      overflow-x: hidden;
-    }
-
-    /* ── Topline ─────────────────────────────────────────────────── */
+    /* Topline */
     .ev-topline {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       height: 2px;
@@ -32,7 +23,7 @@
       box-shadow: 0 0 12px rgba(29,79,255,.4), 0 0 24px rgba(255,46,154,.2);
     }
 
-    /* ── Topbar ──────────────────────────────────────────────────── */
+    /* Topbar */
     .ev-topbar {
       position: fixed; top: 2px; left: 0; right: 0; z-index: 90;
       display: flex;
@@ -73,7 +64,7 @@
     }
     .ev-topbar__back:hover { color: var(--ph-text-mute); }
 
-    /* ── Split layout ────────────────────────────────────────────── */
+    /* Split layout */
     .ev-split {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -81,7 +72,7 @@
       margin-top: 49px;
     }
 
-    /* ── Panel izquierdo ─────────────────────────────────────────── */
+    /* Panel izquierdo */
     .ev-left {
       position: sticky;
       top: 49px;
@@ -239,7 +230,7 @@
       animation: glowMagentaPulse 2.5s ease-in-out infinite;
     }
 
-    /* ── Panel derecho ───────────────────────────────────────────── */
+    /* Panel derecho */
     .ev-right {
       background: #030310;
       border-left: 1px solid rgba(29,79,255,.12);
@@ -269,7 +260,7 @@
       max-width: 480px;
     }
 
-    /* ── Step bar ────────────────────────────────────────────────── */
+    /* Step bar */
     .step-bar {
       display: flex;
       align-items: flex-start;
@@ -333,7 +324,7 @@
 
     .step-connector.done { background: rgba(29,79,255,.35); }
 
-    /* ── Step panels ─────────────────────────────────────────────── */
+    /* Step panels */
     .step-panel { display: none; }
     .step-panel.active {
       display: block;
@@ -364,7 +355,7 @@
 
     .step-nav .ph-btn { flex: 1; }
 
-    /* ── Email note ──────────────────────────────────────────────── */
+    /* Email note */
     .email-note {
       display: flex;
       gap: var(--sp-3);
@@ -390,7 +381,7 @@
       letter-spacing: .02em;
     }
 
-    /* ── Checkboxes ───────────────────────────────────────────────── */
+    /* Checkboxes */
     .ev-checkbox-list { display: flex; flex-direction: column; gap: var(--sp-4); }
 
     .ev-checkbox {
@@ -410,7 +401,7 @@
     .ev-checkbox__text { font-size: var(--text-sm); color: var(--ph-text-mute); line-height: 1.55; }
     .ev-checkbox__text a { color: var(--ph-blue); text-decoration: underline; text-underline-offset: 2px; }
 
-    /* ── Quantity stepper ────────────────────────────────────────── */
+    /* Quantity stepper */
     .qty-row {
       display: flex;
       align-items: center;
@@ -456,7 +447,7 @@
       letter-spacing: .04em;
     }
 
-    /* ── Order summary ────────────────────────────────────────────── */
+    /* Order summary */
     .order-summary {
       background: linear-gradient(135deg, rgba(29,79,255,.08) 0%, rgba(93,45,145,.06) 100%);
       border: 1px solid rgba(29,79,255,.2);
@@ -489,7 +480,7 @@
       color: var(--ph-white);
     }
 
-    /* ── Mini summary (step 3) ───────────────────────────────────── */
+    /* Mini summary (step 3) */
     .mini-summary {
       display: flex;
       justify-content: space-between;
@@ -510,7 +501,7 @@
       letter-spacing: .04em;
     }
 
-    /* ── Payment tabs ─────────────────────────────────────────────── */
+    /* Payment tabs */
     .pay-tabs {
       display: flex;
       background: rgba(255,255,255,.04);
@@ -542,7 +533,7 @@
       box-shadow: 0 0 12px rgba(29,79,255,.3);
     }
 
-    /* ── Transfer info ────────────────────────────────────────────── */
+    /* Transfer info */
     .transfer-info-box {
       background: rgba(93,45,145,.08);
       border: 1px solid rgba(93,45,145,.25);
@@ -569,7 +560,7 @@
     .transfer-info-row span:first-child { color: var(--ph-text-dim); }
     .transfer-info-row span:last-child  { color: var(--ph-text); font-weight: 500; }
 
-    /* ── Transfer file drop ───────────────────────────────────────── */
+    /* Transfer file drop */
     .transfer-zone {
       border: 1px dashed rgba(255,255,255,.1);
       border-radius: var(--radius-md);
@@ -598,7 +589,7 @@
     /* PayPal */
     #paypal-button-container { min-height: 48px; }
 
-    /* ── States ──────────────────────────────────────────────────── */
+    /* States */
     .ev-state {
       display: flex;
       flex-direction: column;
@@ -662,7 +653,7 @@
       z-index: 200;
     }
 
-    /* ── Mobile ──────────────────────────────────────────────────── */
+    /* Mobile */
     @media (max-width: 768px) {
       .ev-topbar { padding: var(--sp-3) var(--sp-4); }
 
@@ -680,19 +671,17 @@
 
       .ev-right { height: auto; overflow-y: visible; }
 
-      /* Espacio extra al fondo para que el contenido no quede bajo la barra CTA */
       .ev-right__inner { padding: var(--sp-6) var(--sp-5) var(--sp-24); max-width: 100%; }
 
       .step-node__label { display: none; }
       .step-connector { margin-top: 17px; }
 
-      /* Ocultar los botones primarios inline en móvil — los reemplaza la barra fija */
       #step1-next,
       #step2-next,
       #step2-back { display: none; }
     }
 
-    /* ── Barra CTA fija — solo móvil ────────────────────────────── */
+    /* Barra CTA fija - solo movil */
     #mobile-cta {
       display: none;
     }
@@ -736,7 +725,7 @@
     <div class="ev-topline"></div>
 
     <header class="ev-topbar">
-      <a href="/" class="ev-topbar__back">← Inicio</a>
+      <a href="/" class="ev-topbar__back">&larr; Inicio</a>
       <span class="ev-topbar__wordmark">PARTY HOUSE</span>
       <span class="ev-topbar__code" id="code-label"></span>
     </header>
@@ -749,7 +738,7 @@
       <div class="ev-global-error">
         <h2>EVENTO NO ENCONTRADO</h2>
         <p>El código no es válido o el evento no está disponible.</p>
-        <a href="/" class="ph-btn ph-btn--ghost">← Volver al inicio</a>
+        <a href="/" class="ph-btn ph-btn--ghost">&larr; Volver al inicio</a>
       </div>
     </div>
 
@@ -762,35 +751,35 @@
 
     <div id="main-content" class="ev-split" hidden>
 
-      <!-- ── Columna izquierda ── -->
+      <!-- Columna izquierda -->
       <div class="ev-left">
         <div class="ev-left__grain"></div>
         <div class="ev-left__content">
           <p class="ev-left__brand">Party House</p>
           <p class="ev-left__eyebrow">Evento privado</p>
-          <h1 class="ev-left__title" id="ev-title">—</h1>
+          <h1 class="ev-left__title" id="ev-title">&mdash;</h1>
           <div class="ev-left__rule"></div>
           <div class="ev-left__meta">
             <div class="ev-meta-row">
               <span class="ev-meta-row__label">Fecha</span>
-              <span class="ev-meta-row__value" id="ev-date">—</span>
+              <span class="ev-meta-row__value" id="ev-date">&mdash;</span>
             </div>
             <div class="ev-meta-row">
               <span class="ev-meta-row__label">Lugar</span>
-              <span class="ev-meta-row__value" id="ev-venue">—</span>
+              <span class="ev-meta-row__value" id="ev-venue">&mdash;</span>
             </div>
           </div>
           <div class="ev-left__price-block">
             <div>
               <p class="ev-left__price-label">Precio por entrada</p>
-              <p class="ev-left__price-value" id="ev-price">—</p>
+              <p class="ev-left__price-value" id="ev-price">&mdash;</p>
             </div>
             <span class="ev-left__availability" id="ev-availability"></span>
           </div>
         </div>
       </div>
 
-      <!-- ── Columna derecha — Stepped wizard ── -->
+      <!-- Columna derecha - Stepped wizard -->
       <div class="ev-right">
         <div class="ev-right__inner">
 
@@ -812,7 +801,7 @@
             </div>
           </div>
 
-          <!-- ── Step 1: Tus datos ── -->
+          <!-- Step 1: Tus datos -->
           <div class="step-panel" id="step-1">
             <p class="step-title">Tus datos</p>
             <p class="step-subtitle">Con esta información emitiremos tu entrada.</p>
@@ -828,17 +817,17 @@
               <input type="email" id="buyer-email" class="ph-input" placeholder="tu@email.com" autocomplete="email" inputmode="email"/>
               <span class="ph-form-group__error" id="err-email" hidden></span>
               <div class="email-note">
-                <span class="email-note__icon">✉</span>
+                <span class="email-note__icon">&#x2709;</span>
                 <p>Recibirás un link en tu correo para descargar tus entradas en cualquier momento, incluso si cerrás esta página. También podés descargarlas desde la pantalla de confirmación mientras la sesión esté activa. Verificá que el correo esté bien escrito.</p>
               </div>
             </div>
 
             <button class="ph-btn ph-btn--primary" id="step1-next" style="width:100%;margin-top:var(--sp-5)">
-              Continuar →
+              Continuar &rarr;
             </button>
           </div>
 
-          <!-- ── Step 2: Tu pedido ── -->
+          <!-- Step 2: Tu pedido -->
           <div class="step-panel" id="step-2">
             <p class="step-title">Tu pedido</p>
             <p class="step-subtitle">Seleccioná la cantidad y confirmá las condiciones.</p>
@@ -846,7 +835,7 @@
             <div class="ph-form-group">
               <label class="ph-form-group__label">Cantidad de entradas *</label>
               <div class="qty-row">
-                <button type="button" class="qty-btn" id="qty-minus" aria-label="Reducir cantidad">−</button>
+                <button type="button" class="qty-btn" id="qty-minus" aria-label="Reducir cantidad">&minus;</button>
                 <span class="qty-value" id="qty-display" aria-live="polite">1</span>
                 <button type="button" class="qty-btn" id="qty-plus" aria-label="Aumentar cantidad">+</button>
               </div>
@@ -870,28 +859,28 @@
 
             <div class="order-summary" id="order-summary">
               <div class="order-summary__row">
-                <span id="summary-line">1 entrada × $0.00</span>
+                <span id="summary-line">1 entrada x Q50.00</span>
                 <span></span>
               </div>
               <div class="order-summary__row">
                 <span>Total</span>
-                <span id="summary-total">$0.00</span>
+                <span id="summary-total">Q50.00</span>
               </div>
             </div>
 
             <div class="step-nav">
-              <button class="ph-btn ph-btn--ghost" id="step2-back">← Atrás</button>
-              <button class="ph-btn ph-btn--primary" id="step2-next">Confirmar →</button>
+              <button class="ph-btn ph-btn--ghost" id="step2-back">&larr; Atrás</button>
+              <button class="ph-btn ph-btn--primary" id="step2-next">Confirmar &rarr;</button>
             </div>
           </div>
 
-          <!-- ── Step 3: Pago ── -->
+          <!-- Step 3: Pago -->
           <div class="step-panel" id="step-3">
             <p class="step-title">Método de pago</p>
 
             <div class="mini-summary">
               <span id="mini-summary-line">1 entrada</span>
-              <strong id="mini-summary-total">$0.00</strong>
+              <strong id="mini-summary-total">Q50.00</strong>
             </div>
 
             <div id="payment-section">
@@ -904,6 +893,12 @@
                 <p style="font-size:var(--text-xs);color:var(--ph-text-dim);margin-bottom:var(--sp-4);letter-spacing:.06em;line-height:1.6">
                   Pago seguro vía PayPal. Acepta tarjetas de crédito y débito.
                 </p>
+                <div style="background:rgba(255,193,7,0.07);border:1px solid rgba(255,193,7,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:15px;flex-shrink:0;margin-top:1px">&#x26A0;&#xFE0F;</span>
+                  <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.6);line-height:1.6">
+                    El cobro se procesa en dólares mediante PayPal. Se te cobrará <strong style="color:rgba(255,255,255,0.85)" id="paypal-usd-notice">&mdash;</strong> equivalente a Q50.00 por entrada al tipo de cambio actual.
+                  </p>
+                </div>
                 <div id="paypal-button-container"></div>
               </div>
 
@@ -911,15 +906,15 @@
                 <div style="background:rgba(29,79,255,0.08);border:1px solid rgba(29,79,255,0.25);border-radius:8px;padding:12px 16px;margin-bottom:16px;">
                   <p style="margin:0 0 4px;font-size:13px;color:var(--ph-text-dim)">Precio en transferencia</p>
                   <p style="margin:0;font-size:15px;font-weight:600;color:var(--ph-text)">
-                    Q50.00 por entrada &nbsp;·&nbsp; Total: <span id="transfer-total-gtq">Q50.00</span>
+                    Q50.00 por entrada &nbsp;&middot;&nbsp; Total: <span id="transfer-total-gtq">Q50.00</span>
                   </p>
                 </div>
                 <div class="transfer-info-box">
                   <p class="transfer-info-box__label">Datos para transferir</p>
-                  <div class="transfer-info-row"><span>Banco</span><span id="ti-bank">—</span></div>
-                  <div class="transfer-info-row"><span>Cuenta</span><span id="ti-account">—</span></div>
-                  <div class="transfer-info-row"><span>Titular</span><span id="ti-name">—</span></div>
-                  <div class="transfer-info-row"><span>Concepto</span><span id="ti-concept">—</span></div>
+                  <div class="transfer-info-row"><span>Banco</span><span id="ti-bank">&mdash;</span></div>
+                  <div class="transfer-info-row"><span>Cuenta</span><span id="ti-account">&mdash;</span></div>
+                  <div class="transfer-info-row"><span>Titular</span><span id="ti-name">&mdash;</span></div>
+                  <div class="transfer-info-row"><span>Concepto</span><span id="ti-concept">&mdash;</span></div>
                 </div>
 
                 <div class="ph-form-group">
@@ -932,7 +927,7 @@
                   <label class="ph-form-group__label">Comprobante de pago *</label>
                   <div class="transfer-zone" id="drop-zone">
                     <input type="file" id="transfer-file" accept="image/*,.pdf" aria-label="Seleccionar comprobante"/>
-                    <div class="transfer-zone__icon">📎</div>
+                    <div class="transfer-zone__icon">&#x1F4CE;</div>
                     <p class="transfer-zone__label">Toca para subir captura o PDF</p>
                     <p class="transfer-zone__filename" id="file-name-display" hidden></p>
                   </div>
@@ -947,7 +942,7 @@
             </div>
 
             <button class="ph-btn ph-btn--ghost" id="step3-back" style="width:100%;margin-top:var(--sp-5);font-size:var(--text-xs)">
-              ← Modificar pedido
+              &larr; Modificar pedido
             </button>
           </div>
 
@@ -958,10 +953,10 @@
 
   </div><!-- /ev-shell -->
 
-  <!-- ── Barra CTA fija (móvil) ──────────────────────────────────── -->
+  <!-- Barra CTA fija (movil) -->
   <div id="mobile-cta" hidden>
-    <button class="mcta-back" id="mcta-back" hidden>← Atrás</button>
-    <button class="ph-btn ph-btn--primary mcta-main" id="mcta-main">Continuar →</button>
+    <button class="mcta-back" id="mcta-back" hidden>&larr; Atrás</button>
+    <button class="ph-btn ph-btn--primary mcta-main" id="mcta-main">Continuar &rarr;</button>
   </div>
 
   <script src="/js/config.js"></script>
@@ -971,7 +966,7 @@
 
   const { api, getParam, navigate, formatUSD, formatDate, showLoading, hideLoading } = window.PH;
 
-  // ── Estado ──────────────────────────────────────────────────────
+  // Estado
   let event        = null;
   let quantity     = 1;
   let maxQty       = 99;
@@ -981,20 +976,19 @@
   let orderId      = null;
   let currentStep  = 1;
 
-  // ── Init ────────────────────────────────────────────────────────
+  // Init
   async function init() {
     const code = getParam('c') || sessionStorage.getItem('ph_event_code') || '';
     document.getElementById('code-label').textContent = code.toUpperCase();
 
-    // Solo usar caché si también tenemos el event_code_id guardado
-    const cached      = sessionStorage.getItem('ph_event');
+    const cached       = sessionStorage.getItem('ph_event');
     const cachedCodeId = sessionStorage.getItem('ph_event_code_id');
     if (cached && cachedCodeId) { try { event = JSON.parse(cached); } catch {} }
 
     if (!event) {
       if (!code) return showGlobalError();
       try {
-        const data = await api('GET', `/api/event/${encodeURIComponent(code)}`);
+        const data = await api('GET', '/api/event/' + encodeURIComponent(code));
         event = data.event;
         sessionStorage.setItem('ph_event',         JSON.stringify(event));
         sessionStorage.setItem('ph_event_code_id', data.event_code_id);
@@ -1017,32 +1011,31 @@
     setupSteps();
   }
 
-  // ── Render event ────────────────────────────────────────────────
+  // Render event
   function renderEvent() {
-    maxQty = 99; // sin límite
-    const available = event.available ?? (event.capacity != null ? Math.max(event.capacity - (event.tickets_sold || 0), 0) : null);
+    maxQty = 99;
+    const available = event.available != null ? event.available : (event.capacity != null ? Math.max(event.capacity - (event.tickets_sold || 0), 0) : null);
 
     document.getElementById('ev-title').textContent   = event.name || event.title || 'Party House';
     document.getElementById('ev-date').textContent    = formatDate(event.event_date);
-    document.getElementById('ev-venue').textContent   = event.venue || event.location || '—';
-    document.getElementById('ev-price').textContent   = formatUSD(event.price || 0);
-    document.getElementById('max-per-order').textContent = maxQty;
+    document.getElementById('ev-venue').textContent   = event.venue || event.location || '-';
+    document.getElementById('ev-price').textContent   = 'Q' + GTQ_PER_TICKET.toFixed(2);
 
     const availEl = document.getElementById('ev-availability');
     if (available === null) {
       availEl.textContent = '';
     } else if (available <= 20) {
-      availEl.textContent = `¡Solo quedan ${available}!`;
+      availEl.textContent = 'Solo quedan ' + available + '!';
       availEl.classList.add('low');
     } else {
-      availEl.textContent = `${available} disponibles`;
+      availEl.textContent = available + ' disponibles';
     }
 
     document.getElementById('main-content').hidden = false;
     updateSummary();
   }
 
-  // ── Quantity stepper ────────────────────────────────────────────
+  // Quantity stepper
   function setupQuantityStepper() {
     const minus = document.getElementById('qty-minus');
     const plus  = document.getElementById('qty-plus');
@@ -1056,37 +1049,41 @@
       clearPayPal();
     }
 
-    minus.addEventListener('click', () => { if (quantity > 1)      { quantity--; update(); } });
-    plus.addEventListener('click',  () => { if (quantity < maxQty) { quantity++; update(); } });
+    minus.addEventListener('click', function() { if (quantity > 1)      { quantity--; update(); } });
+    plus.addEventListener('click',  function() { if (quantity < maxQty) { quantity++; update(); } });
     update();
   }
 
   const GTQ_PER_TICKET = 50;
 
   function updateSummary() {
-    const price = event?.price || 0;
-    const total = price * quantity;
-    const label = `${quantity} ${quantity === 1 ? 'entrada' : 'entradas'}`;
+    const gtqTotal = GTQ_PER_TICKET * quantity;
+    const label    = quantity + ' ' + (quantity === 1 ? 'entrada' : 'entradas');
 
-    document.getElementById('summary-line').textContent  = `${label} × ${formatUSD(price)}`;
-    document.getElementById('summary-total').textContent = formatUSD(total);
+    document.getElementById('summary-line').textContent  = label + ' x Q' + GTQ_PER_TICKET.toFixed(2);
+    document.getElementById('summary-total').textContent = 'Q' + gtqTotal.toFixed(2);
 
     const ml = document.getElementById('mini-summary-line');
     const mt = document.getElementById('mini-summary-total');
     if (ml) ml.textContent = label;
-    if (mt) mt.textContent = formatUSD(total);
+    if (mt) mt.textContent = 'Q' + gtqTotal.toFixed(2);
 
-    // Total en Quetzales para transferencia
     const gtqEl = document.getElementById('transfer-total-gtq');
-    if (gtqEl) gtqEl.textContent = `Q${(GTQ_PER_TICKET * quantity).toFixed(2)}`;
+    if (gtqEl) gtqEl.textContent = 'Q' + gtqTotal.toFixed(2);
+
+    const usdEl = document.getElementById('paypal-usd-notice');
+    if (usdEl) {
+      const usdTotal = ((event && event.price) ? event.price : 0) * quantity;
+      usdEl.textContent = formatUSD(usdTotal) + ' USD';
+    }
   }
 
-  // ── Tabs ─────────────────────────────────────────────────────────
+  // Tabs
   function setupTabs() {
     const tabs = document.querySelectorAll('.pay-tab');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tabs.forEach(function(t) { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
         tab.classList.add('active');
         tab.setAttribute('aria-selected','true');
         payMethod = tab.dataset.tab;
@@ -1097,23 +1094,22 @@
     });
   }
 
-  // ── Step wizard ──────────────────────────────────────────────────
+  // Step wizard
   function setupSteps() {
-    document.getElementById('step1-next').addEventListener('click', () => {
+    document.getElementById('step1-next').addEventListener('click', function() {
       if (validateStep1()) goToStep(2);
     });
-    document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
-    document.getElementById('step2-next').addEventListener('click', () => {
+    document.getElementById('step2-back').addEventListener('click', function() { goToStep(1); });
+    document.getElementById('step2-next').addEventListener('click', function() {
       if (validateStep2()) { createPaymentIntent(); goToStep(3); }
     });
-    document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+    document.getElementById('step3-back').addEventListener('click', function() { goToStep(2); });
 
-    // Barra CTA móvil
-    document.getElementById('mcta-main').addEventListener('click', () => {
+    document.getElementById('mcta-main').addEventListener('click', function() {
       if (currentStep === 1 && validateStep1()) goToStep(2);
       if (currentStep === 2 && validateStep2()) { createPaymentIntent(); goToStep(3); }
     });
-    document.getElementById('mcta-back').addEventListener('click', () => {
+    document.getElementById('mcta-back').addEventListener('click', function() {
       if (currentStep > 1) goToStep(currentStep - 1);
     });
 
@@ -1121,6 +1117,287 @@
   }
 
   function goToStep(n) {
-    // panels
-    document.querySelectorAll('.step-panel').forEach((p, i) => {
-      p.cl
+    document.querySelectorAll('.step-panel').forEach(function(p, i) {
+      p.classList.toggle('active', i + 1 === n);
+    });
+    document.querySelectorAll('.step-node').forEach(function(node, i) {
+      node.classList.remove('active', 'done');
+      if (i + 1 === n) node.classList.add('active');
+      if (i + 1 < n)  node.classList.add('done');
+    });
+    const c1 = document.getElementById('sc-1');
+    const c2 = document.getElementById('sc-2');
+    if (c1) c1.classList.toggle('done', n > 1);
+    if (c2) c2.classList.toggle('done', n > 2);
+
+    currentStep = n;
+
+    if (n === 3 && payMethod === 'paypal' && !paypalLoaded) mountPayPal();
+
+    updateMobileCta(n);
+
+    document.querySelector('.ev-right').scrollTo({ top: 0, behavior: 'smooth' });
+    var evRight = document.querySelector('.ev-right');
+    window.scrollTo({ top: evRight ? evRight.offsetTop : 0, behavior: 'smooth' });
+  }
+
+  function updateMobileCta(n) {
+    var bar      = document.getElementById('mobile-cta');
+    var btnMain  = document.getElementById('mcta-main');
+    var btnBack  = document.getElementById('mcta-back');
+    var isMobile = window.innerWidth <= 768;
+
+    if (!isMobile) { bar.hidden = true; return; }
+
+    if (n === 3) {
+      bar.hidden = false;
+      btnMain.hidden = true;
+      btnBack.hidden = false;
+      btnBack.style.flex = '1';
+    } else {
+      bar.hidden = false;
+      btnBack.hidden  = n === 1;
+      btnBack.style.flex = '';
+      btnMain.hidden  = false;
+      btnMain.textContent = n === 1 ? 'Continuar' : 'Confirmar';
+    }
+  }
+
+  function validateStep1() {
+    clearErrors();
+    var valid = true;
+    var name = document.getElementById('buyer-name').value.trim();
+    if (name.length < 2) { markError('buyer-name','err-name','Ingresa tu nombre completo.'); valid = false; }
+    var email = document.getElementById('buyer-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { markError('buyer-email','err-email','Ingresa un correo válido.'); valid = false; }
+    return valid;
+  }
+
+  function validateStep2() {
+    clearErrors();
+    var age   = document.getElementById('age-check').checked;
+    var terms = document.getElementById('terms-check').checked;
+    if (!age || !terms) { showErr('err-checks','Debes aceptar ambas confirmaciones para continuar.'); return false; }
+    return true;
+  }
+
+  // Payment intent
+  async function createPaymentIntent() {
+    if (!event) return;
+    try {
+      var payload = buildBuyerPayload();
+      console.log('[intent] payload:', JSON.stringify(payload, null, 2));
+      var data = await api('POST', '/api/payment/intent', payload);
+      orderId = data.order_id;
+      console.log('[intent] ok - orderId:', orderId);
+    } catch (e) {
+      console.error('[intent] error:', e.data && e.data.details ? e.data.details : e.message);
+      orderId = null;
+    }
+  }
+
+  function buildBuyerPayload() {
+    return {
+      event_code:    sessionStorage.getItem('ph_event_code') || getParam('c'),
+      event_code_id: sessionStorage.getItem('ph_event_code_id'),
+      full_name:     document.getElementById('buyer-name').value.trim(),
+      email:         document.getElementById('buyer-email').value.trim().toLowerCase(),
+      quantity:      quantity,
+      age_verified:  document.getElementById('age-check').checked,
+      terms_accepted: document.getElementById('terms-check').checked,
+    };
+  }
+
+  // Validacion
+  function showErr(id, msg) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = !msg;
+  }
+
+  function clearErrors() {
+    ['err-name','err-email','err-checks','err-ref','err-file'].forEach(function(id) { showErr(id,''); });
+    document.querySelectorAll('.ph-input').forEach(function(i) { i.classList.remove('is-error'); });
+  }
+
+  function markError(inputId, errId, msg) {
+    var input = document.getElementById(inputId);
+    if (input) input.classList.add('is-error');
+    showErr(errId, msg);
+  }
+
+  function validateForm(showMessages) {
+    if (!showMessages) {
+      var name  = document.getElementById('buyer-name').value.trim();
+      var email = document.getElementById('buyer-email').value.trim();
+      return name.length >= 2 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+    clearErrors();
+    var valid = true;
+    var name = document.getElementById('buyer-name').value.trim();
+    if (name.length < 2) { markError('buyer-name','err-name','Ingresa tu nombre completo.'); valid = false; }
+    var email = document.getElementById('buyer-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { markError('buyer-email','err-email','Ingresa un correo válido.'); valid = false; }
+    var age   = document.getElementById('age-check').checked;
+    var terms = document.getElementById('terms-check').checked;
+    if (!age || !terms) { showErr('err-checks','Debes aceptar ambas confirmaciones para continuar.'); valid = false; }
+    return valid;
+  }
+
+  // PayPal
+  function clearPayPal() {
+    document.getElementById('paypal-button-container').innerHTML = '';
+    paypalLoaded = false;
+  }
+
+  async function mountPayPal() {
+    if (paypalLoaded) return;
+    var clientId;
+    try {
+      var cfg = await api('GET', '/api/public-config');
+      clientId  = cfg.paypalClientId || cfg.paypal_client_id;
+    } catch { return; }
+
+    if (!window.paypal) {
+      var currency = (event && event.currency) ? event.currency : 'USD';
+      await new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://www.paypal.com/sdk/js?client-id=' + clientId + '&currency=' + currency + '&intent=capture&enable-funding=venmo';
+        s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    paypalLoaded = true;
+    renderPayPalButtons();
+  }
+
+  function renderPayPalButtons() {
+    var container = document.getElementById('paypal-button-container');
+    container.innerHTML = '';
+    window.paypal.Buttons({
+      style: { shape:'rect', color:'black', layout:'vertical', label:'pay', height:48 },
+      createOrder: async function() {
+        if (!validateForm(true)) throw new Error('Datos invalidos');
+        showLoading('Iniciando pago seguro...');
+        try {
+          if (!orderId) {
+            var intent = await api('POST', '/api/payment/intent', buildBuyerPayload());
+            orderId = intent.order_id;
+          }
+          var pp = await api('POST', '/api/paypal/create-order', { order_id: orderId });
+          hideLoading();
+          return pp.paypal_order_id;
+        } catch (err) {
+          hideLoading();
+          alert((err.data && err.data.message) ? err.data.message : 'Error al iniciar el pago. Intenta de nuevo.');
+          throw err;
+        }
+      },
+      onApprove: async function(data) {
+        showLoading('Confirmando tu pago...');
+        try {
+          var result = await api('POST', '/api/paypal/capture-order', {
+            paypal_order_id: data.orderID,
+            order_id: orderId,
+          });
+          hideLoading();
+          sessionStorage.setItem('ph_download_token', result.download_token);
+          sessionStorage.setItem('ph_order_id', result.order_id || orderId);
+          navigate('/ticket.html?ot=' + encodeURIComponent(result.download_token));
+        } catch (err) {
+          hideLoading();
+          alert((err.data && err.data.message) ? err.data.message : 'Error al confirmar el pago. Contacta soporte.');
+        }
+      },
+      onError: function(err)  { hideLoading(); console.error('PayPal error:', err); alert('Ocurrio un error con PayPal. Intenta de nuevo.'); },
+      onCancel: function()    { hideLoading(); }
+    }).render('#paypal-button-container');
+  }
+
+  // Transfer info
+  async function loadTransferInfo() {
+    try {
+      var data = await api('GET', '/api/transfer/info');
+      transferInfo = data;
+      document.getElementById('ti-bank').textContent    = data.bank || '-';
+      document.getElementById('ti-account').textContent = data.account || '-';
+      document.getElementById('ti-name').textContent    = data.name || '-';
+      document.getElementById('ti-concept').textContent = data.concept || ('Party House - ' + ((event && event.name) ? event.name : 'Evento'));
+    } catch {}
+  }
+
+  // Transfer file
+  function setupTransferFile() {
+    var fileInput = document.getElementById('transfer-file');
+    var dropZone  = document.getElementById('drop-zone');
+    var nameEl    = document.getElementById('file-name-display');
+
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files[0];
+      if (!file) return;
+      nameEl.textContent = file.name;
+      nameEl.hidden = false;
+      dropZone.classList.add('has-file');
+      showErr('err-file','');
+    });
+
+    document.getElementById('transfer-submit-btn').addEventListener('click', submitTransfer);
+  }
+
+  async function submitTransfer() {
+    if (!validateForm(true)) return;
+    var ref  = document.getElementById('transfer-ref').value.trim();
+    var file = document.getElementById('transfer-file').files[0];
+    if (!ref)  { showErr('err-ref', 'Ingresa el número de referencia.'); return; }
+    if (!file) { showErr('err-file','Sube el comprobante de pago.'); return; }
+
+    var btnText = document.getElementById('transfer-btn-text');
+    var spinner = document.getElementById('transfer-spinner');
+    var btn     = document.getElementById('transfer-submit-btn');
+    btnText.textContent = 'ENVIANDO'; spinner.hidden = false; btn.disabled = true;
+
+    try {
+      if (!orderId) {
+        var intent = await api('POST', '/api/payment/intent', buildBuyerPayload());
+        orderId = intent.order_id;
+      }
+      var fd = new FormData();
+      fd.append('order_id',        orderId);
+      fd.append('reference',       ref);
+      fd.append('quantity',        quantity);
+      fd.append('full_name',       document.getElementById('buyer-name').value.trim());
+      fd.append('email',           document.getElementById('buyer-email').value.trim().toLowerCase());
+      fd.append('age_verified',    document.getElementById('age-check').checked);
+      fd.append('terms_accepted',  document.getElementById('terms-check').checked);
+      fd.append('event_code',      sessionStorage.getItem('ph_event_code') || getParam('c'));
+      fd.append('event_code_id',   sessionStorage.getItem('ph_event_code_id') || '');
+      fd.append('comprobante',     file, file.name);
+
+      var resp = await fetch('/api/transfer/submit', { method: 'POST', body: fd });
+      var json = await resp.json().catch(function() { return {}; });
+      if (!resp.ok) throw Object.assign(new Error(json.message || 'Error'), { data: json });
+
+      sessionStorage.setItem('ph_transfer_pending','true');
+      navigate('/ticket.html?estado=pendiente');
+    } catch (err) {
+      btnText.textContent = 'ENVIAR COMPROBANTE';
+      spinner.hidden = true;
+      btn.disabled   = false;
+      alert((err.data && err.data.message) ? err.data.message : 'Error al enviar. Intenta de nuevo.');
+    }
+  }
+
+  // Helpers
+  function showGlobalError() {
+    document.getElementById('loading-state').hidden = true;
+    document.getElementById('global-error').hidden  = false;
+  }
+
+  init();
+
+  window.addEventListener('resize', function() { updateMobileCta(currentStep); });
+  </script>
+</body>
+</html>
