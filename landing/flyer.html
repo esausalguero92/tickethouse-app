@@ -14,7 +14,7 @@
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
 
-    /* ── Flyer cubre toda la pantalla ── */
+    /* Flyer cubre toda la pantalla */
     .flyer {
       position: fixed;
       inset: 0;
@@ -25,7 +25,7 @@
       z-index: 1;
     }
 
-    /* ── CTA — desktop: encima del espacio negro del flyer ── */
+    /* CTA - desktop */
     .cta-wrap {
       position: fixed;
       z-index: 20;
@@ -56,7 +56,7 @@
     .cta-btn:hover  { opacity: .88; transform: translateY(-1px); }
     .cta-btn:active { opacity: 1;   transform: translateY(0); }
 
-    /* ── Mobile: flyer ocupa pantalla, botón debajo sin tapar ── */
+    /* Mobile */
     @media (max-width: 640px) {
       html, body { overflow: auto; height: auto; }
 
@@ -88,12 +88,10 @@
 </head>
 <body>
 
-  <!-- Flyer full-screen -->
   <img class="flyer" src="/img/landing.png" alt="Party House"/>
 
-  <!-- Botón de compra -->
   <div class="cta-wrap">
-    <a href="#" class="cta-btn" id="cta-btn">CONSEGUIR MI ENTRADA →</a>
+    <a href="#" class="cta-btn" id="cta-btn">CONSEGUIR MI ENTRADA &rarr;</a>
   </div>
 
   <script src="/js/config.js"></script>
@@ -101,5 +99,11 @@
   <script>
   (function () {
     'use strict';
-    const { getParam } = window.PH;
-    const code = getParam('c') || sessionSt
+    var code = (window.PH && window.PH.getParam ? window.PH.getParam('c') : '') ||
+               sessionStorage.getItem('ph_event_code') || '';
+    document.getElementById('cta-btn').href =
+      '/evento.html?c=' + encodeURIComponent(code);
+  })();
+  </script>
+</body>
+</html>
