@@ -39,7 +39,8 @@ router.get('/event/:code',
       return res.status(statusMap[data.error] || 400).json({ error: data.error });
     }
 
-    return res.json(data);
+    const { tickets_sold: _ts, capacity: _cap, available: _av, ...publicData } = data;
+    return res.json(publicData);
   })
 );
 
