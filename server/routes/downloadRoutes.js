@@ -15,12 +15,14 @@ const { getSupabase } = require('../db/supabase');
 const { verifyJwt, generateDownloadToken } = require('../services/QrService');
 const { generateTicketPdf } = require('../services/PdfService');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { downloadLimiter } = require('../middleware/security');
 
 const router = Router();
 
 // ── GET /api/download/order/:token ────────────────────────────────
 // Retorna los tickets de una orden (para /ticket.html)
 router.get('/order/:token',
+  downloadLimiter,
   asyncHandler(async (req, res) => {
     const { verifyToken } = require('../services/QrService');
     const payload = verifyToken(req.params.token);
@@ -47,6 +49,7 @@ router.get('/order/:token',
 // :token = download token JWT (verifica acceso a la orden)
 // :correlative = TH-PH001 (qué ticket específico descargar)
 router.get('/ticket/:token/:correlative',
+  downloadLimiter,
   asyncHandler(async (req, res) => {
     const { verifyToken } = require('../services/QrService');
     const payload = verifyToken(req.params.token);

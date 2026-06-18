@@ -14,12 +14,26 @@ const paymentRoutes  = require('./routes/paymentRoutes');
 const adminRoutes    = require('./routes/adminRoutes');
 const staffRoutes    = require('./routes/staffRoutes');
 const downloadRoutes = require('./routes/downloadRoutes');
+const n8nRoutes      = require('./routes/n8nRoutes');
 
 const app = express();
 
 app.set('trust proxy', 1);
 app.use(helmetMiddleware);
-app.use(cors({ origin: true, credentials: false }));
+
+const allowedOrigins = (env.isProd && env.CORS_ORIGINS)
+  ? env.CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : [];
+app.use(cors({
+  origin: allowedOrigins.length > 0
+    ? function(origin, cb) {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error('CORS: origen no permitido'));
+      }
+    : true,
+  credentials: false,
+}));
+
 app.use(globalLimiter);
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
@@ -32,6 +46,7 @@ app.use('/api', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', staffRoutes);
 app.use('/api/download', downloadRoutes);
+app.use('/api/n8n', n8nRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

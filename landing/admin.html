@@ -748,6 +748,7 @@
     <div id="panel-orders" class="adm-panel">
       <div class="adm-main__header">
         <h1 class="adm-main__title">PEDIDOS</h1>
+        <button class="ph-btn ph-btn--secondary" id="btn-export-excel" onclick="exportOrdersExcel()" style="font-size:12px;padding:8px 16px;letter-spacing:.08em">⬇ EXPORTAR EXCEL</button>
       </div>
       <div class="adm-filters">
         <input type="text" class="adm-filter-input" id="orders-search" placeholder="Buscar nombre o email…" style="flex:1;min-width:180px"/>
@@ -1163,8 +1164,54 @@ function esc(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Export Excel ───────────────────────────────────────────────────
+function exportOrdersExcel() {
+  if (!window.XLSX) {
+    showToast('Cargando librería, intenta en un momento…', 'error');
+    return;
+  }
+  const q  = document.getElementById('orders-search').value.toLowerCase();
+  const st = document.getElementById('orders-status').value;
+  const filtered = allOrders.filter(o => {
+    const matchQ  = !q  || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
+    const matchSt = !st || o.payment_status === st;
+    return matchQ && matchSt;
+  });
+
+  const statusMap  = { paid: 'Pagado', awaiting_review: 'Transferencia pendiente', pending: 'Pendiente', rejected: 'Rechazado', refunded: 'Reembolsado' };
+  const methodMap  = { paypal: 'PayPal', transfer: 'Transferencia', complimentary: 'Cortesía' };
+
+  const rows = filtered.map((o, i) => ({
+    '#':                   i + 1,
+    'Nombre':              o.buyer_name   || '—',
+    'Email':               o.buyer_email  || '—',
+    'Método de pago':      methodMap[o.payment_method] || o.payment_method || '—',
+    'Estado':              statusMap[o.payment_status] || o.payment_status || '—',
+    'Entradas':            o.quantity ?? 0,
+    'Monto (USD)':         parseFloat(o.amount_usd) || 0,
+    'Referencia':          o.transfer_reference || '—',
+    'Códigos':             (o.correlative_codes || []).join(', ') || '—',
+    'Fecha':               o.created_at ? o.created_at.slice(0, 10) : '—',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Anchos de columna
+  ws['!cols'] = [
+    { wch: 4 }, { wch: 28 }, { wch: 30 }, { wch: 18 }, { wch: 22 },
+    { wch: 10 }, { wch: 13 }, { wch: 26 }, { wch: 20 }, { wch: 12 },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
+
+  const fecha = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `party_house_pedidos_${fecha}.xlsx`);
+}
+
 // ── Boot ───────────────────────────────────────────────────────────
 init();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>
 </html>

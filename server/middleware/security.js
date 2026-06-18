@@ -63,6 +63,12 @@ const purchaseLimiter = rateLimit({
   message: { error: 'purchase_rate_limit', message: 'Demasiados intentos de compra.' },
 });
 
+const downloadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'download_rate_limit', message: 'Demasiadas descargas. Intenta en un momento.' },
+});
+
 function sanitizeString(val) {
   if (typeof val !== 'string') return val;
   return val
@@ -74,12 +80,17 @@ function sanitizeString(val) {
     .trim();
 }
 
-function deepSanitize(obj) {
+// Campos que NO se sanitizan: van a bcrypt/JWT, no a HTML ni queries SQL
+const SKIP_SANITIZE_KEYS = new Set(['password', 'password_hash', 'pass', 'pwd', 'pin', 'secret']);
+
+function deepSanitize(obj, parentKey) {
   if (typeof obj === 'string') return sanitizeString(obj);
-  if (Array.isArray(obj)) return obj.map(deepSanitize);
+  if (Array.isArray(obj)) return obj.map(function(item) { return deepSanitize(item, parentKey); });
   if (obj && typeof obj === 'object') {
     const out = {};
-    for (const [k, v] of Object.entries(obj)) out[k] = deepSanitize(v);
+    for (const [k, v] of Object.entries(obj)) {
+      out[k] = SKIP_SANITIZE_KEYS.has(k.toLowerCase()) ? v : deepSanitize(v, k);
+    }
     return out;
   }
   return obj;
@@ -108,6 +119,7 @@ module.exports = {
   paymentLimiter,
   authLimiter,
   purchaseLimiter,
+  downloadLimiter,
   sanitizeInputs,
   validateRequest,
 };

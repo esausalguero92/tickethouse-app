@@ -40,7 +40,12 @@ router.post('/login',
       .eq('active', true);
 
     if (user && String(user).trim()) {
-      query = query.or('email.eq.' + String(user).trim() + ',full_name.eq.' + String(user).trim());
+      // Solo interpolamos si user es estrictamente alfanumérico + caracteres de email/nombre
+      // Cualquier otra cosa se ignora y se revisan todos los admins activos
+      const safeUser = String(user).trim();
+      if (/^[a-zA-Z0-9@._\- ]{1,120}$/.test(safeUser)) {
+        query = query.or(`email.eq.${safeUser},full_name.eq.${safeUser}`);
+      }
     }
 
     const { data: users, error } = await query;
