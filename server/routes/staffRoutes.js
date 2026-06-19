@@ -97,6 +97,41 @@ router.post('/tickets/validate',
     }
 
     if (tErr || !ticket) {
+      // Fallback: ticket no está en DB (ej. tickets limpiados manualmente).
+      // Si el JWT es válido y la orden está pagada, validar por jti para evitar doble entrada.
+      if (payload.oid) {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('id, buyer_name, buyer_email, event:events(name, event_date)')
+          .eq('id', payload.oid)
+          .eq('payment_status', 'paid')
+          .maybeSingle();
+
+        if (order) {
+          const qrKey = tokenInput.substring(0, 500);
+          const { data: prevLog } = await supabase
+            .from('validation_log')
+            .select('id')
+            .eq('qr_scanned', qrKey)
+            .eq('result', 'valid')
+            .limit(1)
+            .maybeSingle();
+
+          if (prevLog) {
+            return ticketError(res, { status: 409, error: 'ticket_already_used', buyerName: order.buyer_name, meta: 'Entrada ya canjeada' });
+          }
+
+          await logValidation(supabase, { qrScanned: tokenInput, result: 'valid', ip });
+          return res.json({
+            ok: true,
+            correlative_code: null,
+            buyer_name:  order.buyer_name || null,
+            event_name:  order.event && order.event.name ? order.event.name : null,
+            event_date:  order.event && order.event.event_date ? order.event.event_date : null,
+          });
+        }
+      }
+
       await logValidation(supabase, { qrScanned: tokenInput, result: 'not_found', ip });
       return ticketError(res, { status: 404, error: 'ticket_not_found', meta: 'Entrada no encontrada' });
     }
