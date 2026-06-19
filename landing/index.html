@@ -335,6 +335,14 @@
         sessionStorage.setItem('ph_event_code_id', data.event_code_id);
         navigate(`/flyer.html?c=${code}`);
       } catch (err) {
+        // Si el codigo no es un evento, verificar si es un access_code de invitado
+        if (err.data?.error === 'code_not_found') {
+          try {
+            await api('GET', `/api/code/check/${encodeURIComponent(code)}`);
+            navigate(`/flyer.html?ac=${encodeURIComponent(code)}`);
+            return;
+          } catch (_) {}
+        }
         input.classList.add('error');
         spinner.hidden = true;
         submitBtn.disabled = false;
