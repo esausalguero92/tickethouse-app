@@ -99,10 +99,44 @@
   <script>
   (function () {
     'use strict';
-    var code = (window.PH && window.PH.getParam ? window.PH.getParam('c') : '') ||
-               sessionStorage.getItem('ph_event_code') || '';
-    document.getElementById('cta-btn').href =
-      '/evento.html?c=' + encodeURIComponent(code);
+    var getParam = function(k) {
+      return new URLSearchParams(window.location.search).get(k) || '';
+    };
+    var eventCode  = getParam('c') || sessionStorage.getItem('ph_event_code') || '';
+    var accessCode = getParam('ac') || '';
+    var btn = document.getElementById('cta-btn');
+
+    if (accessCode) {
+      // Invitado especial: canjear codigo y redirigir a descarga
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        btn.textContent = 'PROCESANDO...';
+        btn.style.opacity = '.6';
+        btn.style.pointerEvents = 'none';
+        fetch('/api/code/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: accessCode }),
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.token) {
+            window.location.href = '/ticket.html?ot=' + encodeURIComponent(data.token);
+          } else {
+            btn.textContent = 'CONSEGUIR MI ENTRADA →';
+            btn.style.opacity = '';
+            btn.style.pointerEvents = '';
+          }
+        })
+        .catch(function() {
+          btn.textContent = 'CONSEGUIR MI ENTRADA →';
+          btn.style.opacity = '';
+          btn.style.pointerEvents = '';
+        });
+      });
+    } else {
+      btn.href = '/evento.html?c=' + encodeURIComponent(eventCode);
+    }
   })();
   </script>
 </body>
