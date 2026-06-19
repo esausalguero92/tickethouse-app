@@ -338,11 +338,9 @@
         // Si el codigo no es un evento, verificar si es un access_code de invitado
         if (err.data?.error === 'code_not_found') {
           try {
-            const result = await api('POST', '/api/code/redeem', { code });
-            if (result.ok && result.token) {
-              navigate('/ticket.html?ot=' + encodeURIComponent(result.token));
-              return;
-            }
+            await api('GET', `/api/code/check/${encodeURIComponent(code)}`);
+            navigate(`/flyer.html?ac=${encodeURIComponent(code)}`);
+            return;
           } catch (_) {}
         }
         input.classList.add('error');
