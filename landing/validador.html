@@ -644,6 +644,19 @@
   <div class="result-overlay__state" id="result-state"></div>
   <div class="result-overlay__buyer" id="result-buyer"></div>
   <div class="result-overlay__correlative" id="result-correlative"></div>
+  <div id="result-cortesia" hidden style="
+    display:inline-block;
+    margin-top:12px;
+    padding:6px 20px;
+    border-radius:999px;
+    background:rgba(255,200,0,.12);
+    border:1px solid rgba(255,200,0,.45);
+    color:#FFD000;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:18px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+  ">★ CORTESÍA</div>
   <div class="result-overlay__meta" id="result-meta"></div>
   <button class="ph-btn ph-btn--ghost" id="result-close">CERRAR</button>
 </div>
@@ -834,11 +847,12 @@ async function validateToken(token) {
   try {
     const data = await api('POST', '/api/tickets/validate', { token }, { 'x-staff-token': staffToken });
     showResult({
-      state:       'valid',
-      buyer:       data.buyer_name || data.name || '—',
-      correlative: data.correlative_code || '—',
-      event:       data.event_name || '—',
-      meta:        data.redeemed_at ? `Validado: ${formatDate(data.redeemed_at)}` : '',
+      state:          'valid',
+      buyer:          data.buyer_name || data.name || '—',
+      correlative:    data.correlative_code || '—',
+      event:          data.event_name || '—',
+      meta:           data.redeemed_at ? `Validado: ${formatDate(data.redeemed_at)}` : '',
+      paymentMethod:  data.payment_method || null,
     });
   } catch (err) {
     const code = err.data?.error || '';
@@ -923,7 +937,7 @@ const RESULT_CONFIG = {
   not_found: { icon: '?', label: 'NO ENCONTRADA', bg: 'rgba(5,5,5,0.97)', color: '#5D2D91', vibrate: [200,100,200] },
 };
 
-function showResult({ state, buyer, correlative, event, meta }) {
+function showResult({ state, buyer, correlative, event, meta, paymentMethod }) {
   const cfg = RESULT_CONFIG[state] || RESULT_CONFIG.invalid;
   vibrate(cfg.vibrate);
 
@@ -940,6 +954,15 @@ function showResult({ state, buyer, correlative, event, meta }) {
   document.getElementById('result-correlative').textContent = correlative ? `#${correlative}` : '';
   document.getElementById('result-correlative').style.color = cfg.color;
   document.getElementById('result-meta').textContent       = event ? `${event}${meta ? ' · ' + meta : ''}` : (meta || '');
+
+  const cortesiaEl = document.getElementById('result-cortesia');
+  if (paymentMethod === 'complimentary') {
+    cortesiaEl.removeAttribute('hidden');
+    cortesiaEl.style.display = 'inline-block';
+  } else {
+    cortesiaEl.hidden = true;
+    cortesiaEl.style.display = 'none';
+  }
 
   // Auto-close after 4s for valid, 6s for others
   const delay = state === 'valid' ? 4000 : 6000;

@@ -88,12 +88,13 @@ router.post('/tickets/validate',
 
     const { data: ticket, error: tErr } = await supabase
       .from('tickets')
-      .select('id, correlative_code, status, redeemed_at, order:orders(buyer_name, buyer_email), event:events(id, name, event_date)')
+      .select('id, correlative_code, status, redeemed_at, order:orders(buyer_name, buyer_email, payment_method), event:events(id, name, event_date)')
       .eq('qr_token', tokenInput).maybeSingle();
 
     if (!tErr && ticket) {
-      ticket.buyer_name  = ticket.order && ticket.order.buyer_name  ? ticket.order.buyer_name  : null;
-      ticket.buyer_email = ticket.order && ticket.order.buyer_email ? ticket.order.buyer_email : null;
+      ticket.buyer_name     = ticket.order && ticket.order.buyer_name     ? ticket.order.buyer_name     : null;
+      ticket.buyer_email    = ticket.order && ticket.order.buyer_email    ? ticket.order.buyer_email    : null;
+      ticket.payment_method = ticket.order && ticket.order.payment_method ? ticket.order.payment_method : null;
     }
 
     if (tErr || !ticket) {
@@ -161,9 +162,10 @@ router.post('/tickets/validate',
     return res.json({
       ok: true,
       correlative_code: ticket.correlative_code,
-      buyer_name:  ticket.buyer_name,
-      event_name:  ticket.event && ticket.event.name ? ticket.event.name : null,
-      event_date:  ticket.event && ticket.event.event_date ? ticket.event.event_date : null,
+      buyer_name:       ticket.buyer_name,
+      event_name:       ticket.event && ticket.event.name       ? ticket.event.name       : null,
+      event_date:       ticket.event && ticket.event.event_date ? ticket.event.event_date : null,
+      payment_method:   ticket.payment_method || null,
     });
   })
 );

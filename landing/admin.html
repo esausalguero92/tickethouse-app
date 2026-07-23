@@ -673,6 +673,10 @@
       <button class="adm-nav__item" data-panel="panel-tickets">
         <span class="adm-nav__icon">✦</span> Entradas
       </button>
+      <p class="adm-nav__section">Invitados</p>
+      <button class="adm-nav__item" data-panel="panel-cortesia" id="nav-cortesia">
+        <span class="adm-nav__icon">★</span> Cortesías
+      </button>
     </nav>
 
     <div class="adm-sidebar__footer">
@@ -782,6 +786,34 @@
       </div>
     </div>
 
+    <!-- ── PANEL: Cortesías ─────────────────────────────────────── -->
+    <div id="panel-cortesia" class="adm-panel">
+      <div class="adm-main__header">
+        <h1 class="adm-main__title">CORTESÍAS</h1>
+        <button class="ph-btn ph-btn--ghost" onclick="loadCortesia()" style="font-size:var(--text-xs)">↻ Actualizar</button>
+      </div>
+
+      <!-- Crear -->
+      <div style="background:var(--ph-bg-soft);border:1px solid var(--ph-border);border-radius:var(--radius-lg);padding:var(--sp-6);margin-bottom:var(--sp-8)">
+        <p class="adm-section-label" style="margin-bottom:var(--sp-3)">Agregar invitados</p>
+        <p style="font-size:var(--text-sm);color:var(--ph-text-dim);margin-bottom:var(--sp-4)">Un nombre por línea · Formato: <strong style="color:var(--ph-text-mute)">Nombre Apellido</strong></p>
+        <textarea id="cortesia-names" rows="4" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--ph-border);border-radius:var(--radius-md);padding:var(--sp-3) var(--sp-4);color:var(--ph-text);font-family:var(--font-body);font-size:var(--text-sm);resize:vertical;outline:none;box-sizing:border-box" placeholder="Juan Pérez&#10;María López&#10;Carlos García"></textarea>
+        <div style="display:flex;align-items:center;gap:var(--sp-4);margin-top:var(--sp-4)">
+          <button class="ph-btn ph-btn--primary" id="cortesia-create-btn">Generar entradas</button>
+          <span id="cortesia-create-err" style="font-size:var(--text-sm);color:var(--ph-magenta)"></span>
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4)">
+        <p class="adm-section-label" style="margin:0">Invitados registrados</p>
+        <span id="cortesia-count" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ph-blue);background:rgba(29,79,255,.1);border:1px solid rgba(29,79,255,.25);padding:3px 10px;border-radius:999px">0</span>
+      </div>
+      <div class="adm-table-wrap" id="cortesia-table-wrap">
+        <div class="adm-empty"><span class="adm-empty__icon">★</span>Cargando…</div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -880,6 +912,7 @@ document.querySelectorAll('.adm-nav__item[data-panel]').forEach(btn => {
     document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.panel).classList.add('active');
+    if (btn.dataset.panel === 'panel-cortesia') loadCortesia();
     closeSidebar();
   });
 });
@@ -1208,6 +1241,89 @@ function exportOrdersExcel() {
   const fecha = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `party_house_pedidos_${fecha}.xlsx`);
 }
+
+// ── Cortesías ──────────────────────────────────────────────────────
+async function loadCortesia() {
+  const wrap = document.getElementById('cortesia-table-wrap');
+  wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">★</span>Cargando…</div>';
+  try {
+    const data = await api('GET', '/api/admin/cortesia', null, { 'x-admin-token': adminToken });
+    renderCortesiaTable(data.guests || []);
+  } catch (e) {
+    wrap.innerHTML = '<div class="adm-empty">Error al cargar. Intenta de nuevo.</div>';
+  }
+}
+
+function renderCortesiaTable(guests) {
+  const wrap = document.getElementById('cortesia-table-wrap');
+  document.getElementById('cortesia-count').textContent = guests.length;
+  if (!guests.length) {
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">★</span>Sin invitados de cortesía aún.</div>';
+    return;
+  }
+  const rows = guests.map(g => {
+    const badge = g.ticket_issued
+      ? '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:rgba(34,211,238,.1);color:#22d3ee;border:1px solid rgba(34,211,238,.25)">✓ Emitido</span>'
+      : '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.05);color:var(--ph-text-dim);border:1px solid var(--ph-border)">Pendiente</span>';
+
+    const dlBtn = g.download_token
+      ? `<a style="padding:6px 14px;border-radius:var(--radius-md);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid rgba(29,79,255,.4);background:rgba(29,79,255,.12);color:var(--ph-blue);text-decoration:none;white-space:nowrap" href="/ticket.html?ot=${encodeURIComponent(g.download_token)}" target="_blank">Descargar</a>`
+      : `<span style="padding:6px 14px;border-radius:var(--radius-md);font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ph-border);color:var(--ph-text-dim);opacity:.4;white-space:nowrap">Descargar</span>`;
+
+    const inviteLink = `${location.origin}/invitado.html?code=${encodeURIComponent(g.code)}`;
+    const safeLink   = esc(inviteLink).replace(/'/g, '&#39;');
+
+    return `<tr>
+      <td>${esc(g.guest_name)}</td>
+      <td style="font-family:var(--font-display);font-size:16px;letter-spacing:.1em">${esc(g.code)}</td>
+      <td>${badge}</td>
+      <td><div style="display:flex;gap:var(--sp-2)">${dlBtn}<button style="padding:6px 14px;border-radius:var(--radius-md);font-size:11px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid var(--ph-border);background:rgba(255,255,255,.04);color:var(--ph-text-mute);white-space:nowrap" onclick="copyCortesiaLink(this,'${safeLink}')">Copiar link</button></div></td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="adm-table">
+    <thead><tr>
+      <th>Nombre</th><th>Código</th><th>Estado</th><th>Acciones</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function copyCortesiaLink(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiado';
+    btn.style.color = '#22d3ee';
+    btn.style.borderColor = 'rgba(34,211,238,.4)';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+
+document.getElementById('cortesia-create-btn').addEventListener('click', async function() {
+  const raw    = document.getElementById('cortesia-names').value.trim();
+  const errEl  = document.getElementById('cortesia-create-err');
+  const btn    = this;
+  if (!raw) { errEl.textContent = 'Escribe al menos un nombre.'; return; }
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Generando…';
+  try {
+    const data = await api('POST', '/api/admin/cortesia/bulk', { names: raw }, { 'x-admin-token': adminToken });
+    const failed = (data.results || []).filter(r => !r.ok);
+    if (failed.length) {
+      errEl.textContent = `${failed.length} error(es): ${failed.map(f => f.name).join(', ')}`;
+    }
+    document.getElementById('cortesia-names').value = '';
+    await loadCortesia();
+  } catch (e) {
+    errEl.textContent = 'Error al generar. Intenta de nuevo.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generar entradas';
+  }
+});
 
 // ── Boot ───────────────────────────────────────────────────────────
 init();

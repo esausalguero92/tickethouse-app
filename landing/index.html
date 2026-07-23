@@ -4,357 +4,96 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#050505"/>
-  <meta name="description" content="Party House — Para quienes ya saben."/>
   <title>Party House</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/tokens.css"/>
   <link rel="stylesheet" href="/css/components.css"/>
-  <link rel="stylesheet" href="/css/animations.css"/>
   <style>
-    /* ── Shell ───────────────────────────────────────────────────── */
-    html, body { height: 100%; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
 
-    .gate {
-      position: relative;
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      overflow: hidden;
-      background: #000;
-    }
-
-    /* ── Atmósfera ───────────────────────────────────────────────── */
-    .gate__atmo { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-
-    .gate__orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(90px);
-      animation: orbIn 1.8s var(--ease-out) forwards;
-      opacity: 0;
-    }
-
-    /* orb azul — arriba izquierda, grande */
-    .gate__orb--a {
-      width: 900px; height: 900px;
-      background: radial-gradient(circle, rgba(29,79,255,.22) 0%, transparent 65%);
-      top: -350px; left: -280px;
-      animation-delay: .1s;
-      animation: orbIn 1.8s var(--ease-out) .1s forwards, orbPulse 8s ease-in-out 2s infinite;
-    }
-    /* orb purple — abajo derecha */
-    .gate__orb--b {
-      width: 700px; height: 700px;
-      background: radial-gradient(circle, rgba(93,45,145,.20) 0%, transparent 65%);
-      bottom: -250px; right: -180px;
-      animation-delay: .3s;
-      animation: orbIn 1.8s var(--ease-out) .3s forwards, orbPulse 10s ease-in-out 2.5s infinite;
-    }
-    /* orb magenta — centro */
-    .gate__orb--c {
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(255,46,154,.13) 0%, transparent 65%);
-      top: 60%; left: 10%;
-      animation-delay: .5s;
-      animation: orbIn 1.8s var(--ease-out) .5s forwards, orbPulse 12s ease-in-out 3s infinite;
-    }
-    /* orb extra — arriba derecha */
-    .gate__orb--d {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, rgba(29,79,255,.10) 0%, transparent 65%);
-      top: -100px; right: -150px;
-      animation: orbIn 1.8s var(--ease-out) .4s forwards, orbPulse 9s ease-in-out 2s infinite;
-    }
-
-    @keyframes orbPulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: .7; transform: scale(1.08); }
-    }
-
-    /* ruido de fondo */
-    .gate__grain {
-      position: absolute; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      opacity: .04;
-    }
-
-    /* viñeta central */
-    .gate__vignette {
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 80% at 50% 50%,
-        transparent 40%, rgba(0,0,0,.7) 100%);
-    }
-
-    /* línea de color top */
-    .gate__topline {
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--grad-brand-top);
-      opacity: .8;
-      box-shadow: 0 0 16px rgba(29,79,255,.5), 0 0 32px rgba(255,46,154,.3);
-    }
-
-    /* ── Contenido central ───────────────────────────────────────── */
-    .gate__inner {
-      position: relative;
+    /* Flyer cubre toda la pantalla */
+    .flyer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
       z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: var(--sp-10) var(--sp-6);
+    }
+
+    /* CTA - desktop */
+    .cta-wrap {
+      position: fixed;
+      z-index: 20;
+      top: 67%;
+      left: 25%;
+      transform: translateX(-50%);
+      width: 44%;
+      max-width: 460px;
+    }
+
+    .cta-btn {
+      display: block;
       width: 100%;
-      max-width: 640px;
-    }
-
-    .gate__logo {
-      width: 100%;
-      max-width: 580px;
-      height: auto;
-      margin-bottom: var(--sp-8);
-      /* elimina el fondo negro del PNG usando screen blend */
-      mix-blend-mode: screen;
-      animation: fadeInUp .6s var(--ease-out) .15s both;
-    }
-
-    .gate__eyebrow {
-      font-size: 10px;
-      letter-spacing: .32em;
-      text-transform: uppercase;
-      color: var(--ph-purple);
-      margin-bottom: var(--sp-6);
-      animation: fadeIn .5s var(--ease-out) .1s both;
-    }
-
-    .gate__wordmark {
-      font-family: var(--font-display);
-      font-size: clamp(88px, 22vw, 148px);
-      letter-spacing: .04em;
-      line-height: .88;
-      color: var(--ph-white);
-      text-transform: uppercase;
-      animation: fadeInUp .6s var(--ease-out) .15s both;
-    }
-
-    /* línea divisora con gradiente */
-    .gate__rule {
-      width: 48px; height: 1px;
-      background: var(--grad-brand-top);
-      margin: var(--sp-6) 0 var(--sp-5);
-      animation: fadeIn .5s var(--ease-out) .3s both;
-    }
-
-    .gate__tagline {
-      font-size: 11px;
-      letter-spacing: .26em;
-      text-transform: uppercase;
-      color: var(--ph-text-dim);
-      margin-bottom: var(--sp-10);
-      animation: fadeIn .5s var(--ease-out) .35s both;
-    }
-
-    /* ── Formulario de acceso ────────────────────────────────────── */
-    .gate__form {
-      width: 100%;
-      max-width: 300px;
-      animation: fadeInUp .55s var(--ease-out) .4s both;
-    }
-
-    .gate__input-wrap {
-      position: relative;
-      margin-bottom: var(--sp-3);
-    }
-
-    /* anillo de glow al enfocar */
-    .gate__input-wrap::after {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: calc(var(--radius-md) + 1px);
-      background: var(--grad-brand-top);
-      opacity: 0;
-      transition: opacity var(--dur-normal);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .gate__input-wrap:focus-within::after { opacity: .5; }
-
-    .code-input {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      box-sizing: border-box;
-      padding: var(--sp-4) var(--sp-5);
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--ph-border);
-      border-radius: var(--radius-md);
-      color: var(--ph-white);
-      font-family: var(--font-display);
-      font-size: var(--text-2xl);
-      letter-spacing: .22em;
+      padding: 18px 24px;
+      background: linear-gradient(90deg, #1D4FFF 0%, #5D2D91 50%, #FF2E9A 100%);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(18px, 2.2vw, 26px);
+      letter-spacing: .13em;
       text-transform: uppercase;
       text-align: center;
-      outline: none;
-      transition: border-color var(--dur-fast), background var(--dur-fast);
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity .15s, transform .15s;
+      box-shadow: 0 0 24px rgba(29,79,255,.4), 0 0 48px rgba(255,46,154,.2);
     }
-    .code-input::placeholder { color: var(--ph-text-dim); letter-spacing: .14em; }
-    .code-input:focus { border-color: transparent; background: rgba(255,255,255,.06); }
-    .code-input.error { border-color: var(--ph-magenta); animation: shake .3s ease-out; }
+    .cta-btn:hover  { opacity: .88; transform: translateY(-1px); }
+    .cta-btn:active { opacity: 1;   transform: translateY(0); }
 
-    @keyframes shake {
-      0%,100% { transform: translateX(0); }
-      25% { transform: translateX(-6px); }
-      75% { transform: translateX(6px); }
-    }
+    /* Mobile */
+    @media (max-width: 640px) {
+      html, body { overflow: auto; height: auto; }
 
-    #error-msg {
-      font-size: var(--text-xs);
-      color: var(--ph-magenta);
-      text-align: center;
-      min-height: 18px;
-      margin-bottom: var(--sp-3);
-      letter-spacing: .04em;
-    }
+      .flyer {
+        position: relative;
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        content: url('/img/vertical.png');
+      }
 
-    /* ── Footer ──────────────────────────────────────────────────── */
-    .gate__footer {
-      position: absolute;
-      bottom: var(--sp-6);
-      left: 0; right: 0;
-      text-align: center;
-      animation: fadeIn .5s var(--ease-out) .7s both;
-    }
-    .gate__footer span {
-      font-size: 10px;
-      letter-spacing: .24em;
-      text-transform: uppercase;
-      color: var(--ph-text-dim);
-    }
+      .cta-wrap {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: calc(100% - 32px);
+        max-width: none;
+        margin: 16px auto 32px;
+      }
 
-    @keyframes orbIn { to { opacity: 1; } }
+      .cta-btn {
+        font-size: 18px;
+        padding: 16px;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="gate">
 
-    <!-- Atmósfera -->
-    <div class="gate__atmo">
-      <div class="gate__grain"></div>
-      <div class="gate__vignette"></div>
-      <div class="gate__orb gate__orb--a"></div>
-      <div class="gate__orb gate__orb--b"></div>
-      <div class="gate__orb gate__orb--c"></div>
-      <div class="gate__orb gate__orb--d"></div>
-    </div>
-    <div class="gate__topline"></div>
+  <img class="flyer" src="/img/landing.png" alt="Party House"/>
 
-    <!-- Contenido -->
-    <div class="gate__inner">
-      
-
-      <img src="/img/logo.png" class="gate__logo" alt="Party House"/>
-
-      
-      
-
-      <form class="gate__form" id="code-form" autocomplete="off" novalidate>
-        <div class="gate__input-wrap">
-          <input
-            type="text"
-            id="code-input"
-            class="code-input"
-            placeholder="TU CÓDIGO"
-            maxlength="20"
-            autocomplete="off"
-            autocorrect="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            inputmode="text"
-            aria-label="Código de acceso al evento"
-            aria-describedby="error-msg"
-          />
-        </div>
-        <p id="error-msg" role="alert" aria-live="polite"></p>
-        <button type="submit" class="ph-btn ph-btn--primary" id="submit-btn" style="width:100%">
-          <span id="btn-text">INGRESAR</span>
-          <span class="ph-spinner" id="btn-spinner" hidden></span>
-        </button>
-      </form>
-    </div>
-
-    <footer class="gate__footer">
-      <span>© Party House</span>
-    </footer>
-
+  <div class="cta-wrap">
+    <a href="/evento.html?c=PH0108" class="cta-btn">CONSEGUIR MI ENTRADA &rarr;</a>
   </div>
 
-  <script src="/js/config.js"></script>
-  <script src="/js/app.js"></script>
-  <script>
-    const { api, getParam, navigate } = window.PH;
-
-    const form      = document.getElementById('code-form');
-    const input     = document.getElementById('code-input');
-    const errorEl   = document.getElementById('error-msg');
-    const submitBtn = document.getElementById('submit-btn');
-    const btnText   = document.getElementById('btn-text');
-    const spinner   = document.getElementById('btn-spinner');
-
-    input.addEventListener('input', () => {
-      const pos = input.selectionStart;
-      input.value = input.value.toUpperCase();
-      input.setSelectionRange(pos, pos);
-      input.classList.remove('error');
-      errorEl.textContent = '';
-    });
-
-    const urlCode = getParam('c');
-    if (urlCode) input.value = urlCode.toUpperCase();
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const code = input.value.trim().toUpperCase();
-
-      if (code.length < 2) {
-        input.classList.add('error');
-        errorEl.textContent = 'Ingresa el código del evento';
-        return;
-      }
-
-      btnText.textContent = 'VERIFICANDO';
-      spinner.hidden = false;
-      submitBtn.disabled = true;
-      errorEl.textContent = '';
-
-      try {
-        const data = await api('GET', `/api/event/${encodeURIComponent(code)}`);
-        sessionStorage.setItem('ph_event_code', code);
-        sessionStorage.setItem('ph_event', JSON.stringify(data.event));
-        sessionStorage.setItem('ph_event_code_id', data.event_code_id);
-        navigate(`/flyer.html?c=${code}`);
-      } catch (err) {
-        // Si el codigo no es un evento, verificar si es un access_code de invitado
-        if (err.data?.error === 'code_not_found') {
-          try {
-            await api('GET', `/api/code/check/${encodeURIComponent(code)}`);
-            navigate(`/flyer.html?ac=${encodeURIComponent(code)}`);
-            return;
-          } catch (_) {}
-        }
-        input.classList.add('error');
-        spinner.hidden = true;
-        submitBtn.disabled = false;
-        btnText.textContent = 'INGRESAR';
-        const msgs = {
-          code_not_found:      'Código no encontrado. Verifica e intenta de nuevo.',
-          code_required:       'Ingresa el código del evento.',
-          event_not_available: 'Este evento ya no está disponible.',
-        };
-        errorEl.textContent = msgs[err.data?.error] || 'Código inválido. Intenta de nuevo.';
-      }
-    });
-  </script>
 </body>
 </html>

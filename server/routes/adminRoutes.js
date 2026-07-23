@@ -17,7 +17,7 @@ const router = Router();
 async function getActiveEvent(supabase) {
   const { data } = await supabase
     .from('events')
-    .select('id, name, event_date, venue, max_capacity, tickets_sold, price, active')
+    .select('id, name, event_date, venue, capacity, tickets_sold, price_usd, active')
     .eq('active', true)
     .order('event_date', { ascending: true })
     .limit(1)
@@ -227,7 +227,7 @@ router.get('/event-summary',
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_event_summary_v2', { p_event_id: event.id });
       if (!rpcErr && rpcData && !rpcData.error) {
-        return res.json(Object.assign({}, rpcData, { event_name: event.name, max_capacity: event.max_capacity }));
+        return res.json(Object.assign({}, rpcData, { event_name: event.name, max_capacity: event.capacity }));
       }
     } catch (e) {}
 
@@ -245,7 +245,7 @@ router.get('/event-summary',
 
     return res.json({
       event_id: event.id, event_name: event.name,
-      max_capacity: event.max_capacity || 0, tickets_sold: event.tickets_sold || 0,
+      max_capacity: event.capacity || 0, tickets_sold: event.tickets_sold || 0,
       paid_orders: results[0].count || 0, pending_transfers: results[1].count || 0,
       redeemed_tickets: results[2].count || 0, redeemed_today: redeemedToday || 0,
     });
@@ -263,6 +263,146 @@ router.post('/test-email',
     } catch (e) {
       return res.status(503).json({ ok: false, error: e.message });
     }
+  })
+);
+
+// ── GET /api/admin/cortesia ───────────────────────────────────────
+// Lista todos los invitados de cortesía del evento activo
+router.get('/cortesia',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { generateDownloadToken } = require('../services/QrService');
+
+    const event = await getActiveEvent(supabase);
+    if (!event) return res.json({ event: null, guests: [] });
+
+    const { data: codes, error } = await supabase
+      .from('access_codes')
+      .select('id, code, status, created_at, guest:guests(first_name, last_name, email), orders(id, payment_status)')
+      .eq('event_id', event.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const guests = (codes || []).map(function(c) {
+      const orders = Array.isArray(c.orders) ? c.orders : (c.orders ? [c.orders] : []);
+      const paidOrder = orders.find(function(o) { return o.payment_status === 'paid'; });
+      return {
+        id:             c.id,
+        code:           c.code,
+        status:         c.status,
+        created_at:     c.created_at,
+        guest_name:     c.guest ? (c.guest.first_name + ' ' + c.guest.last_name).trim() : '—',
+        guest_email:    c.guest ? c.guest.email : null,
+        ticket_issued:  !!paidOrder,
+        download_token: paidOrder ? generateDownloadToken(paidOrder.id) : null,
+      };
+    });
+
+    return res.json({ event: { id: event.id, name: event.name }, guests });
+  })
+);
+
+// ── POST /api/admin/cortesia/bulk ─────────────────────────────────
+// Crea invitados de cortesía en lote y emite sus tickets
+router.post('/cortesia/bulk',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { generateDownloadToken } = require('../services/QrService');
+
+    const event = await getActiveEvent(supabase);
+    if (!event) return res.status(400).json({ error: 'no_active_event' });
+
+    // Acepta array de strings o string con saltos de línea
+    let rawNames = req.body.names || [];
+    if (typeof rawNames === 'string') {
+      rawNames = rawNames.split('\n');
+    }
+
+    const names = rawNames
+      .map(function(n) { return String(n || '').trim(); })
+      .filter(function(n) { return n.length > 0; });
+
+    if (!names.length) return res.status(400).json({ error: 'names_required' });
+
+    function cleanStr(s) {
+      return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();
+    }
+
+    function generateCode(firstName, lastName) {
+      const a = cleanStr(firstName).charAt(0) || 'G';
+      const b = cleanStr(lastName).charAt(0)  || 'X';
+      const d = String(Math.floor(Math.random() * 900) + 100);
+      return a + b + d;
+    }
+
+    const results = [];
+
+    for (const fullName of names) {
+      const parts     = fullName.trim().split(/\s+/);
+      const firstName = parts[0]  || fullName;
+      const lastName  = parts.slice(1).join(' ') || '';
+
+      try {
+        // 1. Insertar guest
+        const { data: guest, error: gErr } = await supabase
+          .from('guests')
+          .insert({ first_name: firstName, last_name: lastName })
+          .select('id')
+          .single();
+
+        if (gErr) { results.push({ name: fullName, ok: false, error: gErr.message }); continue; }
+
+        // 2. Generar código único (reintentar si colisiona)
+        let code = '';
+        for (let i = 0; i < 5; i++) {
+          const candidate = generateCode(firstName, lastName);
+          const { data: existing } = await supabase.from('access_codes').select('id').eq('code', candidate).maybeSingle();
+          if (!existing) { code = candidate; break; }
+        }
+        if (!code) { results.push({ name: fullName, ok: false, error: 'code_collision' }); continue; }
+
+        // 3. Insertar access_code
+        const { error: cErr } = await supabase
+          .from('access_codes')
+          .insert({ code, event_id: event.id, guest_id: guest.id, status: 'active' });
+
+        if (cErr) { results.push({ name: fullName, ok: false, error: cErr.message }); continue; }
+
+        // 4. Crear orden complimentary y emitir ticket
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', { p_code: code });
+        if (rpcErr || !rpcData || rpcData.error) {
+          results.push({ name: fullName, ok: false, error: (rpcData && rpcData.error) || 'order_failed' }); continue;
+        }
+
+        const ticketResult = await issueTickets({
+          orderId:    rpcData.order_id,
+          eventId:    event.id,
+          buyerId:    null,
+          buyerName:  fullName,
+          buyerEmail: null,
+          quantity:   1,
+          eventName:  event.name  || 'Party House',
+          eventDate:  event.event_date || null,
+          eventVenue: event.venue || '',
+        });
+
+        results.push({
+          name:           fullName,
+          ok:             true,
+          code,
+          download_token: generateDownloadToken(rpcData.order_id),
+          correlative:    ticketResult.correlativeCodes && ticketResult.correlativeCodes[0] || null,
+        });
+
+      } catch (e) {
+        results.push({ name: fullName, ok: false, error: e.message });
+      }
+    }
+
+    return res.json({ ok: true, event: { id: event.id, name: event.name }, results });
   })
 );
 
