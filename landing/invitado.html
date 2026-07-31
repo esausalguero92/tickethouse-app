@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#050505"/>
+  <title>Entrada de invitado — Party House</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <link rel="stylesheet" href="/css/animations.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      min-height: 100%;
+      background: #050508;
+      color: #e0e0f0;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    /* Topline brand */
+    .topline {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 2px;
+      background: linear-gradient(90deg, #1d4fff 0%, #ff2e9a 100%);
+      opacity: .85;
+    }
+
+    /* Fondo sutil */
+    .bg-glow {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 30% 20%, rgba(29,79,255,.07) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 50% at 80% 80%, rgba(255,46,154,.05) 0%, transparent 70%);
+    }
+
+    /* Layout centrado */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 40px;
+    }
+
+    /* Card */
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(10,10,28,.8);
+      border: 1px solid rgba(29,79,255,.15);
+      border-radius: 16px;
+      padding: 40px 36px;
+      backdrop-filter: blur(12px);
+    }
+
+    /* Brand header */
+    .brand {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .brand__logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: .12em;
+      background: linear-gradient(135deg, #1d4fff 0%, #ff2e9a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+    }
+    .brand__sub {
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: rgba(180,180,220,.4);
+      margin-top: 6px;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(29,79,255,.3), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* Form */
+    .form-label {
+      display: block;
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: rgba(160,160,200,.6);
+      margin-bottom: 8px;
+    }
+
+    .code-input {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(29,79,255,.2);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #e0e0f5;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      text-align: center;
+    }
+    .code-input::placeholder {
+      color: rgba(120,120,160,.35);
+      font-weight: 400;
+      letter-spacing: .06em;
+    }
+    .code-input:focus {
+      border-color: rgba(29,79,255,.55);
+      box-shadow: 0 0 0 3px rgba(29,79,255,.12);
+    }
+    .code-input:disabled {
+      opacity: .5;
+    }
+
+    /* Submit button */
+    .btn-primary {
+      width: 100%;
+      margin-top: 16px;
+      padding: 15px;
+      background: linear-gradient(135deg, #1d4fff 0%, #3a2fff 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+    .btn-primary:active:not(:disabled) { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Loading spinner dentro del botón */
+    .btn-primary .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Estado de error */
+    .error-box {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: rgba(220,40,40,.08);
+      border: 1px solid rgba(220,40,40,.25);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #f08080;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .error-box.visible { display: block; }
+
+    /* Estado de éxito */
+    .success-box {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: rgba(29,180,100,.08);
+      border: 1px solid rgba(29,180,100,.25);
+      border-radius: 8px;
+      font-size: 13px;
+      color: #60d090;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .success-box.visible { display: block; }
+
+    /* Footer */
+    .footer {
+      margin-top: 28px;
+      font-size: 11px;
+      letter-spacing: .08em;
+      color: rgba(120,120,160,.35);
+      text-align: center;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topline"></div>
+<div class="bg-glow"></div>
+
+<div class="page">
+  <div class="card">
+
+    <div class="brand">
+      <div class="brand__logo">Party House</div>
+      <div class="brand__sub">Entrada de invitado especial</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <form id="redeem-form" autocomplete="off">
+      <label class="form-label" for="code-field">Tu codigo de invitado</label>
+      <input
+        id="code-field"
+        class="code-input"
+        type="text"
+        name="code"
+        placeholder="XXXXXXXX"
+        maxlength="40"
+        inputmode="text"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="characters"
+        required
+      />
+      <button class="btn-primary" type="submit" id="submit-btn">
+        Conseguir mi entrada
+      </button>
+    </form>
+
+    <div class="error-box" id="error-box"></div>
+    <div class="success-box" id="success-box">Redirigiendo a tu entrada...</div>
+
+  </div>
+
+  <div class="footer">Party House &copy; 2025</div>
+</div>
+
+<script>
+(function() {
+  var form    = document.getElementById('redeem-form');
+  var input   = document.getElementById('code-field');
+  var btn     = document.getElementById('submit-btn');
+  var errBox  = document.getElementById('error-box');
+  var okBox   = document.getElementById('success-box');
+
+  // Pre-llenar codigo desde URL si viene como ?code=XXXX
+  var params = new URLSearchParams(window.location.search);
+  var codeParam = params.get('code') || params.get('c') || '';
+  if (codeParam) input.value = codeParam.toUpperCase();
+
+  var ERRORS = {
+    code_invalid:         'El codigo no es valido o ya no esta activo.',
+    code_not_found:       'No encontramos ese codigo. Revisalo e intenta de nuevo.',
+    order_not_found:      'Hubo un problema al recuperar tu entrada. Contacta al organizador.',
+    order_failed:         'No se pudo generar tu entrada. Intenta de nuevo o contacta al organizador.',
+    already_used:         'Este codigo ya fue canjeado. Si crees que es un error, contacta al organizador.',
+    validation_error:     'Ingresa un codigo valido.',
+    db_error:             'Error del servidor. Intenta en unos segundos.',
+  };
+
+  function setLoading(on) {
+    btn.disabled  = on;
+    input.disabled = on;
+    btn.innerHTML = on
+      ? '<span class="spinner"></span>Procesando...'
+      : 'Conseguir mi entrada';
+  }
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.classList.add('visible');
+    okBox.classList.remove('visible');
+  }
+
+  function showSuccess() {
+    okBox.classList.add('visible');
+    errBox.classList.remove('visible');
+  }
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var code = input.value.trim().toUpperCase();
+    if (!code) { showError('Ingresa tu codigo de invitado.'); return; }
+
+    errBox.classList.remove('visible');
+    okBox.classList.remove('visible');
+    setLoading(true);
+
+    fetch('/api/code/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: code }),
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      if (res.ok && res.data.token) {
+        showSuccess();
+        setTimeout(function() {
+          window.location.href = '/ticket.html?ot=' + encodeURIComponent(res.data.token);
+        }, 600);
+        return;
+      }
+      var errKey = res.data && res.data.error;
+      showError(ERRORS[errKey] || 'Ocurrio un error inesperado. Intenta de nuevo.');
+      setLoading(false);
+    })
+    .catch(function() {
+      showError('Error de conexion. Verifica tu internet e intenta de nuevo.');
+      setLoading(false);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

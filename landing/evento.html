@@ -488,6 +488,20 @@
       color: var(--ph-white);
     }
 
+    /* Override fila de descuento (anula los estilos del selector +) */
+    #summary-discount-row {
+      font-weight: 400 !important;
+      color: var(--ph-blue) !important;
+      font-size: var(--text-xs);
+    }
+
+    #summary-discount-row span:last-child {
+      font-family: var(--font-body) !important;
+      font-size: var(--text-sm) !important;
+      color: var(--ph-blue) !important;
+      letter-spacing: 0 !important;
+    }
+
     /* Mini summary (step 3) */
     .mini-summary {
       display: flex;
@@ -725,6 +739,137 @@
         flex: 1;
       }
     }
+
+    /* ══════════════════════════════════════════════════
+       ESCALA ESCRITORIO — proporción y jerarquía
+       ══════════════════════════════════════════════════ */
+    @media (min-width: 769px) {
+
+      /* Panel derecho: ancho cómodo alineado a la izquierda */
+      .ev-right__inner {
+        max-width: 540px;
+        margin: 0;
+        padding: var(--sp-10) var(--sp-6) var(--sp-20);
+      }
+
+      /* Step indicator */
+      .step-bar { margin-bottom: var(--sp-10); }
+
+      .step-node__num {
+        width: 40px; height: 40px;
+        font-size: 17px;
+      }
+
+      .step-connector { margin: 20px var(--sp-2) 0; }
+
+      .step-node__label {
+        font-size: 10px;
+        letter-spacing: .18em;
+      }
+
+      /* Título de paso */
+      .step-title {
+        font-size: clamp(44px, 4vw, 60px);
+        margin-bottom: var(--sp-2);
+      }
+
+      /* Subtítulo más legible */
+      .step-subtitle {
+        font-size: var(--text-lg);
+        line-height: 1.6;
+        margin-bottom: var(--sp-8);
+      }
+
+      /* Labels de campos — presencia y legibilidad */
+      .ph-form-group__label {
+        display: block;
+        font-size: var(--text-base);
+        font-weight: 500;
+        color: var(--ph-text);
+        margin-bottom: var(--sp-2);
+      }
+
+      /* Inputs: cómodos, con peso visual */
+      .ev-right .ph-input {
+        padding: 15px var(--sp-5);
+        font-size: var(--text-base);
+      }
+
+      /* Espaciado entre campos */
+      .ev-right .ph-form-group {
+        margin-bottom: var(--sp-6);
+      }
+
+      /* Botones */
+      .ev-right .ph-btn {
+        padding: 18px var(--sp-8);
+        font-size: var(--text-xl);
+      }
+
+      /* Nota de correo: texto más grande y padding generoso */
+      .email-note {
+        padding: var(--sp-4) var(--sp-5);
+        margin-top: var(--sp-4);
+      }
+
+      .email-note p {
+        font-size: var(--text-sm);
+        line-height: 1.7;
+        letter-spacing: .02em;
+      }
+
+      /* Resumen de pedido */
+      .order-summary {
+        padding: var(--sp-5) var(--sp-6);
+        margin-top: var(--sp-6);
+        margin-bottom: var(--sp-4);
+      }
+
+      .order-summary__row { font-size: var(--text-base); }
+
+      /* Mini resumen paso 3 */
+      .mini-summary {
+        padding: var(--sp-4) var(--sp-5);
+        font-size: var(--text-base);
+      }
+
+      /* Stepper cantidad */
+      .qty-value { font-size: 72px; }
+      .qty-btn   { width: 52px; height: 52px; font-size: var(--text-2xl); }
+
+      /* Panel izquierdo — +15% en todos los textos */
+      .ev-left { padding: var(--sp-12) var(--sp-10) var(--sp-10); }
+
+      .ev-left__brand {
+        font-size: 13px;
+        letter-spacing: .32em;
+        margin-bottom: var(--sp-6);
+      }
+
+      .ev-left__eyebrow {
+        font-size: 13px;
+        letter-spacing: .3em;
+        margin-bottom: var(--sp-4);
+      }
+
+      .ev-left__title {
+        font-size: clamp(81px, 8.9vw, 136px);
+        margin-bottom: var(--sp-10);
+      }
+
+      .ev-left__price-value { font-size: clamp(66px, 6.9vw, 107px); }
+
+      .ev-left__meta { gap: var(--sp-5); margin-bottom: var(--sp-10); }
+
+      .ev-meta-row__label { font-size: 13px; letter-spacing: .22em; min-width: 60px; }
+      .ev-meta-row__value { font-size: 19px; }
+
+      .ev-left__price-block  { padding-top: var(--sp-8); }
+      .ev-left__price-label  { font-size: 13px; letter-spacing: .2em; }
+
+      .ev-left__availability { font-size: 14px; }
+
+    }
   </style>
 </head>
 <body>
@@ -829,6 +974,14 @@
               </div>
             </div>
 
+            <!-- Código de descuento -->
+            <div class="ph-form-group">
+              <label class="ph-form-group__label" for="discount-code">Código de descuento</label>
+              <input type="text" id="discount-code" class="ph-input" placeholder="Ej. PROMO20" autocomplete="off" style="text-transform:uppercase"/>
+              <div id="discount-feedback" style="margin-top:var(--sp-2);font-size:var(--text-sm);display:none"></div>
+              <button type="button" id="discount-apply-btn" style="display:block;width:100%;margin-top:var(--sp-2);padding:10px var(--sp-4);background:rgba(29,79,255,.07);border:1px solid rgba(29,79,255,.22);border-radius:var(--radius-md);color:var(--ph-blue);font-family:var(--font-body);font-size:var(--text-xs);font-weight:500;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:border-color .2s,background .2s">Aplicar código</button>
+            </div>
+
             <button class="ph-btn ph-btn--primary" id="step1-next" style="width:100%;margin-top:var(--sp-5)">
               Continuar &rarr;
             </button>
@@ -868,6 +1021,10 @@
               <div class="order-summary__row">
                 <span id="summary-line">1 entrada x Q50.00</span>
                 <span></span>
+              </div>
+              <div class="order-summary__row" id="summary-discount-row" style="display:none;color:var(--ph-blue)">
+                <span id="summary-discount-label">Descuento</span>
+                <span id="summary-discount-amount">-Q0.00</span>
               </div>
               <div class="order-summary__row">
                 <span>Total</span>
@@ -974,14 +1131,15 @@
   const { api, getParam, navigate, formatUSD, formatDate, showLoading, hideLoading } = window.PH;
 
   // Estado
-  let event        = null;
-  let quantity     = 1;
-  let maxQty       = 99;
-  let payMethod    = 'paypal';
-  let transferInfo = null;
-  let paypalLoaded = false;
-  let orderId      = null;
-  let currentStep  = 1;
+  let event          = null;
+  let quantity       = 1;
+  let maxQty         = 99;
+  let payMethod      = 'paypal';
+  let transferInfo   = null;
+  let paypalLoaded   = false;
+  let orderId        = null;
+  let currentStep    = 1;
+  let appliedDiscount = null; // { discount_id, code, discount_amount_usd, final_amount_usd, discount_type, discount_value }
 
   // Init
   async function init() {
@@ -1016,6 +1174,7 @@
     setupTransferFile();
     loadTransferInfo();
     setupSteps();
+    setupDiscountCode();
   }
 
   // Render event
@@ -1055,24 +1214,161 @@
   const GTQ_PER_TICKET = 50;
 
   function updateSummary() {
-    const gtqTotal = GTQ_PER_TICKET * quantity;
-    const label    = quantity + ' ' + (quantity === 1 ? 'entrada' : 'entradas');
+    const gtqBase = GTQ_PER_TICKET * quantity;
+    const label   = quantity + ' ' + (quantity === 1 ? 'entrada' : 'entradas');
 
+    // Mostrar totales base primero
     document.getElementById('summary-line').textContent  = label + ' x Q' + GTQ_PER_TICKET.toFixed(2);
-    document.getElementById('summary-total').textContent = 'Q' + gtqTotal.toFixed(2);
+    document.getElementById('summary-total').textContent = 'Q' + gtqBase.toFixed(2);
+
+    var discRow = document.getElementById('summary-discount-row');
+    if (discRow) discRow.style.display = 'none';
 
     const ml = document.getElementById('mini-summary-line');
     const mt = document.getElementById('mini-summary-total');
     if (ml) ml.textContent = label;
-    if (mt) mt.textContent = 'Q' + gtqTotal.toFixed(2);
+    if (mt) mt.textContent = 'Q' + gtqBase.toFixed(2);
 
     const gtqEl = document.getElementById('transfer-total-gtq');
-    if (gtqEl) gtqEl.textContent = 'Q' + gtqTotal.toFixed(2);
+    if (gtqEl) gtqEl.textContent = 'Q' + gtqBase.toFixed(2);
 
     const usdEl = document.getElementById('paypal-usd-notice');
     if (usdEl) {
       const usdTotal = ((event && event.price) ? event.price : 0) * quantity;
       usdEl.textContent = formatUSD(usdTotal) + ' USD';
+    }
+
+    // Si hay descuento activo, re-aplicarlo con la nueva cantidad
+    if (appliedDiscount) reapplyDiscount();
+  }
+
+  function reapplyDiscount() {
+    if (!appliedDiscount || !event) return;
+    const usdPerTicket  = (event && event.price) ? event.price : 0;
+    const baseAmountUsd = usdPerTicket * quantity;
+
+    // Recalcular localmente con los datos ya conocidos del código
+    var discountAmountUsd;
+    if (appliedDiscount.discount_type === 'percent') {
+      discountAmountUsd = baseAmountUsd * appliedDiscount.discount_value / 100;
+    } else {
+      discountAmountUsd = appliedDiscount.discount_value;
+    }
+    discountAmountUsd = Math.min(discountAmountUsd, baseAmountUsd);
+    const finalAmountUsd = baseAmountUsd - discountAmountUsd;
+
+    appliedDiscount = { ...appliedDiscount, discount_amount_usd: discountAmountUsd, final_amount_usd: finalAmountUsd };
+    applySummaryDiscount(discountAmountUsd, finalAmountUsd);
+  }
+
+  function applySummaryDiscount(discountAmountUsd, finalAmountUsd) {
+    const usdPerTicket = (event && event.price) ? event.price : 0;
+    const gtqRate      = usdPerTicket > 0 ? (GTQ_PER_TICKET / usdPerTicket) : 1;
+    const discGTQ      = discountAmountUsd * gtqRate;
+    const finalGTQ     = finalAmountUsd    * gtqRate;
+
+    // Resumen principal
+    var discRow   = document.getElementById('summary-discount-row');
+    var discLabel = document.getElementById('summary-discount-label');
+    var discAmt   = document.getElementById('summary-discount-amount');
+    var totalEl   = document.getElementById('summary-total');
+    if (discRow) {
+      discLabel.textContent = appliedDiscount && appliedDiscount.code ? 'Descuento (' + appliedDiscount.code + ')' : 'Descuento';
+      discAmt.textContent   = '-Q' + discGTQ.toFixed(2);
+      discRow.style.display = '';
+    }
+    if (totalEl) totalEl.textContent = 'Q' + finalGTQ.toFixed(2);
+
+    // Mini-resumen (sticky)
+    var mt = document.getElementById('mini-summary-total');
+    if (mt) mt.textContent = 'Q' + finalGTQ.toFixed(2);
+
+    // Info box de transferencia
+    var gtqEl = document.getElementById('transfer-total-gtq');
+    if (gtqEl) gtqEl.textContent = 'Q' + finalGTQ.toFixed(2);
+
+    // Aviso de monto en PayPal
+    var usdEl = document.getElementById('paypal-usd-notice');
+    if (usdEl) usdEl.textContent = formatUSD(finalAmountUsd) + ' USD';
+  }
+
+  function clearDiscountUI() {
+    var inp = document.getElementById('discount-code');
+    if (inp) inp.value = '';
+    var fb = document.getElementById('discount-feedback');
+    if (fb) { fb.style.display = 'none'; fb.textContent = ''; }
+    var discRow = document.getElementById('summary-discount-row');
+    if (discRow) discRow.style.display = 'none';
+  }
+
+  function setupDiscountCode() {
+    var applyBtn  = document.getElementById('discount-apply-btn');
+    var codeInput = document.getElementById('discount-code');
+    if (!applyBtn || !codeInput) return;
+
+    // Aplicar al hacer click o Enter
+    applyBtn.addEventListener('click', applyDiscountCode);
+    codeInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); applyDiscountCode(); }
+    });
+
+    // Limpiar descuento si el usuario borra el código
+    codeInput.addEventListener('input', function() {
+      if (!codeInput.value.trim() && appliedDiscount) {
+        appliedDiscount = null;
+        var fb = document.getElementById('discount-feedback');
+        if (fb) { fb.style.display = 'none'; }
+        // restaurar totales
+        var gtqTotal = GTQ_PER_TICKET * quantity;
+        var totalEl  = document.getElementById('summary-total');
+        if (totalEl) totalEl.textContent = 'Q' + gtqTotal.toFixed(2);
+        var mt = document.getElementById('mini-summary-total');
+        if (mt) mt.textContent = 'Q' + gtqTotal.toFixed(2);
+        var discRow = document.getElementById('summary-discount-row');
+        if (discRow) discRow.style.display = 'none';
+      }
+    });
+  }
+
+  async function applyDiscountCode() {
+    if (!event) return;
+    var codeInput = document.getElementById('discount-code');
+    var feedback  = document.getElementById('discount-feedback');
+    var applyBtn  = document.getElementById('discount-apply-btn');
+    var code = (codeInput.value || '').trim().toUpperCase();
+    if (!code) return;
+
+    var usdPerTicket = (event && event.price) ? event.price : 0;
+    var amountUsd    = usdPerTicket * quantity;
+
+    applyBtn.disabled = true;
+    feedback.style.display = '';
+    feedback.style.color   = 'var(--ph-text-dim)';
+    feedback.textContent   = 'Verificando...';
+
+    try {
+      var data = await api('POST', '/api/discount/validate', {
+        code,
+        event_id:   event.id,
+        amount_usd: amountUsd,
+      });
+
+      appliedDiscount = { ...data, code };
+      feedback.style.color = 'var(--ph-blue)';
+
+      var typeLabel = data.discount_type === 'percent'
+        ? data.discount_value + '% de descuento'
+        : 'Q' + (data.discount_value * ((usdPerTicket > 0) ? (GTQ_PER_TICKET / usdPerTicket) : 1)).toFixed(2) + ' de descuento';
+
+      feedback.textContent = '✓ Código aplicado: ' + typeLabel;
+      applySummaryDiscount(data.discount_amount_usd, data.final_amount_usd);
+
+    } catch (err) {
+      appliedDiscount = null;
+      feedback.style.color = 'var(--ph-magenta)';
+      feedback.textContent = (err.data && err.data.message) ? err.data.message : 'Código inválido.';
+    } finally {
+      applyBtn.disabled = false;
     }
   }
 
@@ -1195,7 +1491,7 @@
   }
 
   function buildBuyerPayload() {
-    return {
+    var payload = {
       event_code:    sessionStorage.getItem('ph_event_code') || getParam('c'),
       event_code_id: sessionStorage.getItem('ph_event_code_id'),
       full_name:     document.getElementById('buyer-name').value.trim(),
@@ -1204,6 +1500,10 @@
       age_verified:  document.getElementById('age-check').checked,
       terms_accepted: document.getElementById('terms-check').checked,
     };
+    if (appliedDiscount && appliedDiscount.code) {
+      payload.discount_code = appliedDiscount.code;
+    }
+    return payload;
   }
 
   // Validacion

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#050505"/>
+  <title>Cortesías — Party House</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/css/tokens.css"/>
+  <link rel="stylesheet" href="/css/components.css"/>
+  <style>
+    html, body { min-height: 100%; background: var(--ph-bg); color: var(--ph-text); }
+
+    .topline {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 2px; background: var(--grad-brand-top); opacity: .85;
+    }
+
+    /* ── Login ───────────────────────────────────────────────── */
+    .login-wrap {
+      min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--sp-6);
+    }
+    .login-card {
+      width: 100%; max-width: 360px;
+      background: var(--ph-bg-soft);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-10) var(--sp-8);
+    }
+    .login-card h1 {
+      font-family: var(--font-display);
+      font-size: 28px; letter-spacing: .1em;
+      margin-bottom: var(--sp-6); text-align: center;
+      background: var(--grad-brand-top);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ── App ─────────────────────────────────────────────────── */
+    .app { display: none; padding: 48px var(--sp-6) var(--sp-16); max-width: 900px; margin: 0 auto; }
+    .app.visible { display: block; }
+
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--sp-8);
+      padding-bottom: var(--sp-5);
+      border-bottom: 1px solid var(--ph-border);
+    }
+    .app-header h1 {
+      font-family: var(--font-display);
+      font-size: 32px; letter-spacing: .1em;
+      background: var(--grad-brand-top);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .app-header__event {
+      font-size: var(--text-xs); letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ph-text-dim);
+    }
+
+    /* ── Create panel ────────────────────────────────────────── */
+    .create-panel {
+      background: var(--ph-bg-soft);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-lg);
+      padding: var(--sp-6);
+      margin-bottom: var(--sp-8);
+    }
+    .create-panel h2 {
+      font-family: var(--font-display);
+      font-size: 20px; letter-spacing: .1em;
+      color: var(--ph-text-mute); margin-bottom: var(--sp-4);
+    }
+    .create-panel p {
+      font-size: var(--text-sm); color: var(--ph-text-dim);
+      margin-bottom: var(--sp-4);
+    }
+    textarea {
+      width: 100%; min-height: 120px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-md);
+      padding: var(--sp-4);
+      color: var(--ph-text); font-family: var(--font-body);
+      font-size: var(--text-sm); resize: vertical;
+      outline: none; transition: border-color var(--dur-fast);
+    }
+    textarea:focus { border-color: var(--ph-blue); }
+    .create-actions {
+      display: flex; align-items: center; gap: var(--sp-4); margin-top: var(--sp-4);
+    }
+    #create-error {
+      font-size: var(--text-sm); color: var(--ph-magenta); min-height: 20px;
+    }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--sp-4);
+    }
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: 20px; letter-spacing: .1em; color: var(--ph-text-mute);
+    }
+    .count-badge {
+      font-size: var(--text-xs); letter-spacing: .1em; text-transform: uppercase;
+      color: var(--ph-blue); background: rgba(29,79,255,.1);
+      border: 1px solid rgba(29,79,255,.25);
+      padding: 3px 10px; border-radius: var(--radius-pill);
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: var(--text-sm);
+    }
+    th {
+      text-align: left; font-size: 10px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--ph-text-dim);
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid var(--ph-border);
+    }
+    td {
+      padding: var(--sp-3) var(--sp-4);
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    .code-chip {
+      font-family: var(--font-display);
+      font-size: 16px; letter-spacing: .1em;
+      color: var(--ph-white);
+    }
+
+    .badge-issued {
+      display: inline-block; padding: 2px 8px;
+      border-radius: var(--radius-pill); font-size: 10px;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(34,211,238,.1); color: #22d3ee;
+      border: 1px solid rgba(34,211,238,.25);
+    }
+    .badge-pending {
+      display: inline-block; padding: 2px 8px;
+      border-radius: var(--radius-pill); font-size: 10px;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: rgba(255,255,255,.05); color: var(--ph-text-dim);
+      border: 1px solid var(--ph-border);
+    }
+
+    .actions { display: flex; gap: var(--sp-2); }
+    .btn-sm {
+      padding: 6px 14px; border-radius: var(--radius-md);
+      font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+      cursor: pointer; border: 1px solid; transition: opacity var(--dur-fast);
+      white-space: nowrap;
+    }
+    .btn-sm:hover { opacity: .75; }
+    .btn-download {
+      background: rgba(29,79,255,.12); border-color: rgba(29,79,255,.4);
+      color: var(--ph-blue);
+    }
+    .btn-copy {
+      background: rgba(255,255,255,.04); border-color: var(--ph-border);
+      color: var(--ph-text-mute);
+    }
+    .btn-copy.copied { color: #22d3ee; border-color: rgba(34,211,238,.4); }
+
+    .empty-state {
+      text-align: center; padding: var(--sp-12);
+      color: var(--ph-text-dim); font-size: var(--text-sm);
+      letter-spacing: .08em;
+    }
+
+    /* ── Shared form inputs ──────────────────────────────────── */
+    .ph-input {
+      width: 100%; padding: var(--sp-3) var(--sp-4);
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--ph-border);
+      border-radius: var(--radius-md);
+      color: var(--ph-text); font-family: var(--font-body);
+      font-size: var(--text-base); outline: none;
+      transition: border-color var(--dur-fast);
+    }
+    .ph-input:focus { border-color: var(--ph-blue); }
+    .field { margin-bottom: var(--sp-4); }
+    .field label {
+      display: block; font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--ph-text-dim);
+      margin-bottom: var(--sp-2);
+    }
+  </style>
+</head>
+<body>
+<div class="topline"></div>
+
+<!-- ── LOGIN ──────────────────────────────────────────────── -->
+<div id="login-wrap" class="login-wrap">
+  <div class="login-card">
+    <h1>Party House</h1>
+    <div class="field">
+      <label for="pw">Contraseña</label>
+      <input id="pw" type="password" class="ph-input" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <p id="login-err" style="color:var(--ph-magenta);font-size:var(--text-sm);min-height:20px;margin-bottom:var(--sp-4);"></p>
+    <button class="ph-btn ph-btn--primary" id="login-btn" style="width:100%">Entrar</button>
+  </div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────────── -->
+<div id="app" class="app">
+
+  <div class="app-header">
+    <div>
+      <h1>Cortesías</h1>
+      <div class="app-header__event" id="event-name">Cargando evento...</div>
+    </div>
+    <button class="ph-btn ph-btn--ghost" id="logout-btn" style="font-size:12px">Cerrar sesión</button>
+  </div>
+
+  <!-- Crear -->
+  <div class="create-panel">
+    <h2>Agregar invitados</h2>
+    <p>Un nombre por línea. Formato: <strong style="color:var(--ph-text-mute)">Nombre Apellido</strong></p>
+    <textarea id="names-input" placeholder="Juan Pérez&#10;María López&#10;Carlos García"></textarea>
+    <div class="create-actions">
+      <button class="ph-btn ph-btn--primary" id="create-btn">Generar entradas</button>
+      <span id="create-error"></span>
+    </div>
+  </div>
+
+  <!-- Lista -->
+  <div class="section-header">
+    <h2>Invitados registrados</h2>
+    <span class="count-badge" id="count-badge">0</span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Código</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="guests-tbody">
+        <tr><td colspan="4" class="empty-state">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script src="/js/config.js"></script>
+<script src="/js/app.js"></script>
+<script>
+'use strict';
+
+const { api } = window.PH;
+const TOKEN_KEY  = 'ph_admin_token';
+const EVENT_CODE = 'PH0108';
+
+let adminToken = null;
+
+// ── Auth ──────────────────────────────────────────────────────────
+const saved = sessionStorage.getItem(TOKEN_KEY);
+if (saved) { adminToken = saved; showApp(); }
+
+document.getElementById('login-btn').addEventListener('click', login);
+document.getElementById('pw').addEventListener('keydown', function(e) { if (e.key === 'Enter') login(); });
+document.getElementById('logout-btn').addEventListener('click', function() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  adminToken = null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-wrap').style.display = 'flex';
+});
+
+async function login() {
+  const pw  = document.getElementById('pw').value;
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn');
+  if (!pw) { err.textContent = 'Ingresa la contraseña.'; return; }
+  btn.disabled = true; btn.textContent = 'Verificando...';
+  try {
+    const data = await api('POST', '/api/admin/login', { password: pw });
+    adminToken = data.token;
+    sessionStorage.setItem(TOKEN_KEY, adminToken);
+    document.getElementById('pw').value = '';
+    showApp();
+  } catch (_) {
+    err.textContent = 'Contraseña incorrecta.';
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  loadGuests();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function h(token) { return { 'x-admin-token': token || adminToken }; }
+
+// ── Load guests ───────────────────────────────────────────────────
+async function loadGuests() {
+  try {
+    const data = await api('GET', '/api/admin/cortesia', null, h());
+    if (data.event) document.getElementById('event-name').textContent = data.event.name;
+    renderTable(data.guests || []);
+  } catch (e) {
+    document.getElementById('guests-tbody').innerHTML =
+      '<tr><td colspan="4" class="empty-state">Error al cargar. Recarga la página.</td></tr>';
+  }
+}
+
+function renderTable(guests) {
+  document.getElementById('count-badge').textContent = guests.length;
+  const tbody = document.getElementById('guests-tbody');
+  if (!guests.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Sin invitados de cortesía aún.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = guests.map(function(g) {
+    const badge = g.ticket_issued
+      ? '<span class="badge-issued">✓ Emitido</span>'
+      : '<span class="badge-pending">Pendiente</span>';
+
+    const downloadBtn = g.download_token
+      ? `<a class="btn-sm btn-download" href="/ticket.html?ot=${encodeURIComponent(g.download_token)}" target="_blank">Descargar</a>`
+      : `<button class="btn-sm btn-download" disabled style="opacity:.3;cursor:not-allowed">Descargar</button>`;
+
+    const inviteLink = `${location.origin}/invitado.html?code=${encodeURIComponent(g.code)}`;
+
+    return `<tr>
+      <td>${escHtml(g.guest_name)}</td>
+      <td><span class="code-chip">${escHtml(g.code)}</span></td>
+      <td>${badge}</td>
+      <td>
+        <div class="actions">
+          ${downloadBtn}
+          <button class="btn-sm btn-copy" onclick="copyLink(this, '${escAttr(inviteLink)}')">Copiar link</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Create bulk ───────────────────────────────────────────────────
+document.getElementById('create-btn').addEventListener('click', async function() {
+  const raw   = document.getElementById('names-input').value.trim();
+  const errEl = document.getElementById('create-error');
+  const btn   = document.getElementById('create-btn');
+
+  if (!raw) { errEl.textContent = 'Escribe al menos un nombre.'; return; }
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Generando...';
+
+  try {
+    const data = await api('POST', '/api/admin/cortesia/bulk', { names: raw }, h());
+    const failed = (data.results || []).filter(function(r) { return !r.ok; });
+    if (failed.length) {
+      errEl.textContent = `${failed.length} error(es): ${failed.map(function(f) { return f.name; }).join(', ')}`;
+    }
+    document.getElementById('names-input').value = '';
+    await loadGuests();
+  } catch (e) {
+    errEl.textContent = 'Error al generar. Intenta de nuevo.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generar entradas';
+  }
+});
+
+// ── Copy link ─────────────────────────────────────────────────────
+function copyLink(btn, url) {
+  navigator.clipboard.writeText(url).then(function() {
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copiar link';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Utils ─────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

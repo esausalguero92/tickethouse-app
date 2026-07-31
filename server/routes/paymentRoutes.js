@@ -61,7 +61,7 @@ router.post('/payment/intent',
   validateRequest,
   asyncHandler(async (req, res) => {
     const supabase = getSupabase();
-    const { event_code_id, full_name, email, phone, quantity, age_verified, terms_accepted } = req.body;
+    const { event_code_id, full_name, email, phone, quantity, age_verified, terms_accepted, discount_code } = req.body;
     const ip = (req.ip || '').replace('::ffff:', '');
     const ua = req.headers['user-agent'] || '';
 
@@ -75,6 +75,7 @@ router.post('/payment/intent',
       p_terms_accepted: terms_accepted === true || terms_accepted === 'true',
       p_ip_address:     ip || null,
       p_user_agent:     ua || null,
+      p_discount_code:  discount_code ? String(discount_code).trim().toUpperCase() : null,
     });
 
     if (error) { console.error('[payment.intent]', error); return res.status(500).json({ error: 'db_error' }); }
@@ -207,7 +208,7 @@ router.post('/transfer/submit',
 
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, payment_status, buyer_name, buyer_email, quantity, amount_usd, event:events(name), buyer:buyers(full_name, email)')
+      .select('id, payment_status, buyer_name, buyer_email, quantity, amount_usd, discount_amount_usd, event:events(name), buyer:buyers(full_name, email), discount_code:discount_codes(code)')
       .eq('id', order_id).eq('payment_status', 'pending').maybeSingle();
 
     if (oErr || !order) return res.status(404).json({ error: 'order_not_found_or_not_pending' });
@@ -246,6 +247,8 @@ router.post('/transfer/submit',
       amountUsd: order.amount_usd,
       reference: safeRef,
       orderId: order_id,
+      discountCode: order.discount_code && order.discount_code.code ? order.discount_code.code : null,
+      discountAmount: order.discount_amount_usd || null,
     }).catch(function(e) { console.error('[transfer.notify]', e.message); });
 
     return res.json({ ok: true, order_id });

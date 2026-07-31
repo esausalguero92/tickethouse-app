@@ -442,4 +442,85 @@ router.post('/complimentary/:code',
   })
 );
 
+// ─── Discount Codes ───────────────────────────────────────────────
+
+// GET /api/admin/discount-codes
+router.get('/discount-codes',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('discount_codes')
+      .select('id, code, description, discount_type, discount_value, max_uses, uses_count, active, expires_at, event_id, created_at, event:events(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ discount_codes: data || [] });
+  })
+);
+
+// POST /api/admin/discount-codes
+router.post('/discount-codes',
+  requireAdmin,
+  body('code').trim().toUpperCase().isLength({ min: 2, max: 50 }).withMessage('code requerido (2-50 chars)'),
+  body('discount_type').isIn(['percent', 'fixed']).withMessage('discount_type debe ser percent o fixed'),
+  body('discount_value').isFloat({ gt: 0 }).withMessage('discount_value debe ser > 0'),
+  body('max_uses').optional({ nullable: true }).isInt({ min: 1 }).withMessage('max_uses debe ser entero positivo'),
+  body('expires_at').optional({ nullable: true }).isISO8601().withMessage('expires_at debe ser fecha ISO'),
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { code, description, discount_type, discount_value, max_uses, expires_at, event_id } = req.body;
+
+    const insert = {
+      code:           code.trim().toUpperCase(),
+      description:    description || null,
+      discount_type,
+      discount_value: parseFloat(discount_value),
+      max_uses:       max_uses ? parseInt(max_uses, 10) : null,
+      expires_at:     expires_at || null,
+      event_id:       event_id || null,
+      active:         true,
+    };
+
+    const { data, error } = await supabase.from('discount_codes').insert(insert).select().single();
+    if (error) {
+      if (error.code === '23505') return res.status(409).json({ error: 'code_already_exists' });
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(201).json({ ok: true, discount_code: data });
+  })
+);
+
+// PATCH /api/admin/discount-codes/:id/toggle
+router.patch('/discount-codes/:id/toggle',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { id } = req.params;
+
+    const { data: current, error: fetchErr } = await supabase
+      .from('discount_codes').select('id, active').eq('id', id).maybeSingle();
+    if (fetchErr || !current) return res.status(404).json({ error: 'not_found' });
+
+    const { data, error } = await supabase
+      .from('discount_codes').update({ active: !current.active }).eq('id', id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true, discount_code: data });
+  })
+);
+
+// DELETE /api/admin/discount-codes/:id
+router.delete('/discount-codes/:id',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { id } = req.params;
+
+    const { error } = await supabase.from('discount_codes').delete().eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true });
+  })
+);
+
 module.exports = router;

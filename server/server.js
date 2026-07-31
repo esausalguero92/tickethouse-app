@@ -15,6 +15,7 @@ const adminRoutes    = require('./routes/adminRoutes');
 const staffRoutes    = require('./routes/staffRoutes');
 const downloadRoutes = require('./routes/downloadRoutes');
 const n8nRoutes      = require('./routes/n8nRoutes');
+const discountRoutes = require('./routes/discountRoutes');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', staffRoutes);
 app.use('/api/download', downloadRoutes);
 app.use('/api/n8n', n8nRoutes);
+app.use('/api', discountRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

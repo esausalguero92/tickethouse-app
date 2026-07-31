@@ -27,6 +27,7 @@
     .adm-login__wrap {
       width: 100%;
       max-width: 420px;
+      zoom: 1.2;
     }
 
     .adm-login__brand {
@@ -251,7 +252,7 @@
     .adm-main {
       flex: 1;
       overflow-y: auto;
-      padding: var(--sp-8);
+      padding: var(--sp-10);
       max-width: 1200px;
     }
 
@@ -259,13 +260,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: var(--sp-8);
+      margin-bottom: var(--sp-10);
       gap: var(--sp-4);
     }
 
     .adm-main__title {
       font-family: var(--font-display);
-      font-size: var(--text-4xl);
+      font-size: 80px;
       letter-spacing: 0.04em;
       color: var(--ph-white);
     }
@@ -279,15 +280,15 @@
     .adm-stats {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: var(--sp-4);
-      margin-bottom: var(--sp-8);
+      gap: var(--sp-5);
+      margin-bottom: var(--sp-10);
     }
 
     .adm-stat-card {
       background: var(--ph-surface);
       border: 1px solid var(--ph-border);
       border-radius: var(--radius-lg);
-      padding: var(--sp-5) var(--sp-5);
+      padding: var(--sp-6) var(--sp-6);
       position: relative;
       overflow: hidden;
       transition: border-color var(--dur-fast);
@@ -302,13 +303,13 @@
     }
 
     .adm-stat-card__icon {
-      font-size: 20px;
+      font-size: 23px;
       margin-bottom: var(--sp-3);
       opacity: 0.8;
     }
 
     .adm-stat-card__label {
-      font-size: 10px;
+      font-size: 11px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--ph-text-dim);
@@ -317,14 +318,14 @@
 
     .adm-stat-card__value {
       font-family: var(--font-display);
-      font-size: 40px;
+      font-size: 46px;
       color: var(--ph-white);
       line-height: 1;
       letter-spacing: 0.02em;
     }
 
     .adm-stat-card__sub {
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
       color: var(--ph-text-dim);
       margin-top: var(--sp-1);
     }
@@ -335,11 +336,11 @@
 
     /* ── Section label ──────────────────────────────────────────────── */
     .adm-section-label {
-      font-size: 10px;
+      font-size: 11px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--ph-text-dim);
-      margin-bottom: var(--sp-4);
+      margin-bottom: var(--sp-5);
     }
 
     /* ── Table ──────────────────────────────────────────────────────── */
@@ -353,14 +354,14 @@
     .adm-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: var(--text-sm);
+      font-size: var(--text-base);
       min-width: 600px;
     }
 
     .adm-table th {
-      padding: var(--sp-3) var(--sp-4);
+      padding: var(--sp-4) var(--sp-5);
       text-align: left;
-      font-size: 9px;
+      font-size: 10px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--ph-text-dim);
@@ -371,7 +372,7 @@
     }
 
     .adm-table td {
-      padding: var(--sp-3) var(--sp-4);
+      padding: var(--sp-4) var(--sp-5);
       border-bottom: 1px solid rgba(255,255,255,0.04);
       color: var(--ph-text-mute);
       vertical-align: middle;
@@ -414,12 +415,12 @@
     .adm-actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 
     .adm-btn-sm {
-      padding: 5px 12px;
+      padding: 6px 14px;
       border-radius: var(--radius-sm);
       border: 1px solid var(--ph-border);
       background: transparent;
       color: var(--ph-text-mute);
-      font-size: 11px;
+      font-size: 13px;
       font-family: var(--font-body);
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -444,13 +445,13 @@
     }
 
     .adm-filter-input {
-      padding: var(--sp-2) var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
       background: var(--ph-surface);
       border: 1px solid var(--ph-border);
       border-radius: var(--radius-md);
       color: var(--ph-white);
       font-family: var(--font-body);
-      font-size: var(--text-sm);
+      font-size: var(--text-base);
       outline: none;
       transition: border-color var(--dur-fast);
     }
@@ -476,12 +477,12 @@
       text-align: center;
       padding: var(--sp-16) var(--sp-8);
       color: var(--ph-text-dim);
-      font-size: var(--text-sm);
+      font-size: var(--text-base);
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }
 
-    .adm-empty__icon { font-size: 32px; margin-bottom: var(--sp-3); display: block; opacity: 0.4; }
+    .adm-empty__icon { font-size: 37px; margin-bottom: var(--sp-3); display: block; opacity: 0.4; }
 
     /* ── Error banner ───────────────────────────────────────────────── */
     .adm-error-banner {
@@ -599,6 +600,38 @@
       font-size: 11px;
       color: var(--ph-text-dim);
     }
+
+    /* ── Admin-wide form scaling ────────────────────────────────────── */
+    .adm-main .ph-input {
+      padding: 15px var(--sp-5);
+      font-size: var(--text-base);
+    }
+    .adm-main .ph-form-group {
+      margin-bottom: var(--sp-6);
+    }
+    .adm-main .ph-form-group__label {
+      display: block;
+      font-size: var(--text-base);
+      font-weight: 500;
+      color: var(--ph-text);
+      margin-bottom: var(--sp-2);
+    }
+    .adm-main .ph-btn {
+      padding: 16px var(--sp-8);
+      font-size: var(--text-xl);
+    }
+    .adm-main select.ph-input {
+      padding: 15px var(--sp-5);
+      font-size: var(--text-base);
+    }
+
+    /* ── Escala global del admin (sin tocar login) ──────────────────── */
+    @media (min-width: 769px) {
+      .adm-layout {
+        zoom: 1.25;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -676,6 +709,11 @@
       <p class="adm-nav__section">Invitados</p>
       <button class="adm-nav__item" data-panel="panel-cortesia" id="nav-cortesia">
         <span class="adm-nav__icon">★</span> Cortesías
+      </button>
+
+      <p class="adm-nav__section">Herramientas</p>
+      <button class="adm-nav__item" data-panel="panel-descuentos" id="nav-descuentos">
+        <span class="adm-nav__icon">🏷</span> Descuentos
       </button>
     </nav>
 
@@ -814,6 +852,69 @@
       </div>
     </div>
 
+    <!-- ── PANEL: Descuentos ────────────────────────────────────── -->
+    <div id="panel-descuentos" class="adm-panel">
+      <div class="adm-main__header">
+        <h1 class="adm-main__title">CÓDIGOS DE DESCUENTO</h1>
+        <button class="ph-btn ph-btn--ghost" onclick="loadDiscountCodes()" style="font-size:var(--text-xs)">↻ Actualizar</button>
+      </div>
+
+      <!-- Crear nuevo código -->
+      <div style="background:var(--ph-bg-soft);border:1px solid var(--ph-border);border-radius:var(--radius-lg);padding:var(--sp-6);margin-bottom:var(--sp-8)">
+        <p class="adm-section-label" style="margin-bottom:var(--sp-5)">Nuevo código de descuento</p>
+
+        <!-- Fila 1 -->
+        <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-4)">
+          <div style="flex:1;min-width:140px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Código *</p>
+            <input type="text" id="dc-code" class="adm-filter-input" placeholder="PROMO20" style="width:100%;box-sizing:border-box;text-transform:uppercase"/>
+          </div>
+          <div style="flex:1;min-width:140px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Tipo *</p>
+            <select id="dc-type" class="adm-filter-input" style="width:100%;box-sizing:border-box">
+              <option value="percent">Porcentaje (%)</option>
+              <option value="fixed">Monto fijo (USD)</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:120px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Valor *</p>
+            <input type="number" id="dc-value" class="adm-filter-input" placeholder="20" min="0.01" step="0.01" style="width:100%;box-sizing:border-box"/>
+          </div>
+        </div>
+
+        <!-- Fila 2 -->
+        <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-5)">
+          <div style="flex:1;min-width:140px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Usos máximos</p>
+            <input type="number" id="dc-max-uses" class="adm-filter-input" placeholder="Ilimitado" min="1" style="width:100%;box-sizing:border-box"/>
+          </div>
+          <div style="flex:1;min-width:160px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Vence el</p>
+            <input type="datetime-local" id="dc-expires" class="adm-filter-input" style="width:100%;box-sizing:border-box"/>
+          </div>
+          <div style="flex:2;min-width:180px">
+            <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Descripción</p>
+            <input type="text" id="dc-description" class="adm-filter-input" placeholder="Nota interna (opcional)" style="width:100%;box-sizing:border-box"/>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:var(--sp-4)">
+          <button class="ph-btn ph-btn--primary" id="dc-create-btn" style="white-space:nowrap">Crear código</button>
+          <span id="dc-create-err" style="font-size:var(--text-sm);color:var(--ph-magenta)"></span>
+          <span id="dc-create-ok" style="font-size:var(--text-sm);color:var(--ph-blue);display:none">✓ Código creado</span>
+        </div>
+      </div>
+
+      <!-- Lista de códigos -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-4)">
+        <p class="adm-section-label" style="margin:0">Códigos existentes</p>
+        <span id="dc-count" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ph-blue);background:rgba(29,79,255,.1);border:1px solid rgba(29,79,255,.25);padding:3px 10px;border-radius:999px">0</span>
+      </div>
+      <div class="adm-table-wrap" id="dc-table-wrap">
+        <div class="adm-empty"><span class="adm-empty__icon">🏷</span>Cargando…</div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -902,6 +1003,7 @@ function init() {
 function enterAdmin(name) {
   document.getElementById('login-screen').hidden = true;
   document.getElementById('admin-layout').hidden = false;
+  setupDiscountPanel();
   loadAll();
 }
 
@@ -912,7 +1014,8 @@ document.querySelectorAll('.adm-nav__item[data-panel]').forEach(btn => {
     document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.panel).classList.add('active');
-    if (btn.dataset.panel === 'panel-cortesia') loadCortesia();
+    if (btn.dataset.panel === 'panel-cortesia')  loadCortesia();
+    if (btn.dataset.panel === 'panel-descuentos') loadDiscountCodes();
     closeSidebar();
   });
 });
@@ -1324,6 +1427,118 @@ document.getElementById('cortesia-create-btn').addEventListener('click', async f
     btn.disabled = false; btn.textContent = 'Generar entradas';
   }
 });
+
+// ── Descuentos ─────────────────────────────────────────────────────
+
+async function loadDiscountCodes() {
+  const wrap = document.getElementById('dc-table-wrap');
+  const countEl = document.getElementById('dc-count');
+  wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">🏷</span>Cargando…</div>';
+  try {
+    const data = await api('GET', '/api/admin/discount-codes', null, { 'x-admin-token': adminToken });
+    const codes = data.discount_codes || [];
+    if (countEl) countEl.textContent = codes.length;
+    if (!codes.length) {
+      wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">🏷</span>No hay códigos creados.</div>';
+      return;
+    }
+    wrap.innerHTML = `<table class="adm-table">
+      <thead><tr>
+        <th>Código</th><th>Tipo</th><th>Valor</th><th>Usos</th><th>Vence</th><th>Descripción</th><th>Estado</th><th></th>
+      </tr></thead>
+      <tbody>${codes.map(dc => {
+        const typeLabel = dc.discount_type === 'percent' ? dc.discount_value + '%' : '$' + Number(dc.discount_value).toFixed(2);
+        const uses      = dc.max_uses ? (dc.uses_count + '/' + dc.max_uses) : dc.uses_count + '/∞';
+        const expires   = dc.expires_at ? new Date(dc.expires_at).toLocaleDateString('es-GT') : '—';
+        const statusBadge = dc.active
+          ? '<span style="color:var(--ph-blue);font-size:10px;letter-spacing:.08em">ACTIVO</span>'
+          : '<span style="color:var(--ph-text-dim);font-size:10px;letter-spacing:.08em">INACTIVO</span>';
+        return `<tr>
+          <td><strong>${dc.code}</strong></td>
+          <td>${dc.discount_type === 'percent' ? 'Porcentaje' : 'Fijo'}</td>
+          <td>${typeLabel}</td>
+          <td>${uses}</td>
+          <td>${expires}</td>
+          <td style="color:var(--ph-text-dim)">${dc.description || '—'}</td>
+          <td>${statusBadge}</td>
+          <td style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="ph-btn ph-btn--ghost" style="font-size:10px;padding:4px 10px" onclick="toggleDiscountCode('${dc.id}','${dc.code}',${dc.active})">${dc.active ? 'Desactivar' : 'Activar'}</button>
+            <button class="ph-btn ph-btn--ghost" style="font-size:10px;padding:4px 10px;color:var(--ph-magenta)" onclick="deleteDiscountCode('${dc.id}','${dc.code}')">Eliminar</button>
+          </td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>`;
+  } catch (e) {
+    wrap.innerHTML = '<div class="adm-empty">Error al cargar códigos.</div>';
+  }
+}
+
+async function toggleDiscountCode(id, code, currentlyActive) {
+  if (!confirm(`¿${currentlyActive ? 'Desactivar' : 'Activar'} el código "${code}"?`)) return;
+  try {
+    await api('PATCH', `/api/admin/discount-codes/${id}/toggle`, null, { 'x-admin-token': adminToken });
+    await loadDiscountCodes();
+  } catch (e) {
+    alert('Error al actualizar el código.');
+  }
+}
+
+async function deleteDiscountCode(id, code) {
+  if (!confirm(`¿Eliminar el código "${code}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await api('DELETE', `/api/admin/discount-codes/${id}`, null, { 'x-admin-token': adminToken });
+    await loadDiscountCodes();
+  } catch (e) {
+    alert('Error al eliminar el código.');
+  }
+}
+
+function setupDiscountPanel() {
+  var btn = document.getElementById('dc-create-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async function() {
+    var errEl = document.getElementById('dc-create-err');
+    var okEl  = document.getElementById('dc-create-ok');
+    errEl.textContent = ''; okEl.style.display = 'none';
+
+    var code    = (document.getElementById('dc-code').value || '').trim().toUpperCase();
+    var type    = document.getElementById('dc-type').value;
+    var value   = document.getElementById('dc-value').value;
+    var maxUses = document.getElementById('dc-max-uses').value;
+    var expires = document.getElementById('dc-expires').value;
+    var desc    = document.getElementById('dc-description').value.trim();
+
+    if (!code)  { errEl.textContent = 'El código es requerido.'; return; }
+    if (!value || parseFloat(value) <= 0) { errEl.textContent = 'El valor debe ser mayor a 0.'; return; }
+    if (type === 'percent' && parseFloat(value) > 100) { errEl.textContent = 'El porcentaje no puede superar 100.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Creando…';
+    try {
+      await api('POST', '/api/admin/discount-codes', {
+        code,
+        discount_type:  type,
+        discount_value: parseFloat(value),
+        max_uses:       maxUses ? parseInt(maxUses, 10) : null,
+        expires_at:     expires ? new Date(expires).toISOString() : null,
+        description:    desc || null,
+      }, { 'x-admin-token': adminToken });
+
+      ['dc-code','dc-value','dc-max-uses','dc-expires','dc-description'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+      okEl.style.display = '';
+      setTimeout(function() { okEl.style.display = 'none'; }, 3000);
+      await loadDiscountCodes();
+    } catch (e) {
+      errEl.textContent = (e.data && e.data.error === 'code_already_exists')
+        ? 'Ya existe un código con ese nombre.'
+        : 'Error al crear el código.';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Crear código';
+    }
+  });
+}
 
 // ── Boot ───────────────────────────────────────────────────────────
 init();

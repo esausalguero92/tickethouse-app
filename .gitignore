@@ -4,3 +4,14 @@ server/.env
 .DS_Store
 *.log
 dist
+
+# Archivos temporales y datos locales
+*.tmp
+*.xlsx
+*.~lock.*
+~$*
+backups/
+ventas_*
+Detalle_*
+Complementarios_*
+server/routes/.fuse_hidden*

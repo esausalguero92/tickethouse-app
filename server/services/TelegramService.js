@@ -32,7 +32,7 @@ function buildMultipart(fields, fileBuffer, fileField, fileName, mimeType) {
  * Notifica al admin cuando llega una transferencia pendiente.
  * Non-blocking: el caller no debe awaitar.
  */
-async function notifyNewTransfer({ fileBuffer, fileName, mimeType, buyerName, quantity, eventName, amountUsd, reference, orderId }) {
+async function notifyNewTransfer({ fileBuffer, fileName, mimeType, buyerName, quantity, eventName, amountUsd, reference, orderId, discountCode, discountAmount }) {
   const chatId = env.TRANSFER_NOTIFY_ID || env.ADMIN_TELEGRAM_IDS[0] || '';
   if (!env.TELEGRAM_BOT_TOKEN || !chatId) {
     console.warn('[telegram] Sin destino — configura TRANSFER_NOTIFY_ID o ADMIN_TELEGRAM_IDS.');
@@ -47,9 +47,19 @@ async function notifyNewTransfer({ fileBuffer, fileName, mimeType, buyerName, qu
     `🎉 ${eventName}`,
     `💵 USD ${Number(amountUsd).toFixed(2)}`,
     reference ? `📋 Folio: ${reference}` : '📋 Sin folio',
-    '',
-    `🔗 ${env.PUBLIC_BASE_URL}/admin.html`,
   ];
+
+  if (discountCode) {
+    lines.push('');
+    lines.push(`🏷 Código de descuento: ${discountCode}`);
+    if (discountAmount) {
+      lines.push(`💸 Descuento aplicado: -USD ${Number(discountAmount).toFixed(2)}`);
+    }
+  }
+
+  lines.push('');
+  lines.push(`🔗 ${env.PUBLIC_BASE_URL}/admin.html`);
+
   const caption = lines.join('\n');
 
   try {
