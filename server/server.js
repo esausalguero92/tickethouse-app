@@ -16,6 +16,7 @@ const staffRoutes    = require('./routes/staffRoutes');
 const downloadRoutes = require('./routes/downloadRoutes');
 const n8nRoutes      = require('./routes/n8nRoutes');
 const discountRoutes = require('./routes/discountRoutes');
+const pdfRoutes      = require('./routes/pdfRoutes');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api', staffRoutes);
 app.use('/api/download', downloadRoutes);
 app.use('/api/n8n', n8nRoutes);
 app.use('/api', discountRoutes);
+app.use('/pdf', pdfRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
