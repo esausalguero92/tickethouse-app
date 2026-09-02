@@ -13,6 +13,7 @@ RUN cd server && npm ci --omit=dev
 
 COPY server ./server
 COPY landing ./landing
+COPY pdf ./pdf
 
 ENV NODE_ENV=production
 ENV PORT=3000
