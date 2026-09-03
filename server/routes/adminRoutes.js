@@ -426,7 +426,7 @@ router.post('/complimentary/:code',
     const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_create_complimentary_order', { p_code: ctx.code });
     if (rpcErr || !rpcData || rpcData.error) return res.status(500).json({ error: (rpcData && rpcData.error) || 'db_order_failed' });
 
-    const guestName = ((ctx.guest && ctx.guest.first_name) || '' + ' ' + (ctx.guest && ctx.guest.last_name) || '').trim();
+    const guestName = [ctx.guest && ctx.guest.first_name, ctx.guest && ctx.guest.last_name].filter(Boolean).join(' ').trim() || 'Invitado/a';
     try {
       const result = await issueTickets({
         orderId: rpcData.order_id, eventId: ctx.event_id, buyerId: null,

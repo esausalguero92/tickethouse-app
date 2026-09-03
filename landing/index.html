@@ -20,28 +20,37 @@
   <link rel="stylesheet" href="/css/components.css"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+    html, body { margin: 0; background: #000; overflow: hidden; height: 100%; }
 
-    /* Flyer cubre toda la pantalla */
-    .flyer {
-      position: fixed;
-      inset: 0;
+    /* Hero — ocupa todo el viewport sin scroll */
+    .hero {
+      position: relative;
       width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: center center;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 0;
+    }
+
+    /* Flyer — imagen completa visible, sin recorte */
+    .flyer {
+      display: block;
+      max-width: 100%;
+      max-height: 100vh;
+      width: auto;
+      height: auto;
       z-index: 1;
     }
 
     /* CTA - desktop */
     .cta-wrap {
-      position: fixed;
+      position: absolute;
       z-index: 20;
-      top: 65%;
-      left: 22%;
+      top: 58%;
+      left: 50%;
       transform: translateX(-50%);
-      width: 61.3%;
-      max-width: 640px;
+      width: min(61.3%, 640px);
     }
 
     .cta-btn {
@@ -67,14 +76,15 @@
 
     /* Mobile */
     @media (max-width: 640px) {
-      html, body { overflow: auto; height: auto; }
+      .hero { aspect-ratio: auto; }
 
       .flyer {
         position: relative;
+        inset: auto;
         display: block;
         width: 100%;
         height: auto;
-        object-fit: contain;
+        object-fit: unset;
         content: url('/img/vertical.png');
       }
 
@@ -97,10 +107,11 @@
 </head>
 <body>
 
-  <img class="flyer" src="/img/horizontal.png" alt="Party House"/>
-
-  <div class="cta-wrap">
-    <a href="/evento.html?c=PH586" class="cta-btn">CONSEGUIR MI ENTRADA &rarr;</a>
+  <div class="hero">
+    <img class="flyer" src="/img/horizontal.png" alt="Party House"/>
+    <div class="cta-wrap">
+      <a href="/evento.html?c=PH586" class="cta-btn">CONSEGUIR MI ENTRADA &rarr;</a>
+    </div>
   </div>
 
 </body>

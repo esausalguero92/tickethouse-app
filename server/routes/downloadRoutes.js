@@ -12,7 +12,7 @@
 const { Router } = require('express');
 const { param } = require('express-validator');
 const { getSupabase } = require('../db/supabase');
-const { verifyJwt, generateDownloadToken } = require('../services/QrService');
+// QrService se importa dentro de cada handler (verifyToken)
 const { generateTicketPdf } = require('../services/PdfService');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { downloadLimiter } = require('../middleware/security');
