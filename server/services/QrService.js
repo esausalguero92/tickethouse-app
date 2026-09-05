@@ -6,7 +6,9 @@ const env = require('../config/env');
 /**
  * Genera N JWT tokens para N tickets de una orden.
  * Cada token tiene jti unico para evitar replay attacks.
- * Expira 48h despues de la fecha del evento (o 60 dias si no hay fecha).
+ * Expira 30 dias despues de la fecha del evento (o 365 dias si no hay fecha).
+ * La DB es la fuente de verdad para saber si el ticket fue canjeado; el exp es solo
+ * una capa adicional, no el control principal.
  *
  * @param {Object} opts
  * @param {string}   opts.orderId
@@ -18,10 +20,10 @@ const env = require('../config/env');
  */
 function generateTicketTokens({ orderId, eventId, buyerId, quantity, correlativeCodes, eventDate }) {
   const now = Math.floor(Date.now() / 1000);
-  let exp = now + 60 * 60 * 24 * 60;  // 60 dias default
+  let exp = now + 60 * 60 * 24 * 365; // 365 dias default
   if (eventDate) {
     const t = new Date(eventDate).getTime();
-    if (!isNaN(t)) exp = Math.floor(t / 1000) + 60 * 60 * 48;
+    if (!isNaN(t)) exp = Math.floor(t / 1000) + 60 * 60 * 24 * 30; // 30 dias post-evento
   }
 
   // Derivar cantidad: usar correlativeCodes.length si se paso array (legacy), sino quantity
@@ -59,9 +61,21 @@ function generateDownloadToken(orderId) {
 }
 
 /**
- * Verifica un token generico (QR o download).
+ * Verifica un token de QR de entrada (ignora exp -- la DB controla si fue canjeado).
+ * La firma sigue siendo verificada; solo se omite la validacion de fecha de expiracion.
  */
 function verifyToken(token) {
+  try {
+    return jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'], ignoreExpiration: true });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifica un token con expiracion estricta (para download tokens y login tokens).
+ */
+function verifyTokenStrict(token) {
   try {
     return jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
   } catch {
@@ -81,4 +95,4 @@ async function generateQrBuffer(token, size = 480) {
   });
 }
 
-module.exports = { generateTicketTokens, generateDownloadToken, verifyToken, generateQrBuffer };
+module.exports = { generateTicketTokens, generateDownloadToken, verifyToken, verifyTokenStrict, generateQrBuffer };

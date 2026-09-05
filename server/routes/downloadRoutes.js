@@ -24,7 +24,7 @@ const router = Router();
 router.get('/order/:token',
   downloadLimiter,
   asyncHandler(async (req, res) => {
-    const { verifyToken } = require('../services/QrService');
+    const { verifyTokenStrict: verifyToken } = require('../services/QrService');
     const payload = verifyToken(req.params.token);
     if (!payload || payload.t !== 'ph.download' || !payload.oid) {
       return res.status(401).json({ error: 'token_invalid_or_expired' });
@@ -51,7 +51,7 @@ router.get('/order/:token',
 router.get('/ticket/:token/:correlative',
   downloadLimiter,
   asyncHandler(async (req, res) => {
-    const { verifyToken } = require('../services/QrService');
+    const { verifyTokenStrict: verifyToken } = require('../services/QrService');
     const payload = verifyToken(req.params.token);
     if (!payload || payload.t !== 'ph.download' || !payload.oid) {
       return res.status(401).json({ error: 'token_invalid_or_expired' });

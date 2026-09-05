@@ -5,6 +5,7 @@ const { body } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const { getSupabase } = require('../db/supabase');
 const { requireStaff, verifyJwt } = require('../middleware/auth');
+const { verifyToken: verifyQrToken } = require('../services/QrService');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validateRequest, authLimiter } = require('../middleware/security');
 const env = require('../config/env');
@@ -74,7 +75,7 @@ router.post('/tickets/validate',
     const ip = (req.ip || '').replace('::ffff:', '');
 
     let payload;
-    try { payload = verifyJwt(tokenInput); } catch (e) { payload = null; }
+    payload = verifyQrToken(tokenInput); // ignoreExpiration=true; DB controla si fue canjeado
 
     if (!payload) {
       await logValidation(supabase, { qrScanned: tokenInput, result: 'invalid', ip });
