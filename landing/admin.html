@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#050505"/>
-  <title>Admin — Party House</title>
+  <title>Admin — TicketHouse</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/css/animations.css"/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
 
     /* ── Login ─────────────────────────────────────────────────────── */
     .adm-login {
@@ -79,22 +80,21 @@
     /* ── Layout ─────────────────────────────────────────────────────── */
     .adm-layout {
       display: flex;
-      min-height: 100dvh;
+      flex-direction: row;
+      height: 100dvh;
+      overflow: hidden;
     }
 
     /* ── Sidebar ────────────────────────────────────────────────────── */
     .adm-sidebar {
       width: 240px;
-      min-height: 100dvh;
+      min-height: 0;
       background: var(--ph-surface);
       border-right: 1px solid var(--ph-border);
       padding: var(--sp-6) var(--sp-4);
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      position: sticky;
-      top: 0;
-      height: 100dvh;
       overflow-y: auto;
     }
 
@@ -251,9 +251,10 @@
     /* ── Main content ───────────────────────────────────────────────── */
     .adm-main {
       flex: 1;
+      min-width: 0;
+      min-height: 0;
       overflow-y: auto;
       padding: var(--sp-10);
-      max-width: 1200px;
     }
 
     .adm-main__header {
@@ -507,93 +508,6 @@
     #adm-toast.success { border-color: rgba(29,79,255,0.5); color: #5b8fff; }
     #adm-toast[hidden] { display: none; }
 
-    /* ── Transfer card (mobile-friendly) ────────────────────────────── */
-    .transfer-cards {
-      display: flex;
-      flex-direction: column;
-      gap: var(--sp-4);
-    }
-
-    .transfer-card {
-      background: var(--ph-surface);
-      border: 1px solid var(--ph-border);
-      border-radius: var(--radius-lg);
-      padding: var(--sp-5);
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: var(--sp-4);
-      transition: border-color var(--dur-fast);
-    }
-
-    .transfer-card:hover { border-color: rgba(255,255,255,0.12); }
-
-    .transfer-card__main { display: flex; flex-direction: column; gap: var(--sp-3); }
-
-    .transfer-card__buyer {
-      font-weight: 600;
-      color: var(--ph-text);
-      font-size: var(--text-base);
-    }
-
-    .transfer-card__meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--sp-4);
-      font-size: var(--text-sm);
-      color: var(--ph-text-mute);
-    }
-
-    .transfer-card__meta-item { display: flex; gap: var(--sp-2); align-items: center; }
-    .transfer-card__meta-label { color: var(--ph-text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; }
-
-    .transfer-card__aside {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: var(--sp-3);
-    }
-
-    .transfer-card__amount {
-      font-family: var(--font-display);
-      font-size: 26px;
-      color: var(--ph-white);
-      letter-spacing: 0.02em;
-      line-height: 1;
-    }
-
-    .transfer-card__receipt-link {
-      display: block;
-      width: 56px;
-      height: 56px;
-    }
-
-    .transfer-card__receipt-img {
-      width: 56px;
-      height: 56px;
-      object-fit: cover;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--ph-border);
-      cursor: pointer;
-      transition: opacity var(--dur-fast);
-    }
-
-    .transfer-card__receipt-img:hover { opacity: 0.8; }
-
-    .transfer-card__receipt-pdf {
-      width: 56px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(29,79,255,0.1);
-      border: 1px solid rgba(29,79,255,0.3);
-      border-radius: var(--radius-md);
-      font-size: 22px;
-      text-decoration: none;
-    }
-
-    .transfer-card__actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
-
     /* ── Buyer ID mono ──────────────────────────────────────────────── */
     .adm-id {
       font-family: var(--font-mono);
@@ -625,14 +539,41 @@
       font-size: var(--text-base);
     }
 
-    /* ── Escala global del admin (sin tocar login) ──────────────────── */
+    /* ── Escala global del admin ────────────────────────────────────── */
     @media (min-width: 769px) {
-      .adm-layout {
-        zoom: 0.875;
-      }
+      .adm-main { font-size: 0.875em; }
     }
 
-  </style>
+      /* ── Imagen upload (evento modal) ───────────────────────── */
+    .ev-img-thumb {
+      position: relative;
+      width: 72px; height: 72px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .ev-img-thumb img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .ev-img-thumb__del {
+      position: absolute; top: 2px; right: 2px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(0,0,0,.75); border: none;
+      color: #fff; font-size: 10px; line-height: 18px; text-align: center;
+      cursor: pointer; display: none; padding: 0;
+    }
+    .ev-img-thumb:hover .ev-img-thumb__del { display: block; }
+    .ev-img-thumb--pending { border-color: rgba(79,124,255,.4); }
+    .ev-img-thumb--pending::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: rgba(79,124,255,.15);
+    }
+    #ev-drop-zone.drag-over {
+      border-color: #4F7CFF;
+      background: rgba(79,124,255,.07);
+    }
+</style>
 </head>
 <body>
 
@@ -694,9 +635,8 @@
       <button class="adm-nav__item active" data-panel="panel-dashboard">
         <span class="adm-nav__icon">📊</span> Dashboard
       </button>
-      <button class="adm-nav__item" data-panel="panel-transfers">
-        <span class="adm-nav__icon">💳</span> Transferencias
-        <span class="badge badge--awaiting" id="transfer-badge" hidden style="margin-left:auto;font-size:9px;padding:2px 6px"></span>
+      <button class="adm-nav__item" data-panel="panel-eventos">
+        <span class="adm-nav__icon">📅</span> Eventos
       </button>
 
       <p class="adm-nav__section">Datos</p>
@@ -714,6 +654,9 @@
       <p class="adm-nav__section">Herramientas</p>
       <button class="adm-nav__item" data-panel="panel-descuentos" id="nav-descuentos">
         <span class="adm-nav__icon">🏷</span> Descuentos
+      </button>
+      <button class="adm-nav__item" data-panel="panel-artistas" id="nav-artistas">
+        <span class="adm-nav__icon">🎤</span> Artistas
       </button>
     </nav>
 
@@ -755,10 +698,10 @@
         </div>
         <div class="adm-stat-card">
           <div class="adm-stat-card__accent" style="background:var(--ph-purple)"></div>
-          <div class="adm-stat-card__icon">⏳</div>
-          <p class="adm-stat-card__label">Transferencias</p>
-          <p class="adm-stat-card__value" id="stat-pending">—</p>
-          <p class="adm-stat-card__sub">pendientes</p>
+          <div class="adm-stat-card__icon">📅</div>
+          <p class="adm-stat-card__label">Eventos activos</p>
+          <p class="adm-stat-card__value" id="stat-events">—</p>
+          <p class="adm-stat-card__sub">en curso</p>
         </div>
         <div class="adm-stat-card">
           <div class="adm-stat-card__accent" style="background:var(--ph-magenta)"></div>
@@ -775,14 +718,89 @@
       </div>
     </div>
 
-    <!-- ── PANEL: Transferencias ─────────────────────────────────── -->
-    <div id="panel-transfers" class="adm-panel">
+    <!-- ── PANEL: Eventos ──────────────────────────────────────── -->
+    <div id="panel-eventos" class="adm-panel">
       <div class="adm-main__header">
-        <h1 class="adm-main__title">TRANSFERENCIAS</h1>
-        <button class="ph-btn ph-btn--ghost" onclick="loadAll()" style="font-size:var(--text-xs)">↻ Actualizar</button>
+        <h1 class="adm-main__title">EVENTOS</h1>
+        <button class="ph-btn ph-btn--secondary" onclick="openEventoModal()" style="font-size:12px;padding:8px 16px;letter-spacing:.08em">+ NUEVO EVENTO</button>
       </div>
-      <div id="transfers-wrap">
-        <div class="adm-empty"><span class="adm-empty__icon">💳</span>Cargando…</div>
+      <div id="eventos-wrap">
+        <div class="adm-empty"><span class="adm-empty__icon">📅</span>Cargando…</div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: Crear / Editar Evento ─────────────────────────── -->
+    <div id="evento-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.72);align-items:center;justify-content:center;padding:var(--sp-4)">
+      <div style="background:#12121F;border:1px solid rgba(255,255,255,.1);border-radius:12px;width:100%;max-width:540px;max-height:90dvh;overflow-y:auto;padding:var(--sp-8)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-6)">
+          <h2 style="font-family:var(--font-display);font-size:22px;letter-spacing:.06em" id="evento-modal-title">NUEVO EVENTO</h2>
+          <button onclick="closeEventoModal()" style="background:none;border:none;color:var(--ph-text-dim);font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <form id="evento-form" onsubmit="submitEventoForm(event)">
+          <input type="hidden" id="evento-id"/>
+          <div style="display:flex;flex-direction:column;gap:var(--sp-4)">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+              Nombre del evento *
+              <input type="text" id="ev-name" required maxlength="120" class="adm-filter-input" placeholder="Ej: La Gran Fiesta 2024"/>
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+                Fecha *
+                <input type="datetime-local" id="ev-date" required class="adm-filter-input"/>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+                Precio (GTQ) *
+                <input type="number" id="ev-price" required min="0" step="0.01" class="adm-filter-input" placeholder="150.00"/>
+              </label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+              Lugar *
+              <input type="text" id="ev-venue" required maxlength="200" class="adm-filter-input" placeholder="Ej: Club XYZ, Ciudad de Guatemala"/>
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+                Capacidad *
+                <input type="number" id="ev-capacity" required min="1" class="adm-filter-input" placeholder="500"/>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+                Prefijo código
+                <input type="text" id="ev-prefix" maxlength="4" class="adm-filter-input" placeholder="BLG" style="text-transform:uppercase"/>
+              </label>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">Imágenes del evento</span>
+
+              <!-- Thumbnails de imágenes actuales -->
+              <div id="ev-images-list" style="display:flex;flex-wrap:wrap;gap:8px;min-height:0"></div>
+
+              <!-- Zona de upload -->
+              <div id="ev-drop-zone"
+                style="border:2px dashed rgba(255,255,255,.15);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s"
+                onclick="document.getElementById('ev-file-input').click()"
+                ondragover="evDropOver(event)"
+                ondragleave="evDropLeave(event)"
+                ondrop="evDropFiles(event)">
+                <div style="font-size:24px;margin-bottom:4px;opacity:.4">📷</div>
+                <p style="font-size:12px;color:rgba(255,255,255,.3);margin:0">
+                  Clic o arrastrá imágenes aquí<br/>
+                  <span style="font-size:10px">JPG, PNG, WebP · máx 5 MB</span>
+                </p>
+              </div>
+              <input type="file" id="ev-file-input" multiple accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="evFilesSelected(this.files)"/>
+
+              <!-- Cola de archivos pendientes (nuevos) -->
+              <div id="ev-pending-list" style="display:flex;flex-wrap:wrap;gap:8px;min-height:0"></div>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+              Descripción (opcional)
+              <textarea id="ev-desc" class="adm-filter-input" rows="3" maxlength="1000" placeholder="Detalles del evento…" style="resize:vertical"></textarea>
+            </label>
+          </div>
+          <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-6);justify-content:flex-end">
+            <button type="button" onclick="closeEventoModal()" class="ph-btn ph-btn--ghost">Cancelar</button>
+            <button type="submit" id="evento-submit-btn" class="ph-btn ph-btn--primary">Guardar</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -797,7 +815,6 @@
         <select class="adm-filter-input" id="orders-status">
           <option value="">Todos los estados</option>
           <option value="paid">Pagado</option>
-          <option value="awaiting_review">Transferencia pendiente</option>
           <option value="rejected">Rechazado</option>
         </select>
       </div>
@@ -829,6 +846,48 @@
       <div class="adm-main__header">
         <h1 class="adm-main__title">CORTESÍAS</h1>
         <button class="ph-btn ph-btn--ghost" onclick="loadCortesia()" style="font-size:var(--text-xs)">↻ Actualizar</button>
+      </div>
+
+      <!-- Selector de evento (custom dropdown) -->
+      <style>
+        .ce-dropdown { position:relative; flex:1; min-width:220px; }
+        .ce-dropdown__btn {
+          width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px;
+          background:rgba(255,255,255,.04); border:1px solid var(--ph-border);
+          border-radius:var(--radius-md); padding:10px 14px;
+          color:var(--ph-text); font-family:var(--font-body); font-size:var(--text-sm);
+          cursor:pointer; text-align:left; transition:border-color var(--dur-fast);
+        }
+        .ce-dropdown__btn:hover { border-color:rgba(255,255,255,.2); }
+        .ce-dropdown__btn.open { border-color:var(--ph-blue); }
+        .ce-dropdown__arrow { opacity:.5; flex-shrink:0; transition:transform .15s; }
+        .ce-dropdown__btn.open .ce-dropdown__arrow { transform:rotate(180deg); }
+        .ce-dropdown__label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ce-dropdown__list {
+          position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:999;
+          background:var(--ph-bg-soft); border:1px solid var(--ph-border);
+          border-radius:var(--radius-md); overflow:hidden;
+          box-shadow:0 8px 24px rgba(0,0,0,.5);
+          display:none;
+        }
+        .ce-dropdown__list.open { display:block; }
+        .ce-dropdown__item {
+          padding:10px 14px; font-size:var(--text-sm); color:var(--ph-text);
+          cursor:pointer; transition:background var(--dur-fast);
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .ce-dropdown__item:hover { background:rgba(255,255,255,.06); }
+        .ce-dropdown__item.selected { color:var(--ph-blue); background:rgba(29,79,255,.08); }
+      </style>
+      <div style="background:var(--ph-bg-soft);border:1px solid var(--ph-border);border-radius:var(--radius-lg);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-4);display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap">
+        <p style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ph-text-dim);margin:0;white-space:nowrap">Evento:</p>
+        <div class="ce-dropdown" id="cortesia-dropdown">
+          <button type="button" class="ce-dropdown__btn" id="cortesia-dropdown-btn">
+            <span class="ce-dropdown__label" id="cortesia-dropdown-label">Cargando eventos…</span>
+            <span class="ce-dropdown__arrow">▾</span>
+          </button>
+          <div class="ce-dropdown__list" id="cortesia-dropdown-list"></div>
+        </div>
       </div>
 
       <!-- Crear -->
@@ -882,6 +941,15 @@
           </div>
         </div>
 
+
+        <!-- Fila 1b: Evento -->
+        <div style="margin-bottom:var(--sp-4)">
+          <p style="font-size:var(--text-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--ph-text-dim);margin-bottom:var(--sp-2)">Evento <span style="color:var(--ph-text-dim);font-weight:400">(opcional — dejar vacío para que aplique en todos)</span></p>
+          <select id="dc-event-id" class="adm-filter-input" style="width:100%;box-sizing:border-box">
+            <option value="">— Global (todos los eventos) —</option>
+          </select>
+        </div>
+
         <!-- Fila 2 -->
         <div style="display:flex;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-5)">
           <div style="flex:1;min-width:140px">
@@ -915,6 +983,85 @@
       </div>
     </div>
 
+    <!-- ARTISTAS PANEL -->
+    <div class="adm-panel" id="panel-artistas">
+      <div class="adm-panel__head">
+        <h2 class="adm-panel__title">Artistas</h2>
+        <button class="ph-btn ph-btn--primary" id="btn-new-artist" style="font-size:13px;padding:6px 16px;">+ Nuevo artista</button>
+      </div>
+      <div id="artist-form-wrap" style="display:none;background:var(--ph-surface);border:1px solid var(--ph-border);border-radius:12px;padding:24px;margin-bottom:24px;">
+        <h3 id="artist-form-title" style="font-size:15px;font-weight:700;margin:0 0 18px;letter-spacing:.04em;">Nuevo artista</h3>
+        <input type="hidden" id="artist-edit-id">
+        <form id="artist-form" autocomplete="off">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div>
+              <label class="adm-label">Nombre *</label>
+              <input class="adm-input" id="artist-name" required placeholder="Ej: DJ Arco">
+            </div>
+            <div>
+              <label class="adm-label">Instagram</label>
+              <input class="adm-input" id="artist-instagram" placeholder="@handle">
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label class="adm-label">Generos (separados por coma)</label>
+            <input class="adm-input" id="artist-genres" placeholder="House, Techno, Electronic">
+          </div>
+          <div style="margin-bottom:14px;">
+            <label class="adm-label">Bio</label>
+            <textarea class="adm-input" id="artist-bio" rows="3" style="resize:vertical;" placeholder="Descripcion breve del artista..."></textarea>
+          </div>
+          <div style="margin-bottom:18px;">
+            <label class="adm-label">Foto</label>
+            <input type="file" id="artist-photo" accept="image/*" style="display:block;font-size:13px;color:rgba(255,255,255,.6);margin-top:6px;">
+            <div id="artist-photo-preview" style="display:none;margin-top:10px;">
+              <img id="artist-photo-img" src="" alt="Preview" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--ph-border);">
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button type="submit" class="ph-btn ph-btn--primary" id="artist-submit-btn">Guardar</button>
+            <button type="button" class="ph-btn" id="artist-cancel-btn" style="background:rgba(255,255,255,.07);">Cancelar</button>
+            <span id="artist-form-msg" style="font-size:13px;"></span>
+          </div>
+        </form>
+      </div>
+      <div id="artists-loading" style="text-align:center;padding:32px;color:rgba(255,255,255,.4);font-size:13px;">Cargando...</div>
+      <div class="adm-table-wrap" style="display:none;" id="artists-table-wrap">
+        <table style="width:100%;border-collapse:collapse;" id="artists-table">
+          <thead>
+            <tr style="border-bottom:1px solid var(--ph-border);">
+              <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.4);font-weight:600;">FOTO</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.4);font-weight:600;">NOMBRE</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.4);font-weight:600;">GENEROS</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.4);font-weight:600;">INSTAGRAM</th>
+              <th style="padding:10px 12px;text-align:right;font-size:11px;letter-spacing:.1em;color:rgba(255,255,255,.4);font-weight:600;">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody id="artists-tbody"></tbody>
+        </table>
+      </div>
+      <div id="artists-empty" style="display:none;text-align:center;padding:40px;color:rgba(255,255,255,.3);font-size:14px;">Sin artistas aun</div>
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--ph-border);">
+        <h3 style="font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin:0 0 16px;">Asignar a evento</h3>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+          <select class="adm-input" id="assign-event-select" style="max-width:320px;">
+            <option value="">- Elige un evento -</option>
+          </select>
+          <button class="ph-btn" id="btn-load-assignment" style="background:rgba(255,255,255,.08);white-space:nowrap;font-size:13px;padding:8px 16px;">Cargar</button>
+        </div>
+        <div id="assignment-area" style="display:none;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <p style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35);margin:0 0 10px;">Disponibles</p>
+            <div id="available-artists" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+          <div>
+            <p style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35);margin:0 0 10px;">Asignados</p>
+            <div id="assigned-artists" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -930,6 +1077,7 @@ let adminToken = null;
 let allOrders  = [];
 let allTickets = [];
 let summary    = null;
+let allEventos = [];
 
 // ── Auth ───────────────────────────────────────────────────────────
 document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -1004,7 +1152,19 @@ function enterAdmin(name) {
   document.getElementById('login-screen').hidden = true;
   document.getElementById('admin-layout').hidden = false;
   setupDiscountPanel();
+  setupArtistPanel();
   loadAll();
+}
+
+// -- Artist API helpers --
+function getToken() { return adminToken; }
+function apiFetch(url, opts) {
+  opts = opts || {};
+  var hdrs = Object.assign({ 'x-admin-token': adminToken }, opts.headers || {});
+  if (opts.body && typeof opts.body === 'string' && !hdrs['Content-Type']) {
+    hdrs['Content-Type'] = 'application/json';
+  }
+  return fetch(url, Object.assign({}, opts, { headers: hdrs }));
 }
 
 // ── Nav ────────────────────────────────────────────────────────────
@@ -1014,8 +1174,11 @@ document.querySelectorAll('.adm-nav__item[data-panel]').forEach(btn => {
     document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById(btn.dataset.panel).classList.add('active');
-    if (btn.dataset.panel === 'panel-cortesia')  loadCortesia();
+    document.querySelector('.adm-main').scrollTop = 0;
+    if (btn.dataset.panel === 'panel-eventos')   loadEventos();
+    if (btn.dataset.panel === 'panel-cortesia')  initCortesia();
     if (btn.dataset.panel === 'panel-descuentos') loadDiscountCodes();
+    if (btn.dataset.panel === 'panel-artistas') loadArtists();
     closeSidebar();
   });
 });
@@ -1029,32 +1192,22 @@ async function loadAll() {
   errBanner.hidden = true;
 
   try {
-    const [sumData, ordersData, ticketsData, transfersData] = await Promise.all([
+    const [sumData, ordersData, ticketsData, eventsData] = await Promise.all([
       api('GET', '/api/admin/event-summary',    null, h),
       api('GET', '/api/admin/orders',           null, h),
       api('GET', '/api/admin/tickets',          null, h),
-      api('GET', '/api/admin/pending-transfers',null, h),
+      api('GET', '/api/admin/events',           null, h),
     ]);
 
     summary    = sumData;
     allOrders  = ordersData.orders  || [];
     allTickets = ticketsData.tickets || [];
+    allEventos = eventsData.events  || [];
 
     renderDashboard(sumData, allOrders);
     renderOrders(allOrders);
     renderTickets(allTickets);
-    renderTransfers(transfersData.transfers || []);
-
-    const pendCount = (transfersData.transfers || []).filter(
-      t => t.payment_status === 'awaiting_review' || t.payment_status === 'pending'
-    ).length;
-    const badge = document.getElementById('transfer-badge');
-    if (pendCount > 0) {
-      badge.textContent = pendCount;
-      badge.hidden = false;
-    } else {
-      badge.hidden = true;
-    }
+    renderEventosList(allEventos);
 
   } catch (err) {
     if (err.status === 401 || err.status === 403) {
@@ -1074,7 +1227,7 @@ function renderDashboard(sum, orders) {
   document.getElementById('stat-sold').textContent     = sum.tickets_sold ?? '—';
   document.getElementById('stat-capacity').textContent = `de ${sum.max_capacity ?? '?'} capacidad`;
   document.getElementById('stat-orders').textContent   = sum.paid_orders ?? '—';
-  document.getElementById('stat-pending').textContent  = sum.pending_transfers ?? '—';
+  document.getElementById('stat-events').textContent   = allEventos.filter(e => e.active).length;
   document.getElementById('stat-redeemed').textContent = sum.redeemed_today ?? '—';
 
   renderOrdersTable('recent-orders-wrap', orders.slice(0, 10), false);
@@ -1154,99 +1307,264 @@ function renderTickets(tickets) {
   `;
 }
 
-// ── Transfers ──────────────────────────────────────────────────────
-function renderTransfers(transfers) {
-  const wrap = document.getElementById('transfers-wrap');
+// ── Eventos ────────────────────────────────────────────────────────
+let _editingEventoId = null;
 
-  if (!transfers.length) {
-    wrap.innerHTML = `<div class="adm-empty"><span class="adm-empty__icon">💳</span>Sin transferencias pendientes</div>`;
+async function loadEventos() {
+  const wrap = document.getElementById('eventos-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">📅</span>Cargando…</div>';
+  try {
+    const data = await api('GET', '/api/admin/events', null, { 'x-admin-token': adminToken });
+    allEventos = data.events || [];
+    renderEventosList(allEventos);
+  } catch (e) {
+    wrap.innerHTML = '<div class="adm-empty">Error al cargar eventos.</div>';
+  }
+}
+
+function renderEventosList(events) {
+  const wrap = document.getElementById('eventos-wrap');
+  if (!wrap) return;
+  if (!events.length) {
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">📅</span>Sin eventos creados. Crea uno con el botón de arriba.</div>';
     return;
   }
-
-  const isPdf = url => url && (url.includes('.pdf') || url.includes('application%2Fpdf'));
-
-  const cards = transfers.map(t => {
-    const receiptHtml = t.transfer_receipt_url
-      ? isPdf(t.transfer_receipt_url)
-        ? `<a href="${esc(t.transfer_receipt_url)}" target="_blank" rel="noopener" class="transfer-card__receipt-pdf">📄</a>`
-        : `<a href="${esc(t.transfer_receipt_url)}" target="_blank" rel="noopener" class="transfer-card__receipt-link">
-             <img src="${esc(t.transfer_receipt_url)}" class="transfer-card__receipt-img" alt="Comprobante"/>
-           </a>`
-      : '<span style="color:var(--ph-text-dim);font-size:12px">Sin comprobante</span>';
-
-    const actionsHtml = t.payment_status !== 'paid'
-      ? `<div class="transfer-card__actions">
-           <button class="adm-btn-sm confirm" onclick="confirmTransfer('${esc(t.id)}', this)">✓ Confirmar</button>
-           ${t.payment_status !== 'rejected'
-             ? `<button class="adm-btn-sm reject" onclick="rejectTransfer('${esc(t.id)}', this)">✕ Rechazar</button>`
-             : ''}
-         </div>`
-      : '';
-
-    return `
-      <div class="transfer-card">
-        <div class="transfer-card__main">
-          <div>
-            <span class="transfer-card__buyer">${esc(t.buyer_name || '—')}</span>
-            ${statusBadge(t.payment_status)}
-          </div>
-          <div class="transfer-card__meta">
-            <div class="transfer-card__meta-item">
-              <span class="transfer-card__meta-label">Email</span>
-              <span>${esc(t.buyer_email || '—')}</span>
-            </div>
-            <div class="transfer-card__meta-item">
-              <span class="transfer-card__meta-label">Entradas</span>
-              <span style="font-weight:600;color:var(--ph-text)">${t.quantity ?? '—'}</span>
-            </div>
-            <div class="transfer-card__meta-item">
-              <span class="transfer-card__meta-label">Folio</span>
-              <span style="font-family:var(--font-mono)">${esc(t.transfer_reference || '—')}</span>
-            </div>
-            <div class="transfer-card__meta-item">
-              <span class="transfer-card__meta-label">Fecha</span>
-              <span>${t.created_at ? formatDate(t.created_at) : '—'}</span>
-            </div>
-          </div>
-          ${actionsHtml}
+  const rows = events.map(ev => {
+    const fecha = ev.event_date ? new Date(ev.event_date).toLocaleString('es-GT', { dateStyle:'medium', timeStyle:'short' }) : '—';
+    const sold  = ev.tickets_sold ?? 0;
+    const cap   = ev.capacity ?? '?';
+    const pct   = ev.capacity ? Math.round(sold / ev.capacity * 100) : 0;
+    return `<tr>
+      <td style="font-weight:600;max-width:200px;word-break:break-word">${esc(ev.name)}</td>
+      <td style="white-space:nowrap">${fecha}</td>
+      <td>${esc(ev.venue || '—')}</td>
+      <td style="text-align:right">Q${Number(ev.price_gtq || 0).toFixed(2)}</td>
+      <td style="text-align:center">
+        <span style="font-family:var(--font-mono)">${sold}/${cap}</span>
+        <div style="height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:4px;width:80px">
+          <div style="height:4px;background:var(--ph-blue);border-radius:2px;width:${Math.min(pct,100)}%"></div>
         </div>
-        <div class="transfer-card__aside">
-          <span class="transfer-card__amount">$${Number(t.amount_usd || 0).toFixed(2)}</span>
-          ${receiptHtml}
-        </div>
-      </div>
-    `;
+      </td>
+      <td style="text-align:center">
+        <button onclick="toggleEventoStatus('${ev.id}', ${ev.active}, this)"
+          class="adm-btn-sm ${ev.active ? 'confirm' : 'reject'}"
+          style="min-width:80px">
+          ${ev.active ? '✓ Activo' : '✕ Inactivo'}
+        </button>
+      </td>
+      <td style="white-space:nowrap">
+        <button onclick="openEventoModal('${ev.id}')" class="adm-btn-sm" style="margin-right:4px">✏ Editar</button>
+        <button onclick="deleteEvento('${ev.id}', '${esc(ev.name)}')" class="adm-btn-sm reject">🗑</button>
+      </td>
+    </tr>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="transfer-cards">${cards}</div>`;
+  wrap.innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="adm-table" style="width:100%;table-layout:auto">
+        <thead><tr>
+          <th>Nombre</th><th>Fecha</th><th>Lugar</th><th>Precio</th><th>Vendidas</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
-// ── Transfer actions ───────────────────────────────────────────────
-async function confirmTransfer(orderId, btn) {
-  if (!confirm('¿Confirmar esta transferencia y emitir las entradas?')) return;
+function openEventoModal(eventoId) {
+  _editingEventoId = eventoId || null;
+  const modal = document.getElementById('evento-modal');
+  document.getElementById('evento-modal-title').textContent = eventoId ? 'EDITAR EVENTO' : 'NUEVO EVENTO';
+  document.getElementById('evento-form').reset();
+  document.getElementById('evento-id').value = '';
+  renderEventoImages([]);
+  document.getElementById('ev-pending-list').innerHTML = '';
+  _pendingImageFiles = [];
+
+  if (eventoId) {
+    const ev = allEventos.find(e => e.id === eventoId);
+    if (ev) {
+      document.getElementById('evento-id').value = ev.id;
+      document.getElementById('ev-name').value   = ev.name || '';
+      document.getElementById('ev-venue').value  = ev.venue || '';
+      document.getElementById('ev-price').value  = ev.price_gtq || '';
+      document.getElementById('ev-capacity').value = ev.capacity || '';
+      document.getElementById('ev-prefix').value = ev.code_prefix || '';
+      // Render existing images
+      renderEventoImages(ev.images || (ev.image_url ? [ev.image_url] : []));
+      document.getElementById('ev-desc').value   = ev.description || '';
+      if (ev.event_date) {
+        // Convert ISO to datetime-local format
+        const d = new Date(ev.event_date);
+        const pad = n => String(n).padStart(2, '0');
+        document.getElementById('ev-date').value =
+          `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+    }
+  }
+
+  modal.style.display = 'flex';
+}
+
+
+let _pendingImageFiles = [];
+
+function renderEventoImages(images) {
+  const list = document.getElementById('ev-images-list');
+  if (!list) return;
+  list.innerHTML = (images || []).map((url, i) => `
+    <div class="ev-img-thumb" title="${url}">
+      <img src="${url}" loading="lazy"/>
+      <button class="ev-img-thumb__del" type="button" onclick="deleteEventoImage('${url}', this)" title="Eliminar">✕</button>
+    </div>`).join('');
+}
+
+async function deleteEventoImage(url, btn) {
+  const id = document.getElementById('evento-id').value;
+  if (!id) { showToast('Guarda el evento primero.', 'error'); return; }
+  if (!confirm('¿Eliminar esta imagen?')) return;
+  btn.disabled = true;
+  try {
+    const h = { 'x-admin-token': adminToken, 'Content-Type': 'application/json' };
+    const data = await api('DELETE', `/api/admin/events/${id}/images`, { url }, h);
+    renderEventoImages(data.images || []);
+    showToast('Imagen eliminada', 'success');
+    loadEventos();
+  } catch {
+    showToast('Error al eliminar imagen', 'error');
+    btn.disabled = false;
+  }
+}
+
+function evFilesSelected(files) {
+  if (!files || !files.length) return;
+  for (const f of files) addPendingImage(f);
+  document.getElementById('ev-file-input').value = '';
+}
+
+function addPendingImage(file) {
+  if (file.size > 5 * 1024 * 1024) { showToast('La imagen supera 5 MB.', 'error'); return; }
+  _pendingImageFiles.push(file);
+  const idx = _pendingImageFiles.length - 1;
+  const url = URL.createObjectURL(file);
+  const wrap = document.createElement('div');
+  wrap.className = 'ev-img-thumb ev-img-thumb--pending';
+  wrap.innerHTML = `<img src="${url}"/>
+    <button class="ev-img-thumb__del" type="button" title="Quitar">✕</button>`;
+  wrap.querySelector('button').addEventListener('click', () => {
+    _pendingImageFiles.splice(_pendingImageFiles.indexOf(file), 1);
+    wrap.remove();
+  });
+  document.getElementById('ev-pending-list').appendChild(wrap);
+}
+
+function evDropOver(e) {
+  e.preventDefault();
+  document.getElementById('ev-drop-zone').classList.add('drag-over');
+}
+function evDropLeave(e) {
+  document.getElementById('ev-drop-zone').classList.remove('drag-over');
+}
+function evDropFiles(e) {
+  e.preventDefault();
+  document.getElementById('ev-drop-zone').classList.remove('drag-over');
+  for (const f of e.dataTransfer.files) addPendingImage(f);
+}
+function closeEventoModal() {
+  document.getElementById('evento-modal').style.display = 'none';
+  _editingEventoId = null;
+}
+
+async function submitEventoForm(e) {
+  e.preventDefault();
+  const btn = document.getElementById('evento-submit-btn');
   btn.disabled = true;
   btn.textContent = '…';
+
+  const id = document.getElementById('evento-id').value;
+  const prefix = document.getElementById('ev-prefix').value.trim().toUpperCase();
+  const payload = {
+    name:        document.getElementById('ev-name').value.trim(),
+    event_date:  document.getElementById('ev-date').value,
+    venue:       document.getElementById('ev-venue').value.trim(),
+    price_gtq:   parseFloat(document.getElementById('ev-price').value),
+    capacity:    parseInt(document.getElementById('ev-capacity').value, 10),
+    code_prefix: prefix || null,
+    // image_url is managed by upload endpoint
+    description: document.getElementById('ev-desc').value.trim() || null,
+  };
+
   try {
-    await api('POST', '/api/admin/confirm-transfer', { order_id: orderId }, { 'x-admin-token': adminToken });
-    loadAll();
+    const h = { 'x-admin-token': adminToken };
+    let eventId = id;
+    if (id) {
+      await api('PATCH', `/api/admin/events/${id}`, payload, h);
+    } else {
+      const created = await api('POST', '/api/admin/events', payload, h);
+      eventId = created.event.id;
+    }
+
+    // Upload pending images
+    if (_pendingImageFiles.length > 0) {
+      const uploadBtn = document.getElementById('evento-submit-btn');
+      for (let i = 0; i < _pendingImageFiles.length; i++) {
+        uploadBtn.textContent = `Subiendo imagen ${i+1}/${_pendingImageFiles.length}…`;
+        const fd = new FormData();
+        fd.append('image', _pendingImageFiles[i]);
+        await fetch(`/api/admin/events/${eventId}/images`, {
+          method: 'POST',
+          headers: h,
+          body: fd,
+        });
+      }
+      _pendingImageFiles = [];
+    }
+
+    showToast(id ? 'Evento actualizado ✓' : 'Evento creado ✓', 'success');
+    closeEventoModal();
+    loadEventos();
   } catch (err) {
-    showToast(err.data?.error || err.message || 'Error al confirmar.', 'error');
+    showToast(err.data?.error || err.message || 'Error al guardar.', 'error');
+  } finally {
     btn.disabled = false;
-    btn.textContent = '✓ Confirmar';
+    btn.textContent = 'Guardar';
   }
 }
 
-async function rejectTransfer(orderId, btn) {
-  const reason = prompt('Razón del rechazo (opcional):') ?? '';
+async function toggleEventoStatus(eventoId, currentlyActive, btn) {
   btn.disabled = true;
   try {
-    await api('POST', '/api/admin/reject-transfer', { order_id: orderId, reason }, { 'x-admin-token': adminToken });
-    loadAll();
+    const h = { 'x-admin-token': adminToken };
+    await api('PATCH', `/api/admin/events/${eventoId}/status`, { active: !currentlyActive }, h);
+    showToast(`Evento ${!currentlyActive ? 'activado' : 'desactivado'} ✓`, 'success');
+    loadEventos();
   } catch (err) {
-    showToast(err.data?.error || err.message || 'Error al rechazar.', 'error');
+    showToast(err.data?.error || err.message || 'Error al cambiar estado.', 'error');
     btn.disabled = false;
   }
 }
+
+async function deleteEvento(eventoId, nombre) {
+  if (!confirm(`¿Eliminar el evento "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    const h = { 'x-admin-token': adminToken };
+    await api('DELETE', `/api/admin/events/${eventoId}`, null, h);
+    showToast('Evento eliminado ✓', 'success');
+    loadEventos();
+  } catch (err) {
+    const msg = err.data?.error || err.message || 'Error al eliminar.';
+    if (err.status === 409) {
+      showToast('No se puede eliminar: este evento tiene entradas vendidas.', 'error');
+    } else {
+      showToast(msg, 'error');
+    }
+  }
+}
+
+// Close modal when clicking backdrop
+document.getElementById('evento-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEventoModal();
+});
 
 // ── Filters ────────────────────────────────────────────────────────
 document.getElementById('orders-search').addEventListener('input', filterOrders);
@@ -1314,8 +1632,8 @@ function exportOrdersExcel() {
     return matchQ && matchSt;
   });
 
-  const statusMap  = { paid: 'Pagado', awaiting_review: 'Transferencia pendiente', pending: 'Pendiente', rejected: 'Rechazado', refunded: 'Reembolsado' };
-  const methodMap  = { paypal: 'PayPal', transfer: 'Transferencia', complimentary: 'Cortesía' };
+  const statusMap  = { paid: 'Pagado', awaiting_review: 'Pendiente', pending: 'Pendiente', rejected: 'Rechazado', refunded: 'Reembolsado' };
+  const methodMap  = { recurrente: 'Recurrente', transfer: 'Transferencia', complimentary: 'Cortesía' };
 
   const rows = filtered.map((o, i) => ({
     '#':                   i + 1,
@@ -1346,11 +1664,71 @@ function exportOrdersExcel() {
 }
 
 // ── Cortesías ──────────────────────────────────────────────────────
+let cortesiaEventId = null;
+
+async function initCortesia() {
+  try {
+    const data = await api('GET', '/api/admin/events', null, { 'x-admin-token': adminToken });
+    const events = data.events || [];
+    const btn   = document.getElementById('cortesia-dropdown-btn');
+    const label = document.getElementById('cortesia-dropdown-label');
+    const list  = document.getElementById('cortesia-dropdown-list');
+
+    if (!events.length) { label.textContent = 'Sin eventos'; loadCortesia(); return; }
+
+    // Preseleccionar activo
+    const activeEv = events.find(function(e) { return e.active; }) || events[0];
+    cortesiaEventId = activeEv.id;
+
+    function renderItems() {
+      list.innerHTML = events.map(function(ev) {
+        const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric' }) : '';
+        const tag  = ev.active ? ' ★' : '';
+        const sel  = ev.id === cortesiaEventId ? ' selected' : '';
+        return '<div class="ce-dropdown__item' + sel + '" data-id="' + ev.id + '">' + ev.name + tag + (date ? ' — ' + date : '') + '</div>';
+      }).join('');
+      // Label del botón
+      const cur = events.find(function(e) { return e.id === cortesiaEventId; });
+      if (cur) {
+        const date = cur.event_date ? new Date(cur.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric' }) : '';
+        label.textContent = cur.name + (cur.active ? ' ★' : '') + (date ? ' — ' + date : '');
+      }
+    }
+    renderItems();
+
+    // Toggle dropdown
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const open = list.classList.toggle('open');
+      btn.classList.toggle('open', open);
+    });
+    // Seleccionar item
+    list.addEventListener('click', function(e) {
+      const item = e.target.closest('.ce-dropdown__item');
+      if (!item) return;
+      cortesiaEventId = item.dataset.id;
+      list.classList.remove('open');
+      btn.classList.remove('open');
+      renderItems();
+      loadCortesia();
+    });
+    // Cerrar al click afuera
+    document.addEventListener('click', function() {
+      list.classList.remove('open');
+      btn.classList.remove('open');
+    });
+  } catch (e) {
+    document.getElementById('cortesia-dropdown-label').textContent = 'Error al cargar eventos';
+  }
+  loadCortesia();
+}
+
 async function loadCortesia() {
   const wrap = document.getElementById('cortesia-table-wrap');
   wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">★</span>Cargando…</div>';
+  const qs = cortesiaEventId ? '?event_id=' + encodeURIComponent(cortesiaEventId) : '';
   try {
-    const data = await api('GET', '/api/admin/cortesia', null, { 'x-admin-token': adminToken });
+    const data = await api('GET', '/api/admin/cortesia' + qs, null, { 'x-admin-token': adminToken });
     renderCortesiaTable(data.guests || []);
   } catch (e) {
     wrap.innerHTML = '<div class="adm-empty">Error al cargar. Intenta de nuevo.</div>';
@@ -1414,7 +1792,7 @@ document.getElementById('cortesia-create-btn').addEventListener('click', async f
   errEl.textContent = '';
   btn.disabled = true; btn.textContent = 'Generando…';
   try {
-    const data = await api('POST', '/api/admin/cortesia/bulk', { names: raw }, { 'x-admin-token': adminToken });
+    const data = await api('POST', '/api/admin/cortesia/bulk', { names: raw, event_id: cortesiaEventId }, { 'x-admin-token': adminToken });
     const failed = (data.results || []).filter(r => !r.ok);
     if (failed.length) {
       errEl.textContent = `${failed.length} error(es): ${failed.map(f => f.name).join(', ')}`;
@@ -1431,6 +1809,18 @@ document.getElementById('cortesia-create-btn').addEventListener('click', async f
 // ── Descuentos ─────────────────────────────────────────────────────
 
 async function loadDiscountCodes() {
+  // Populate event selector
+  try {
+    const evData = await api('GET', '/api/admin/events', null, { 'x-admin-token': adminToken });
+    const evSelect = document.getElementById('dc-event-id');
+    if (evSelect && evData && evData.events) {
+      // keep first "Global" option, rebuild the rest
+      evSelect.innerHTML = '<option value="">— Global (todos los eventos) —</option>' +
+        evData.events.map(function(ev) {
+          return '<option value="' + ev.id + '">' + ev.name + '</option>';
+        }).join('');
+    }
+  } catch(_) {}
   const wrap = document.getElementById('dc-table-wrap');
   const countEl = document.getElementById('dc-count');
   wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">🏷</span>Cargando…</div>';
@@ -1444,7 +1834,7 @@ async function loadDiscountCodes() {
     }
     wrap.innerHTML = `<table class="adm-table">
       <thead><tr>
-        <th>Código</th><th>Tipo</th><th>Valor</th><th>Usos</th><th>Vence</th><th>Descripción</th><th>Estado</th><th></th>
+        <th>Código</th><th>Evento</th><th>Tipo</th><th>Valor</th><th>Usos</th><th>Vence</th><th>Descripción</th><th>Estado</th><th></th>
       </tr></thead>
       <tbody>${codes.map(dc => {
         const typeLabel = dc.discount_type === 'percent' ? dc.discount_value + '%' : '$' + Number(dc.discount_value).toFixed(2);
@@ -1455,6 +1845,7 @@ async function loadDiscountCodes() {
           : '<span style="color:var(--ph-text-dim);font-size:10px;letter-spacing:.08em">INACTIVO</span>';
         return `<tr>
           <td><strong>${dc.code}</strong></td>
+          <td style="font-size:11px;color:var(--ph-text-dim)">${dc.event ? dc.event.name : '<em>Global</em>'}</td>
           <td>${dc.discount_type === 'percent' ? 'Porcentaje' : 'Fijo'}</td>
           <td>${typeLabel}</td>
           <td>${uses}</td>
@@ -1508,6 +1899,7 @@ function setupDiscountPanel() {
     var maxUses = document.getElementById('dc-max-uses').value;
     var expires = document.getElementById('dc-expires').value;
     var desc    = document.getElementById('dc-description').value.trim();
+    var eventId = document.getElementById('dc-event-id').value || null;
 
     if (!code)  { errEl.textContent = 'El código es requerido.'; return; }
     if (!value || parseFloat(value) <= 0) { errEl.textContent = 'El valor debe ser mayor a 0.'; return; }
@@ -1522,11 +1914,13 @@ function setupDiscountPanel() {
         max_uses:       maxUses ? parseInt(maxUses, 10) : null,
         expires_at:     expires ? new Date(expires).toISOString() : null,
         description:    desc || null,
+        event_id:       eventId || undefined,
       }, { 'x-admin-token': adminToken });
 
       ['dc-code','dc-value','dc-max-uses','dc-expires','dc-description'].forEach(function(id) {
         document.getElementById(id).value = '';
       });
+      document.getElementById('dc-event-id').value = '';
       okEl.style.display = '';
       setTimeout(function() { okEl.style.display = 'none'; }, 3000);
       await loadDiscountCodes();
@@ -1542,6 +1936,180 @@ function setupDiscountPanel() {
 
 // ── Boot ───────────────────────────────────────────────────────────
 init();
+
+// ═══════════════════════════════════════════════════════════════
+// ARTISTS
+// ═══════════════════════════════════════════════════════════════
+let _allArtists = [];
+
+async function loadArtists() {
+  const tbody = document.getElementById('artists-tbody');
+  const loading = document.getElementById('artists-loading');
+  const table = document.getElementById('artists-table-wrap');
+  const empty = document.getElementById('artists-empty');
+  loading.style.display = 'block'; table.style.display = 'none'; empty.style.display = 'none';
+
+  const res = await apiFetch('/api/admin/artists');
+  if (!res.ok) { loading.textContent = 'Error cargando artistas.'; return; }
+  const { artists } = await res.json();
+  _allArtists = artists || [];
+  loading.style.display = 'none';
+
+  if (!_allArtists.length) { empty.style.display = 'block'; return; }
+  table.style.display = 'table';
+  tbody.innerHTML = _allArtists.map(a => `
+    <tr>
+      <td><img src="${a.photo_url || ''}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:#222;${a.photo_url ? '' : 'opacity:.3;'}"></td>
+      <td style="font-weight:600;">${escHtml(a.name)}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.6);">${(a.genres||[]).map(g=>`<span style="background:rgba(255,255,255,.1);border-radius:4px;padding:2px 6px;">${escHtml(g)}</span>`).join(' ')}</td>
+      <td style="font-size:12px;color:rgba(255,255,255,.5);">${a.instagram ? escHtml(a.instagram) : '—'}</td>
+      <td style="text-align:right;">
+        <button class="btn" style="font-size:12px;padding:4px 10px;background:rgba(255,255,255,.07);margin-right:4px;" onclick="editArtist('${a.id}')">Editar</button>
+        <button class="btn" style="font-size:12px;padding:4px 10px;background:rgba(248,113,113,.15);color:#f87171;" onclick="deleteArtist('${a.id}','${escHtml(a.name)}')">Eliminar</button>
+      </td>
+    </tr>
+  `).join('');
+
+  // populate event-assignment artist list too
+  renderAvailableArtists();
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function editArtist(id) {
+  const a = _allArtists.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('artist-edit-id').value = a.id;
+  document.getElementById('artist-form-title').textContent = 'Editar artista';
+  document.getElementById('artist-name').value      = a.name || '';
+  document.getElementById('artist-bio').value       = a.bio || '';
+  document.getElementById('artist-instagram').value = a.instagram || '';
+  document.getElementById('artist-genres').value    = (a.genres||[]).join(', ');
+  if (a.photo_url) {
+    document.getElementById('artist-photo-img').src = a.photo_url;
+    document.getElementById('artist-photo-preview').style.display = 'block';
+  }
+  document.getElementById('artist-form-wrap').style.display = 'block';
+  document.getElementById('artist-form-msg').textContent = '';
+  document.getElementById('artist-form-wrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function deleteArtist(id, name) {
+  if (!confirm('Eliminar artista "' + name + '"?')) return;
+  const res = await apiFetch('/api/admin/artists/' + id, { method: 'DELETE' });
+  if (!res.ok) { alert('Error al eliminar'); return; }
+  await loadArtists();
+}
+
+async function loadEventsForAssignment() {
+  const sel = document.getElementById('assign-event-select');
+  const res = await apiFetch('/api/admin/events');
+  if (!res.ok) return;
+  const { events } = await res.json();
+  sel.innerHTML = '<option value="">- Elige un evento -</option>' +
+    (events||[]).map(ev => '<option value="' + ev.id + '">' + escHtml(ev.name) + '</option>').join('');
+}
+
+async function loadAssignmentArea(eventId) {
+  const area = document.getElementById('assignment-area');
+  area.style.display = 'grid';
+  const res = await apiFetch(`/api/admin/events/${eventId}/artists`);
+  const { artists: assigned } = res.ok ? await res.json() : { artists: [] };
+  const assignedIds = (assigned||[]).map(a => a.id);
+
+  const availableDiv = document.getElementById('available-artists');
+  const assignedDiv  = document.getElementById('assigned-artists');
+
+  availableDiv.innerHTML = _allArtists.filter(a => !assignedIds.includes(a.id)).map(a => `
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;">
+      <img src="${a.photo_url||''}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#222;flex-shrink:0;">
+      <span style="flex:1;font-size:13px;">${escHtml(a.name)}</span>
+      <button class="btn" style="font-size:11px;padding:3px 8px;background:rgba(74,222,128,.15);color:var(--green);" onclick="assignArtist('${eventId}','${a.id}')">+ Agregar</button>
+    </div>
+  `).join('') || '<p style="font-size:12px;color:rgba(255,255,255,.4);padding:8px;">Todos asignados</p>';
+
+  assignedDiv.innerHTML = (assigned||[]).map(a => `
+    <div style="display:flex;align-items:center;gap:8px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:8px;padding:8px;">
+      <img src="${a.photo_url||''}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#222;flex-shrink:0;">
+      <span style="flex:1;font-size:13px;">${escHtml(a.name)}</span>
+      <button class="btn" style="font-size:11px;padding:3px 8px;background:rgba(248,113,113,.15);color:var(--error);" onclick="removeArtist('${eventId}','${a.id}')">Quitar</button>
+    </div>
+  `).join('') || '<p style="font-size:12px;color:rgba(255,255,255,.4);padding:8px;">Sin artistas aun</p>';
+}
+
+
+async function assignArtist(eventId, artistId) {
+  await apiFetch('/api/admin/events/' + eventId + '/artists', { method: 'POST', body: JSON.stringify({ artist_id: artistId }) });
+  await loadAssignmentArea(eventId);
+}
+
+async function removeArtist(eventId, artistId) {
+  await apiFetch('/api/admin/events/' + eventId + '/artists/' + artistId, { method: 'DELETE' });
+  await loadAssignmentArea(eventId);
+}
+
+function renderAvailableArtists() {
+  loadEventsForAssignment();
+}
+
+function setupArtistPanel() {
+  document.getElementById('btn-new-artist').addEventListener('click', () => {
+    document.getElementById('artist-edit-id').value = '';
+    document.getElementById('artist-form-title').textContent = 'Nuevo artista';
+    document.getElementById('artist-form').reset();
+    document.getElementById('artist-photo-preview').style.display = 'none';
+    document.getElementById('artist-form-wrap').style.display = 'block';
+  });
+
+  document.getElementById('artist-cancel-btn').addEventListener('click', () => {
+    document.getElementById('artist-form-wrap').style.display = 'none';
+    document.getElementById('artist-form-msg').textContent = '';
+  });
+
+  document.getElementById('artist-photo').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const img = document.getElementById('artist-photo-img');
+    img.src = URL.createObjectURL(file);
+    document.getElementById('artist-photo-preview').style.display = 'block';
+  });
+
+  document.getElementById('artist-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const msg   = document.getElementById('artist-form-msg');
+    const btn   = document.getElementById('artist-submit-btn');
+    const editId = document.getElementById('artist-edit-id').value;
+    msg.textContent = 'Guardando...'; btn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('name',      document.getElementById('artist-name').value.trim());
+    fd.append('bio',       document.getElementById('artist-bio').value.trim());
+    fd.append('instagram', document.getElementById('artist-instagram').value.trim());
+    const genresRaw = document.getElementById('artist-genres').value;
+    fd.append('genres', JSON.stringify(genresRaw.split(',').map(g => g.trim()).filter(Boolean)));
+    const photoFile = document.getElementById('artist-photo').files[0];
+    if (photoFile) fd.append('photo', photoFile);
+
+    const url    = editId ? '/api/admin/artists/' + editId : '/api/admin/artists';
+    const method = editId ? 'PATCH' : 'POST';
+    const res  = await fetch(url, { method, headers: { 'x-admin-token': getToken() }, body: fd });
+    const data = await res.json();
+    btn.disabled = false;
+    if (!res.ok) { msg.style.color = 'var(--error)'; msg.textContent = data.error || 'Error'; return; }
+    msg.style.color = 'var(--green)'; msg.textContent = editId ? 'Artista actualizado ✓' : 'Artista creado ✓';
+    setTimeout(() => { document.getElementById('artist-form-wrap').style.display = 'none'; msg.textContent = ''; }, 1200);
+    await loadArtists();
+  });
+
+  document.getElementById('btn-load-assignment').addEventListener('click', async () => {
+    const eventId = document.getElementById('assign-event-select').value;
+    if (!eventId) return;
+    await loadAssignmentArea(eventId);
+  });
+}
+
+
+
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </body>

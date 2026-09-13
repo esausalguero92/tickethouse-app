@@ -11,20 +11,16 @@ const helmetMiddleware = helmet({
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'", "'unsafe-inline'",
-        'https://www.paypal.com', 'https://*.paypal.com',
-        'https://www.sandbox.paypal.com', 'https://*.sandbox.paypal.com',
-        'https://www.paypalobjects.com',
-        'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net',
+        'https://cdn.jsdelivr.net',        // Recurrente checkout SDK
         'https://cdnjs.cloudflare.com',
+        'https://fonts.googleapis.com',
         'https://www.googletagmanager.com',
       ],
       scriptSrcElem: [
         "'self'", "'unsafe-inline'",
-        'https://www.paypal.com', 'https://*.paypal.com',
-        'https://www.sandbox.paypal.com', 'https://*.sandbox.paypal.com',
-        'https://www.paypalobjects.com',
-        'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net',
+        'https://cdn.jsdelivr.net',
         'https://cdnjs.cloudflare.com',
+        'https://fonts.googleapis.com',
         'https://www.googletagmanager.com',
       ],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
@@ -32,16 +28,14 @@ const helmetMiddleware = helmet({
       imgSrc: ["'self'", 'data:', 'https:', 'https://*.google-analytics.com', 'https://www.googletagmanager.com'],
       connectSrc: [
         "'self'",
-        'https://api-m.paypal.com', 'https://api-m.sandbox.paypal.com',
-        'https://*.paypal.com', 'https://*.sandbox.paypal.com',
+        'https://app.recurrente.com',      // Recurrente API (iframe calls)
         env.SUPABASE_URL || '',
         'https://*.google-analytics.com',
         'https://*.analytics.google.com',
         'https://www.googletagmanager.com',
       ],
       frameSrc: [
-        'https://www.paypal.com', 'https://www.sandbox.paypal.com',
-        'https://*.paypal.com', 'https://*.sandbox.paypal.com',
+        'https://app.recurrente.com',      // Recurrente checkout iframe
       ],
       objectSrc: ["'none'"],
       scriptSrcAttr: ["'unsafe-inline'"],

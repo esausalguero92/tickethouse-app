@@ -1,107 +1,917 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N6RVQBJ1HJ"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-N6RVQBJ1HJ');
-    </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-N6RVQBJ1HJ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-N6RVQBJ1HJ');
+  </script>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#050505"/>
-  <title>Party House</title>
+  <title>TicketHouse — Eventos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/css/tokens.css"/>
-  <link rel="stylesheet" href="/css/components.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; background: #000; overflow: hidden; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
 
-    /* Flyer cubre toda la pantalla */
-    .flyer {
+    :root {
+      --bg: #050505;
+      --surface: #111111;
+      --surface2: #1a1a1a;
+      --border: rgba(255,255,255,.08);
+      --accent: #4F7CFF;
+      --accent2: #A855F7;
+      --text: #ffffff;
+      --text-muted: rgba(255,255,255,.9);
+      --text-dim: rgba(255,255,255,.75);
+      --card-radius: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ─── TOPBAR ───────────────────────────────────────────────── */
+    .topbar {
       position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      background: rgba(5,5,5,.7);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      transition: background .3s;
+    }
+
+    .topbar__logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: .15em;
+      color: var(--text);
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .topbar__tag {
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    /* ─── HERO ─────────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      min-height: 100dvh;
+      display: flex;
+      align-items: flex-end;
+      padding-bottom: 80px;
+      overflow: hidden;
+    }
+
+    /* Static hero background — /img/landing.png */
+    .hero::before {
+      content: '';
+      position: absolute;
       inset: 0;
+      background-image: url('/img/landing.png');
+      background-size: cover;
+      background-position: center 30%;
+      transition: opacity .8s;
+    }
+
+    /* Gradient overlay — always on top of photo */
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(0deg,
+          rgba(5,5,5,1) 0%,
+          rgba(5,5,5,.75) 35%,
+          rgba(5,5,5,.3) 65%,
+          rgba(5,5,5,.55) 100%
+        );
+    }
+
+    /* CSS atmosphere when no photo */
+    .hero__atmo {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .hero__orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .35;
+    }
+
+    .hero__orb--1 {
+      width: 700px; height: 700px;
+      top: -200px; left: -200px;
+      background: radial-gradient(circle, #1D4FFF 0%, transparent 70%);
+    }
+
+    .hero__orb--2 {
+      width: 500px; height: 500px;
+      top: -100px; right: -100px;
+      background: radial-gradient(circle, #5D2D91 0%, transparent 70%);
+      opacity: .28;
+    }
+
+    .hero__orb--3 {
+      width: 400px; height: 400px;
+      bottom: 10%; left: 30%;
+      background: radial-gradient(circle, #FF2E9A 0%, transparent 70%);
+      opacity: .18;
+    }
+
+    .hero__content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      padding: 0 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .hero__eyebrow {
+      font-size: 11px;
+      letter-spacing: .32em;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hero__eyebrow::before {
+      content: '';
+      display: block;
+      width: 28px; height: 1px;
+      background: rgba(255,255,255,.3);
+    }
+
+    .hero__title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(64px, 10vw, 136px);
+      line-height: .9;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 28px;
+    }
+
+    .hero__sub {
+      font-size: 15px;
+      color: #fff;
+      font-weight: 300;
+      letter-spacing: .02em;
+    }
+
+    .hero__scroll {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero__scroll-label {
+      font-size: 9px;
+      letter-spacing: .3em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .hero__scroll-arrow {
+      width: 24px; height: 24px;
+      border-right: 1px solid rgba(255,255,255,.2);
+      border-bottom: 1px solid rgba(255,255,255,.2);
+      transform: rotate(45deg);
+      animation: arrowBounce 1.6s ease-in-out infinite;
+    }
+
+    @keyframes arrowBounce {
+      0%, 100% { transform: rotate(45deg) translateY(0); opacity: .4; }
+      50% { transform: rotate(45deg) translateY(5px); opacity: .9; }
+    }
+
+    /* ─── EVENTS SECTION ───────────────────────────────────────── */
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 32px 100px;
+    }
+
+    .section__header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 56px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .section__title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      letter-spacing: .08em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .section__count {
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding-bottom: 6px;
+    }
+
+    /* ─── EVENT CARDS ──────────────────────────────────────────── */
+    .ev-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    /* First card = featured (full width) */
+    .ev-card--featured {
+      /* no wider than other cards */
+    }
+
+    .ev-card {
+      background: #0d0d0d;
+      border-radius: 4px;
+      overflow: hidden;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      transition: transform .2s ease, opacity .2s;
+    }
+
+    .ev-card:hover {
+      transform: translateY(-4px);
+      opacity: .88;
+    }
+
+    /* Regular card: portrait ratio */
+    .ev-card__media {
+      position: relative;
+      aspect-ratio: 3/4;
+      overflow: hidden;
+      background: #111;
+    }
+
+    /* Featured card: landscape */
+    
+
+    .ev-card__img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center center;
-      z-index: 1;
-    }
-
-    /* CTA - desktop */
-    .cta-wrap {
-      position: fixed;
-      z-index: 20;
-      top: 65%;
-      left: 22%;
-      transform: translateX(-50%);
-      width: 61.3%;
-      max-width: 640px;
-    }
-
-    .cta-btn {
+      transition: transform .5s ease;
       display: block;
+    }
+
+    .ev-card:hover .ev-card__img {
+      transform: scale(1.04);
+    }
+
+    /* Placeholder when no image */
+    .ev-card__placeholder {
       width: 100%;
-      padding: 20px 25px;
-      background: linear-gradient(90deg, #1D4FFF 0%, #5D2D91 50%, #FF2E9A 100%);
-      border: none;
-      border-radius: 6px;
-      color: #fff;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #111 0%, #1a1a2e 100%);
+    }
+
+    .ev-card__placeholder-text {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(14px, 1.7vw, 20px);
-      letter-spacing: .13em;
+      font-size: clamp(20px, 5vw, 36px);
+      letter-spacing: .12em;
+      color: rgba(255,255,255,.08);
       text-transform: uppercase;
       text-align: center;
-      text-decoration: none;
-      cursor: pointer;
-      transition: opacity .15s, transform .15s;
-      box-shadow: 0 0 24px rgba(29,79,255,.4), 0 0 48px rgba(255,46,154,.2);
+      padding: 16px;
     }
-    .cta-btn:hover  { opacity: .88; transform: translateY(-1px); }
-    .cta-btn:active { opacity: 1;   transform: translateY(0); }
 
-    /* Mobile */
-    @media (max-width: 640px) {
-      html, body { overflow: auto; height: auto; }
+    /* Sold out overlay */
+    .ev-card__sold-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(5,5,5,.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-      .flyer {
-        position: relative;
-        display: block;
-        width: 100%;
-        height: auto;
-        object-fit: contain;
-        content: url('/img/vertical.png');
+    .ev-card__sold-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: .22em;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.15);
+      padding: 8px 24px;
+      border-radius: 4px;
+      transform: rotate(-15deg);
+    }
+
+    /* Card info — BELOW image (xceed style) */
+    .ev-card__info {
+      padding: 12px 12px 14px;
+    }
+
+    .ev-card__date {
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+
+    .ev-card__name {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      color: #fff;
+      line-height: 1.25;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .ev-card--featured .ev-card__name {
+      font-size: 20px;
+    }
+
+    .ev-card__venue {
+      font-size: 12px;
+      color: #fff;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* xceed-style white button */
+    .ev-card__price-btn {
+      display: inline-block;
+      background: #fff;
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: 7px 16px;
+      border-radius: 2px;
+      line-height: 1;
+    }
+
+    .ev-card__price-btn--sold {
+      background: rgba(255,255,255,.1);
+      color: #fff;
+    }
+
+    /* ─── STATES ────────────────────────────────────────────────── */
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 24px;
+      gap: 16px;
+    }
+
+    .state-spinner {
+      width: 40px; height: 40px;
+      border: 2px solid rgba(79,124,255,.2);
+      border-top-color: #4F7CFF;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .state-icon {
+      font-size: 40px;
+      opacity: .3;
+    }
+
+    .state-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: .1em;
+      color: #fff;
+    }
+
+    .state-sub {
+      font-size: 13px;
+      color: #fff;
+    }
+
+    /* ─── FOOTER ────────────────────────────────────────────────── */
+    .footer {
+      border-top: 1px solid var(--border);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .footer__text {
+      font-size: 12px;
+      color: #fff;
+      letter-spacing: .06em;
+    }
+
+    /* ─── RESPONSIVE ────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .ev-grid {
+        grid-template-columns: repeat(3, 1fr);
       }
+    }
 
-      .cta-wrap {
-        position: relative;
-        top: auto;
-        left: auto;
-        transform: none;
-        width: 85%;
-        max-width: none;
-        margin: -20px 0 32px 8%;
+    @media (max-width: 720px) {
+      .ev-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
       }
+    }
 
-      .cta-btn {
-        font-size: 14px;
-        padding: 13px;
+    @media (max-width: 600px) {
+      .topbar { padding: 16px 20px; }
+      .hero__content { padding: 0 20px; }
+      .hero__title { font-size: clamp(52px, 14vw, 72px); }
+      .section { padding: 0 20px 80px; }
+      .section__header { padding: 40px 0 24px; }
+      .section__title { font-size: 36px; }
+      .ev-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
       }
+      /* .ev-card--featured: no span on mobile either */
+    }
+
+    /* ─── INFO SECTIONS ─────────────────────────────────────────── */
+    .info-sections {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .info-card {
+      border-radius: 16px;
+      padding: 10px 48px;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .info-card--buyers {
+      background: linear-gradient(135deg, #0d1117 0%, #111827 100%);
+      border: 1px solid rgba(79,124,255,.2);
+    }
+
+    .info-card--organizers {
+      background: linear-gradient(135deg, #0d0d18 0%, #1a0d2e 100%);
+      border: 1px solid rgba(168,85,247,.25);
+    }
+
+    .info-card__glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    .info-card--buyers .info-card__glow {
+      width: 400px; height: 400px;
+      top: -100px; right: -100px;
+      background: radial-gradient(circle, rgba(79,124,255,.15) 0%, transparent 70%);
+    }
+
+    .info-card--organizers .info-card__glow {
+      width: 300px; height: 300px;
+      bottom: -80px; left: -80px;
+      background: radial-gradient(circle, rgba(168,85,247,.2) 0%, transparent 70%);
+    }
+
+    .info-card__tag {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 28px;
+      font-weight: 600;
+    }
+
+    .info-card--buyers .info-card__tag {
+      background: rgba(79,124,255,.12);
+      color: #7BA3FF;
+      border: 1px solid rgba(79,124,255,.25);
+    }
+
+    .info-card--organizers .info-card__tag {
+      background: rgba(168,85,247,.12);
+      color: #C084FC;
+      border: 1px solid rgba(168,85,247,.25);
+    }
+
+    .info-card__title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px;
+      letter-spacing: .06em;
+      line-height: 1;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .info-card__body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255,255,255,.65);
+      margin-bottom: 10px;
+    }
+
+    .info-card__features {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+
+    .info-card__feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      color: rgba(255,255,255,.8);
+      line-height: 1.5;
+    }
+
+    .info-card__feature-icon {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+
+    .info-card--buyers .info-card__feature-icon {
+      background: rgba(79,124,255,.18);
+      color: #7BA3FF;
+    }
+
+    .info-card--organizers .info-card__feature-icon {
+      background: rgba(168,85,247,.18);
+      color: #C084FC;
+    }
+
+    .info-card__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-decoration: none;
+      transition: opacity .2s, transform .2s;
+    }
+
+    .info-card__cta:hover { opacity: .85; transform: translateY(-1px); }
+
+    .info-card--buyers .info-card__cta {
+      background: rgba(79,124,255,.15);
+      border: 1px solid rgba(79,124,255,.4);
+      color: #7BA3FF;
+    }
+
+    .info-card--organizers .info-card__cta {
+      background: rgba(168,85,247,.15);
+      border: 1px solid rgba(168,85,247,.4);
+      color: #C084FC;
+    }
+
+    .info-card__commission {
+      margin-bottom: 10px;
+      padding: 8px 16px;
+      background: rgba(168,85,247,.08);
+      border: 1px solid rgba(168,85,247,.2);
+      border-radius: 12px;
+    }
+
+    .info-card__commission-label {
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.4);
+      margin-bottom: 6px;
+    }
+
+    .info-card__commission-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: .04em;
+      color: #C084FC;
+      line-height: 1;
+    }
+
+    .info-card__commission-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,.4);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 860px) {
+      .info-sections { grid-template-columns: 1fr; }
+      .info-card { padding: 18px 28px; gap: 28px; }
+      .info-card__title { font-size: 32px; }
+      .info-card__commission-value { font-size: 40px; }
+    }
+
+    @media (max-width: 700px) {
+      .info-sections { padding: 0 16px 80px; gap: 16px; }
+      .info-card { padding: 24px 20px; grid-template-columns: 1fr; gap: 20px; }
+      .info-card__title { font-size: 28px; }
+      .info-card__commission-value { font-size: 36px; }
+      .info-card__body { font-size: 13px; }
     }
   </style>
 </head>
 <body>
 
-  <img class="flyer" src="/img/horizontal.png" alt="Party House"/>
+  <!-- Topbar -->
+  <header class="topbar">
+    <a href="/" class="topbar__logo">TicketHouse</a>
+    <span class="topbar__tag">Guatemala</span>
+  </header>
 
-  <div class="cta-wrap">
-    <a href="/evento.html?c=PH586" class="cta-btn">CONSEGUIR MI ENTRADA &rarr;</a>
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero__atmo" aria-hidden="true">
+      <div class="hero__orb hero__orb--1"></div>
+      <div class="hero__orb hero__orb--2"></div>
+      <div class="hero__orb hero__orb--3"></div>
+    </div>
+
+    <div class="hero__content">
+      <p class="hero__eyebrow">Próximos eventos</p>
+      <h1 class="hero__title">Tu entrada,<br/>sin complicaciones.</h1>
+      <p class="hero__sub">Comprá tus boletos de forma segura &mdash; llegan directo a tu correo.</p>
+    </div>
+
+    <div class="hero__scroll" aria-hidden="true">
+      <span class="hero__scroll-label">Explorar</span>
+      <div class="hero__scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- Events section -->
+  <main>
+    <div class="section">
+      <div class="section__header">
+        <h2 class="section__title">Eventos</h2>
+        <span class="section__count" id="ev-count">&nbsp;</span>
+      </div>
+
+      <!-- Loading -->
+      <div id="state-loading" class="state-box">
+        <div class="state-spinner"></div>
+      </div>
+
+      <!-- Grid -->
+      <div id="ev-grid" class="ev-grid" hidden></div>
+
+      <!-- Empty -->
+      <div id="state-empty" class="state-box" hidden>
+        <div class="state-icon">🎟️</div>
+        <p class="state-title">Sin eventos por ahora</p>
+        <p class="state-sub">Volvé pronto para ver los próximos eventos.</p>
+      </div>
+
+      <!-- Error -->
+      <div id="state-error" class="state-box" hidden>
+        <div class="state-icon">⚠️</div>
+        <p class="state-title">Error al cargar</p>
+        <p class="state-sub">No se pudieron cargar los eventos. Intentá más tarde.</p>
+      </div>
+    </div>
+  </main>
+
+
+  <!-- ─── INFO SECTIONS ───────────────────────────────────────── -->
+  <div class="info-sections">
+
+    <!-- Compradores -->
+    <div class="info-card info-card--buyers">
+      <div class="info-card__glow"></div>
+      <span class="info-card__tag">Para compradores</span>
+      <h2 class="info-card__title">Comprá con total confianza</h2>
+      <p class="info-card__body">TicketHouse es la plataforma de tickets más segura de Guatemala. Tu entrada llega directo a tu correo con código QR único y verificable en puerta.</p>
+      <div class="info-card__features">
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Pago 100% seguro</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Tu entrada llega al instante a tu correo</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Código QR único — no se puede duplicar ni falsificar</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Sin cuentas, sin apps — comprás como invitado</span>
+        </div>
+      </div>
+      <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;" class="info-card__cta">Ver eventos →</a>
+    </div>
+
+    <!-- Organizadores -->
+    <div class="info-card info-card--organizers">
+      <div class="info-card__glow"></div>
+      <span class="info-card__tag">Para organizadores</span>
+      <h2 class="info-card__title">Vendé más, pagá menos</h2>
+      <p class="info-card__body">La comisión más baja del mercado guatemalteco. Sin mensualidades, sin contratos. Solo pagás cuando vendés.</p>
+      <div class="info-card__commission">
+        <p class="info-card__commission-label">Comisión por boleto vendido</p>
+        <p class="info-card__commission-value">La más baja</p>
+        <p class="info-card__commission-sub">Sin costos fijos · Sin sorpresas</p>
+      </div>
+      <div class="info-card__features">
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Panel de admin con ventas en tiempo real</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Validador de QR para tu equipo en puerta</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Cortesías ilimitadas sin costo adicional</span>
+        </div>
+        <div class="info-card__feature">
+          <span class="info-card__feature-icon">✓</span>
+          <span>Soporte directo — hablás con quien construyó la plataforma</span>
+        </div>
+      </div>
+      <a href="mailto:contacto@tickethouse.gt" class="info-card__cta">Escribinos al correo →</a>
+    </div>
+
   </div>
 
+  <footer class="footer">
+    <p class="footer__text">© 2025 TicketHouse · tickethouse.gt</p>
+  </footer>
+
+  <script>
+  'use strict';
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escAttr(s) {
+    return String(s ?? '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString('es-GT', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch { return ''; }
+  }
+
+  function isSoldOut(ev) {
+    if (ev.capacity == null) return false;
+    return (ev.tickets_sold || 0) >= ev.capacity;
+  }
+
+  function buildCard(ev, featured) {
+    const soldOut = isSoldOut(ev);
+    const url = `/evento.html?id=${escAttr(ev.id)}`;
+    const cls = `ev-card${featured ? ' ev-card--featured' : ''}`;
+    const tag = soldOut ? 'div' : 'a';
+    const href = soldOut ? '' : `href="${url}"`;
+
+    const media = ev.image_url
+      ? `<img class="ev-card__img" src="${escAttr(ev.image_url)}" alt="${escAttr(ev.name)}" loading="lazy"/>`
+      : `<div class="ev-card__placeholder"><span class="ev-card__placeholder-text">${esc(ev.name.slice(0, 16).toUpperCase())}</span></div>`;
+
+    const soldOverlay = soldOut
+      ? `<div class="ev-card__sold-overlay"><span class="ev-card__sold-label">Agotado</span></div>`
+      : '';
+
+    const priceBtn = soldOut
+      ? `<span class="ev-card__price-btn ev-card__price-btn--sold">Agotado</span>`
+      : `<span class="ev-card__price-btn">Desde Q${Number(ev.price_gtq || 0).toFixed(0)}</span>`;
+
+    return `
+      <${tag} class="${cls}" ${href}>
+        <div class="ev-card__media">
+          ${media}
+          ${soldOverlay}
+        </div>
+        <div class="ev-card__info">
+          <p class="ev-card__date">${esc(fmtDate(ev.event_date))}</p>
+          <h3 class="ev-card__name">${esc(ev.name)}</h3>
+          <p class="ev-card__venue">${esc(ev.venue || '')}</p>
+          ${priceBtn}
+        </div>
+      </${tag}>`;
+  }
+
+  async function loadEvents() {
+    try {
+      // Timeout de 12 segundos para no quedarse colgado
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+
+      let res;
+      try {
+        res = await fetch('/api/events/active', { signal: ctrl.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+
+      console.log('[events] status:', res.status);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      const body = await res.json();
+      console.log('[events] body:', body);
+      const events = body.events;
+
+      document.getElementById('state-loading').hidden = true;
+
+      if (!events || events.length === 0) {
+        document.getElementById('state-empty').hidden = false;
+        return;
+      }
+
+      // Dim CSS orbs since we have a real background photo
+      const atmo = document.querySelector('.hero__atmo');
+      if (atmo) atmo.style.opacity = '0.15';
+
+      // Render count
+      document.getElementById('ev-count').textContent =
+        events.length + ' evento' + (events.length === 1 ? '' : 's');
+
+      const grid = document.getElementById('ev-grid');
+      grid.innerHTML = events.map(ev => buildCard(ev, false)).join('');
+      grid.hidden = false;
+
+    } catch (err) {
+      console.error('[events] error cargando eventos:', err.message || err);
+      document.getElementById('state-loading').hidden = true;
+      document.getElementById('state-error').hidden = false;
+    }
+  }
+
+  loadEvents();
+  </script>
 </body>
 </html>

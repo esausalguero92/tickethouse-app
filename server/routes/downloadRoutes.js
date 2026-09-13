@@ -1,26 +1,35 @@
 'use strict';
 /**
- * Party House — Descarga segura de tickets
+ * TicketHouseV2 — Descarga segura de tickets
  *
- * GET /api/download/order/:token      → Info de la orden (tickets) por download token
- * GET /api/download/ticket/:token/:correlative → Descargar PDF de 1 ticket
+ * GET /api/download/order/:token             → Info de la orden (tickets) por download token
+ * GET /api/download/ticket/:token/:code      → Descargar PDF de 1 ticket
+ *
+ * :code acepta AMBOS formatos:
+ *   Legacy: TH-PH001
+ *   Nuevo:  TH-BLG-482719
  *
  * Los tokens son JWT firmados con exp de 24h.
  * Nunca exponer el order_id directamente en URLs predecibles.
  */
 
 const { Router } = require('express');
-const { param } = require('express-validator');
 const { getSupabase } = require('../db/supabase');
-// QrService se importa dentro de cada handler (verifyToken)
 const { generateTicketPdf } = require('../services/PdfService');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { downloadLimiter } = require('../middleware/security');
 
 const router = Router();
 
+// Patrones de código válido (legacy + nuevo)
+const LEGACY_CODE_RE = /^TH-PH\d+$/;
+const NEW_CODE_RE    = /^TH-[A-Z]{2,4}-\d{6}$/;
+
+function isValidTicketCode(code) {
+  return LEGACY_CODE_RE.test(code) || NEW_CODE_RE.test(code);
+}
+
 // ── GET /api/download/order/:token ────────────────────────────────
-// Retorna los tickets de una orden (para /ticket.html)
 router.get('/order/:token',
   downloadLimiter,
   asyncHandler(async (req, res) => {
@@ -33,22 +42,20 @@ router.get('/order/:token',
     const supabase = getSupabase();
     const { data, error } = await supabase.rpc('rpc_get_order_tickets', {
       p_order_id: payload.oid,
-      p_token: req.params.token,
+      p_token:    req.params.token,
     });
 
     if (error || !data || data.error) {
-      return res.status(404).json({ error: data?.error || 'order_not_found' });
+      return res.status(404).json({ error: data && data.error ? data.error : 'order_not_found' });
     }
 
     return res.json(data);
   })
 );
 
-// ── GET /api/download/ticket/:token/:correlative → PDF ────────────
-// Descarga el PDF de un ticket individual.
-// :token = download token JWT (verifica acceso a la orden)
-// :correlative = TH-PH001 (qué ticket específico descargar)
-router.get('/ticket/:token/:correlative',
+// ── GET /api/download/ticket/:token/:code → PDF ───────────────────
+// :code puede ser TH-PH001 (legacy) o TH-BLG-482719 (nuevo)
+router.get('/ticket/:token/:code',
   downloadLimiter,
   asyncHandler(async (req, res) => {
     const { verifyTokenStrict: verifyToken } = require('../services/QrService');
@@ -57,20 +64,33 @@ router.get('/ticket/:token/:correlative',
       return res.status(401).json({ error: 'token_invalid_or_expired' });
     }
 
-    const correlative = req.params.correlative.toUpperCase().trim();
-    if (!/^TH-PH\d+$/.test(correlative)) {
-      return res.status(400).json({ error: 'correlative_invalid' });
+    const code = req.params.code.toUpperCase().trim();
+
+    if (!isValidTicketCode(code)) {
+      return res.status(400).json({ error: 'code_invalid' });
     }
 
     const supabase = getSupabase();
 
-    // Buscar el ticket (verificar que pertenece a la orden del token)
-    const { data: ticket, error } = await supabase
-      .from('tickets')
-      .select('id, correlative_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue), buyer:buyers(full_name)')
-      .eq('correlative_code', correlative)
-      .eq('order_id', payload.oid)
-      .maybeSingle();
+    // Buscar ticket por correlative_code (legacy) o public_code (nuevo)
+    let ticketQuery;
+    if (LEGACY_CODE_RE.test(code)) {
+      ticketQuery = supabase
+        .from('tickets')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue), buyer:buyers(full_name)')
+        .eq('correlative_code', code)
+        .eq('order_id', payload.oid)
+        .maybeSingle();
+    } else {
+      ticketQuery = supabase
+        .from('tickets')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue), buyer:buyers(full_name)')
+        .eq('public_code', code)
+        .eq('order_id', payload.oid)
+        .maybeSingle();
+    }
+
+    const { data: ticket, error } = await ticketQuery;
 
     if (error || !ticket) {
       return res.status(404).json({ error: 'ticket_not_found' });
@@ -79,18 +99,21 @@ router.get('/ticket/:token/:correlative',
       return res.status(410).json({ error: 'ticket_revoked' });
     }
 
-    // Generar PDF
+    // Código visible en el PDF: preferir public_code, caer a correlative_code
+    const displayCode = ticket.public_code || ticket.correlative_code;
+
     const pdfBuffer = await generateTicketPdf({
+      publicCode:      ticket.public_code,
       correlativeCode: ticket.correlative_code,
       qrToken:         ticket.qr_token,
-      eventName:       ticket.event?.name || 'Party House',
-      eventDate:       ticket.event?.event_date || null,
-      eventVenue:      ticket.event?.venue || '',
-      buyerName:       ticket.buyer?.full_name || '',
+      eventName:       ticket.event ? ticket.event.name       : 'TicketHouse',
+      eventDate:       ticket.event ? ticket.event.event_date : null,
+      eventVenue:      ticket.event ? ticket.event.venue      : '',
+      buyerName:       ticket.buyer ? ticket.buyer.full_name  : '',
     });
 
     res.set('Content-Type', 'application/pdf');
-    res.set('Content-Disposition', `attachment; filename="ticket-${correlative}.pdf"`);
+    res.set('Content-Disposition', `attachment; filename="ticket-${displayCode}.pdf"`);
     res.set('Cache-Control', 'private, max-age=3600');
     res.end(pdfBuffer);
   })

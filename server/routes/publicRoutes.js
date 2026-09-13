@@ -48,27 +48,11 @@ router.get('/event/:code',
 // ── GET /api/public-config ────────────────────────────────────────
 router.get('/public-config', (_, res) => {
   res.json({
-    paypal_client_id: env.PAYPAL_CLIENT_ID || '',
-    paypalClientId:   env.PAYPAL_CLIENT_ID || '',
-    paypal_currency:  'USD',
+    payment_gateway: 'recurrente',
   });
 });
 
-// ── GET /api/transfer/info ────────────────────────────────────────
-// Devuelve campos individuales que evento.html muestra al comprador
-router.get('/transfer/info', (_, res) => {
-  // Soporte para BANK_DETAILS legacy "Banco · Cuenta"
-  const raw = env.BANK_DETAILS || '';
-  const parts = raw.split('·').map(s => s.trim());
 
-  res.json({
-    bank:         env.TRANSFER_BANK         || parts[0] || 'Consulta al organizador',
-    account:      env.TRANSFER_ACCOUNT      || parts[1] || '—',
-    name:         env.TRANSFER_ACCOUNT_NAME || 'Party House',
-    concept:      'Party House — Entrada',
-    bank_details: raw,
-  });
-});
 
 // ── GET /api/health ───────────────────────────────────────────────
 router.get('/health', (_, res) => {
@@ -155,6 +139,94 @@ router.post('/code/redeem',
     });
 
     return res.json({ ok: true, token: result.downloadToken });
+  })
+);
+
+// ── GET /api/events/active ───────────────────────────────────────
+// Lista eventos activos para la landing pública (index.html)
+router.get('/events/active',
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('events')
+      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, image_url, images, description')
+      .eq('active', true)
+      .order('event_date', { ascending: true });
+
+    if (error) return res.status(500).json({ error: 'db_error' });
+    return res.json({ events: data || [] });
+  })
+);
+
+// ── GET /api/events/:id ─────────────────────────────────────────
+router.get('/events/:id',
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('events')
+      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, image_url, images, description, code_prefix')
+      .eq('id', req.params.id)
+      .eq('active', true)
+      .single();
+
+    if (error || !data) return res.status(404).json({ message: 'Evento no encontrado' });
+
+    // Buscar event_code asociado para el flujo de pago
+    const { data: ecData } = await supabase
+      .from('event_codes')
+      .select('id')
+      .eq('event_id', data.id)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle();
+
+    // Fetch artists assigned to this event
+    const { data: artistsData } = await supabase
+      .from('event_artists')
+      .select('role, sort_order, artist:artists(id, name, bio, genres, photo_url, instagram)')
+      .eq('event_id', data.id)
+      .order('sort_order', { ascending: true });
+
+    const artists = (artistsData || []).map(row => ({
+      ...row.artist,
+      role: row.role,
+      sort_order: row.sort_order,
+    }));
+
+    return res.json({ event: data, event_code_id: ecData ? ecData.id : null, artists });
+  })
+);
+
+
+// ── GET /api/order-status/:orderId ─────────────────────────────────
+// Polling endpoint — ticket.html uses this after Recurrente checkout.
+// Returns { status } always; adds download_token only when order is paid.
+// UUID is 128-bit random — safe to expose token on match.
+router.get('/order-status/:orderId',
+  asyncHandler(async (req, res) => {
+    const { orderId } = req.params;
+
+    // Basic UUID format guard
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId)) {
+      return res.status(400).json({ error: 'invalid_id' });
+    }
+
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, payment_status')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: 'not_found' });
+
+    if (data.payment_status === 'paid') {
+      const { generateDownloadToken } = require('../services/QrService');
+      const download_token = generateDownloadToken(orderId);
+      return res.json({ status: 'paid', download_token });
+    }
+
+    return res.json({ status: data.payment_status });
   })
 );
 

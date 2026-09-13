@@ -2,44 +2,20 @@
 
 const { Router } = require('express');
 const { body } = require('express-validator');
-const multer = require('multer');
 const { getSupabase } = require('../db/supabase');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validateRequest, purchaseLimiter, paymentLimiter } = require('../middleware/security');
 const { issueTickets } = require('../services/TicketService');
-const { notifyNewTransfer } = require('../services/TelegramService');
+const { notifyNewOrder } = require('../services/TelegramService');
+const { createCheckout, verifyWebhookSignature } = require('../services/RecurrenteService');
 const env = require('../config/env');
 
 const router = Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: env.MAX_UPLOAD_BYTES },
-  fileFilter: (_req, file, cb) => {
-    const ok = /^(image\/(jpeg|png|webp|heic|heif)|application\/pdf)$/.test(file.mimetype);
-    if (!ok) { const e = new Error('file_type_not_allowed'); e.code = 'FILE_TYPE'; return cb(e); }
-    cb(null, true);
-  },
-});
-
-const uploadReceipt = upload.fields([
-  { name: 'comprobante', maxCount: 1 },
-  { name: 'proof',       maxCount: 1 },
-]);
-
-async function paypalToken() {
-  if (!env.hasPayPal) throw Object.assign(new Error('PayPal no configurado.'), { status: 503 });
-  const basic = Buffer.from(`${env.PAYPAL_CLIENT_ID}:${env.PAYPAL_CLIENT_SECRET}`).toString('base64');
-  const r = await fetch(`${env.PAYPAL_BASE}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=client_credentials',
-  });
-  const j = await r.json();
-  if (!r.ok) throw new Error(j.error_description || 'paypal_auth_failed');
-  return j.access_token;
-}
-
+// ── POST /api/payment/intent ──────────────────────────────────────
+// Crea la orden pendiente en BD (RPC atómica).
+// El backend es la autoridad: precio, cantidad, descuento, evento.
+// El frontend recibe order_id + total_gtq para mostrar checkout.
 router.post('/payment/intent',
   purchaseLimiter,
   body('event_code_id').custom(v => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)).withMessage('event_code_id invalido'),
@@ -47,7 +23,7 @@ router.post('/payment/intent',
   body('email').trim().isEmail().normalizeEmail().withMessage('Email invalido'),
   body('quantity').custom(v => {
     const n = parseInt(v, 10);
-    if (isNaN(n) || n < 1 || n > 20) throw new Error('Cantidad invalida (1-20)');
+    if (isNaN(n) || n < 1 || n > 10) throw new Error('Cantidad invalida (1-10)');
     return true;
   }),
   body('age_verified').custom(v => {
@@ -79,6 +55,7 @@ router.post('/payment/intent',
     });
 
     if (error) { console.error('[payment.intent]', error); return res.status(500).json({ error: 'db_error' }); }
+    console.log('[payment.intent] rpc result:', JSON.stringify(data));
     if (data && data.error) {
       const statusMap = {
         age_not_verified: 400, terms_not_accepted: 400, quantity_invalid: 400,
@@ -91,7 +68,11 @@ router.post('/payment/intent',
   })
 );
 
-router.post('/paypal/create-order',
+// ── POST /api/payment/recurrente/checkout ─────────────────────────
+// Crea el checkout en Recurrente y retorna checkout_url al frontend.
+// El frontend embebe el checkout_url en un iframe (NO redirige).
+// La clave RECURRENTE_SECRET_KEY NUNCA llega al cliente.
+router.post('/payment/recurrente/checkout',
   paymentLimiter,
   body('order_id').isUUID().withMessage('order_id invalido'),
   validateRequest,
@@ -99,159 +80,173 @@ router.post('/paypal/create-order',
     const supabase = getSupabase();
     const { order_id } = req.body;
 
+    // Verificar que la orden existe, está pendiente y obtener detalles
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, event_id, quantity, amount_usd, payment_status, buyer_name, event:events(name)')
-      .eq('id', order_id).eq('payment_status', 'pending').maybeSingle();
+      .select('id, payment_status, quantity, amount_usd, discount_amount_usd, buyer_name, buyer_email, event:events(name, code_prefix, price_gtq)')
+      .eq('id', order_id)
+      .eq('payment_status', 'pending')
+      .maybeSingle();
 
-    if (oErr || !order) return res.status(404).json({ error: 'order_not_found_or_not_pending' });
+    if (oErr || !order) {
+      console.error('[payment.checkout] order lookup failed:', oErr?.message, 'order:', order);
+      return res.status(404).json({ error: 'order_not_found_or_not_pending' });
+    }
 
-    const accessToken = await paypalToken();
-    const ppRes = await fetch(`${env.PAYPAL_BASE}/v2/checkout/orders`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        intent: 'CAPTURE',
-        purchase_units: [{
-          reference_id: order.id,
-          description: `${order.event && order.event.name ? order.event.name : 'Party House'} - ${order.quantity} entradas`,
-          amount: { currency_code: 'USD', value: Number(order.amount_usd).toFixed(2) },
-        }],
-      }),
-    });
+    // El backend calcula el precio — nunca confiar en el frontend
+    const unitPriceGtq  = Math.round((order.event && order.event.price_gtq ? order.event.price_gtq : 0) * 100);
+    const discountGtq   = Math.round((order.discount_amount_usd || 0) * 100);
 
-    const ppBody = await ppRes.json();
-    if (!ppRes.ok) { console.error('[paypal.create]', ppBody); return res.status(502).json({ error: 'paypal_create_failed' }); }
+    let checkoutId, checkoutUrl;
+    try {
+      ({ checkoutId, checkoutUrl } = await createCheckout({
+        orderId:       order_id,
+        eventName:     (order.event && order.event.name) || 'TicketHouse',
+        quantity:      order.quantity,
+        unitPriceGtq,
+        discountAmount: discountGtq,
+        buyerEmail:    order.buyer_email,
+        buyerName:     order.buyer_name,
+      }));
+    } catch (e) {
+      console.error('[payment.recurrente.checkout]', e.message);
+      return res.status(e.status || 502).json({ error: 'checkout_creation_failed', message: e.message });
+    }
 
-    return res.json({ id: ppBody.id, paypal_order_id: ppBody.id, amount_usd: order.amount_usd, quantity: order.quantity });
+    // Guardar checkout_id en la orden para correlacionar con el webhook
+    await supabase
+      .from('orders')
+      .update({ recurrente_checkout_id: checkoutId })
+      .eq('id', order_id);
+
+    // Solo retornar checkout_url — la clave secreta nunca sale al cliente
+    return res.json({ checkout_url: checkoutUrl });
   })
 );
 
-router.post('/paypal/capture-order',
-  paymentLimiter,
-  body('order_id').isUUID().withMessage('order_id invalido'),
-  body('paypal_order_id').notEmpty().withMessage('paypal_order_id requerido'),
-  validateRequest,
+// ── POST /api/webhooks/recurrente ─────────────────────────────────
+// Endpoint de webhook de Recurrente (Svix HMAC-SHA256).
+// Los tickets se emiten AQUÍ, no en el callback del iframe.
+// CRÍTICO: verificar firma antes de cualquier acción.
+router.post('/webhooks/recurrente',
+  // Nota: este endpoint recibe body crudo (raw) — Express debe montarlo con
+  // express.raw({ type: 'application/json' }) ANTES de este router.
+  // Ver server.js: app.use('/api/webhooks/recurrente', express.raw(...), paymentRouter)
   asyncHandler(async (req, res) => {
     const supabase = getSupabase();
-    const { order_id, paypal_order_id } = req.body;
 
-    const { data: order, error: oErr } = await supabase
-      .from('orders')
-      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, amount_usd, payment_status, event:events(name, event_date, venue)')
-      .eq('id', order_id).maybeSingle();
-
-    if (oErr || !order) return res.status(404).json({ error: 'order_not_found' });
-
-    if (order.payment_status === 'paid') {
-      const { generateDownloadToken } = require('../services/QrService');
-      return res.json({ ok: true, download_token: generateDownloadToken(order_id), already_paid: true });
-    }
-    if (order.payment_status !== 'pending') {
-      return res.status(409).json({ error: 'order_not_pending', status: order.payment_status });
+    // 1. Verificar firma Svix (lanza si inválida)
+    let payload;
+    try {
+      payload = verifyWebhookSignature(req.body, req.headers);
+    } catch (e) {
+      console.warn('[webhook.recurrente] Firma inválida:', e.message);
+      return res.status(401).json({ error: 'invalid_signature' });
     }
 
-    const accessToken = await paypalToken();
-    const captureRes = await fetch(`${env.PAYPAL_BASE}/v2/checkout/orders/${paypal_order_id}/capture`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    });
-    const captureBody = await captureRes.json();
-    if (!captureRes.ok || captureBody.status !== 'COMPLETED') {
-      console.error('[paypal.capture]', captureBody);
-      return res.status(502).json({ error: 'paypal_capture_failed' });
-    }
+    // 2. Idempotencia: ignorar eventos ya procesados
+    const svixId = req.headers['svix-id'];
+    if (svixId) {
+      const { data: existing } = await supabase
+        .from('webhook_events')
+        .select('svix_id')
+        .eq('svix_id', svixId)
+        .maybeSingle();
 
-    const { data: confirmData, error: confirmErr } = await supabase.rpc('rpc_confirm_paypal_order', {
-      p_order_id: order_id, p_paypal_order_id: paypal_order_id, p_amount_usd: Number(order.amount_usd),
-    });
-    if (confirmErr || (confirmData && confirmData.error)) {
-      console.error('[paypal.confirm_db]', confirmErr, confirmData);
-      return res.status(500).json({ error: 'db_confirm_failed' });
-    }
-
-    const result = await issueTickets({
-      orderId: order.id, eventId: order.event_id, buyerId: order.buyer_id,
-      buyerName: order.buyer_name, buyerEmail: order.buyer_email, quantity: order.quantity,
-      eventName: order.event && order.event.name ? order.event.name : 'Party House',
-      eventDate: order.event && order.event.event_date ? order.event.event_date : null,
-      eventVenue: order.event && order.event.venue ? order.event.venue : '',
-    });
-
-    return res.json({ ok: true, download_token: result.downloadToken, correlative_codes: result.correlativeCodes, quantity: result.quantity });
-  })
-);
-
-router.post('/transfer/submit',
-  purchaseLimiter,
-  (req, res, next) => {
-    uploadReceipt(req, res, function(err) {
-      if (!err) {
-        req.file = (req.files && req.files.comprobante && req.files.comprobante[0]) ||
-                   (req.files && req.files.proof && req.files.proof[0]) || null;
-        return next();
+      if (existing) {
+        console.log('[webhook.recurrente] Evento duplicado, ignorando:', svixId);
+        return res.json({ ok: true, duplicate: true });
       }
-      if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'file_too_large' });
-      if (err.code === 'FILE_TYPE') return res.status(415).json({ error: 'file_type_not_allowed' });
-      next(err);
-    });
-  },
-  asyncHandler(async (req, res) => {
-    const supabase = getSupabase();
-    const { order_id, reference } = req.body;
-    const file = req.file;
 
-    if (!file) return res.status(400).json({ error: 'proof_required', message: 'Sube el comprobante de pago.' });
-    if (!order_id || !/^[0-9a-f-]{36}$/i.test(order_id)) return res.status(400).json({ error: 'order_id_invalid' });
-
-    const safeRef = (reference || '').slice(0, 120).trim();
-
-    const { data: order, error: oErr } = await supabase
-      .from('orders')
-      .select('id, payment_status, buyer_name, buyer_email, quantity, amount_usd, discount_amount_usd, event:events(name), buyer:buyers(full_name, email), discount_code:discount_codes(code)')
-      .eq('id', order_id).eq('payment_status', 'pending').maybeSingle();
-
-    if (oErr || !order) return res.status(404).json({ error: 'order_not_found_or_not_pending' });
-
-    const ext = (file.mimetype.split('/')[1] || 'bin').replace('jpeg', 'jpg');
-    const objectPath = `${order_id}/${Date.now()}.${ext}`;
-
-    const { error: upErr } = await supabase.storage
-      .from(env.RECEIPTS_BUCKET)
-      .upload(objectPath, file.buffer, { contentType: file.mimetype, upsert: false });
-
-    if (upErr) { console.error('[transfer.storage]', upErr); return res.status(500).json({ error: 'storage_upload_failed' }); }
-
-    const { data: signedData, error: signErr } = await supabase.storage
-      .from(env.RECEIPTS_BUCKET)
-      .createSignedUrl(objectPath, 60 * 60 * 24 * 365);
-
-    if (signErr || !signedData || !signedData.signedUrl) return res.status(500).json({ error: 'storage_sign_failed' });
-
-    const { data: submitData, error: submitErr } = await supabase.rpc('rpc_submit_transfer_order', {
-      p_order_id: order_id, p_reference: safeRef || null, p_receipt_url: signedData.signedUrl,
-    });
-
-    if (submitErr || (submitData && submitData.error)) {
-      console.error('[transfer.rpc]', submitErr, submitData);
-      return res.status(500).json({ error: 'db_transfer_failed' });
+      // Registrar como procesado (antes de emitir tickets para mayor idempotencia)
+      await supabase.from('webhook_events').insert({ svix_id: svixId });
     }
 
-    notifyNewTransfer({
-      fileBuffer: file.buffer,
-      fileName: file.originalname || 'comprobante',
-      mimeType: file.mimetype,
-      buyerName: order.buyer_name || (order.buyer && order.buyer.full_name) || 'Comprador',
-      quantity: order.quantity,
-      eventName: (order.event && order.event.name) || 'Party House',
-      amountUsd: order.amount_usd,
-      reference: safeRef,
-      orderId: order_id,
-      discountCode: order.discount_code && order.discount_code.code ? order.discount_code.code : null,
-      discountAmount: order.discount_amount_usd || null,
-    }).catch(function(e) { console.error('[transfer.notify]', e.message); });
+    const eventType = payload.type;
 
-    return res.json({ ok: true, order_id });
+    // 3. Solo procesar pagos exitosos
+    if (eventType !== 'intent.succeeded' && eventType !== 'payment_intent.succeeded') {
+      console.log('[webhook.recurrente] Evento ignorado:', eventType);
+      return res.json({ ok: true, ignored: eventType });
+    }
+
+    // 4. Extraer order_id desde metadata
+    const intentData = payload.data || payload;
+    const orderId = intentData.metadata && intentData.metadata.order_id;
+    const intentId = intentData.id || intentData.payment_intent_id;
+
+    if (!orderId) {
+      console.error('[webhook.recurrente] Falta metadata.order_id en evento:', svixId);
+      return res.status(400).json({ error: 'missing_order_id' });
+    }
+
+    // 5. Obtener orden y verificar que está pendiente
+    const { data: order, error: oErr } = await supabase
+      .from('orders')
+      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, event:events(name, event_date, venue, code_prefix)')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    if (oErr || !order) {
+      console.error('[webhook.recurrente] Orden no encontrada:', orderId);
+      return res.status(404).json({ error: 'order_not_found' });
+    }
+
+    // Si ya fue pagada (otro webhook duplicado llegó primero)
+    if (order.payment_status === 'paid') {
+      console.log('[webhook.recurrente] Orden ya pagada:', orderId);
+      return res.json({ ok: true, already_paid: true });
+    }
+
+    // 6. Marcar orden como pagada con método recurrente
+    const { error: upErr } = await supabase
+      .from('orders')
+      .update({
+        payment_status:       'paid',
+        payment_method:       'recurrente',
+        paid_at:              new Date().toISOString(),
+        recurrente_intent_id: intentId || null,
+      })
+      .eq('id', orderId)
+      .eq('payment_status', 'pending');
+
+    if (upErr) {
+      console.error('[webhook.recurrente] Error actualizando orden:', upErr.message);
+      return res.status(500).json({ error: 'db_update_failed' });
+    }
+
+    // 7. Emitir tickets (flujo completo: JWT + BD + PDF + email)
+    let result;
+    try {
+      result = await issueTickets({
+        orderId:    order.id,
+        eventId:    order.event_id,
+        buyerId:    order.buyer_id,
+        buyerName:  order.buyer_name,
+        buyerEmail: order.buyer_email,
+        quantity:   order.quantity,
+        eventName:  (order.event && order.event.name)      || 'TicketHouse',
+        eventDate:  (order.event && order.event.event_date) || null,
+        eventVenue: (order.event && order.event.venue)     || '',
+        eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+      });
+    } catch (e) {
+      console.error('[webhook.recurrente] Error emitiendo tickets:', e.message);
+      // El webhook ya confirmó pago — el admin puede re-emitir manualmente
+      return res.status(500).json({ error: 'ticket_issue_failed', order_id: orderId });
+    }
+
+    // 8. Notificar al admin por Telegram (non-blocking)
+    notifyNewOrder({
+      buyerName:  order.buyer_name,
+      quantity:   order.quantity,
+      eventName:  (order.event && order.event.name) || 'TicketHouse',
+      orderId,
+      publicCodes: result.publicCodes,
+    }).catch(function(e) { console.error('[webhook.telegram]', e.message); });
+
+    console.log('[webhook.recurrente] Tickets emitidos para orden:', orderId, '→', result.publicCodes);
+    return res.json({ ok: true });
   })
 );
 

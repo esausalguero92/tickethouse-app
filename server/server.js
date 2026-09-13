@@ -37,6 +37,14 @@ app.use(cors({
 }));
 
 app.use(globalLimiter);
+
+// ── Webhook de Recurrente: necesita body crudo (Buffer) para verificar firma Svix ──
+// DEBE montarse ANTES de express.json() global
+app.use('/api/webhooks/recurrente',
+  express.raw({ type: 'application/json', limit: '256kb' }),
+  paymentRoutes
+);
+
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 app.use(sanitizeInputs);
@@ -56,7 +64,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 app.listen(env.PORT, '0.0.0.0', () => {
-  console.log('[boot] Party House server v2.0.0 - port ' + env.PORT + ' - ' + env.NODE_ENV);
+  console.log('[boot] TicketHouseV2 server v3.0.0 - port ' + env.PORT + ' - ' + env.NODE_ENV);
 });
 
 module.exports = app;

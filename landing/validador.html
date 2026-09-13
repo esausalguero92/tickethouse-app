@@ -584,8 +584,8 @@
             type="text"
             id="manual-code"
             class="manual-correlative-input"
-            placeholder="TH-PH001"
-            maxlength="20"
+            placeholder="TH-PH001 o TH-BLG-482719"
+            maxlength="24"
             autocomplete="off"
             autocorrect="off"
             autocapitalize="characters"
@@ -828,10 +828,18 @@ document.getElementById('manual-code').addEventListener('input', (e) => {
   e.target.value = e.target.value.toUpperCase();
 });
 
+const LEGACY_CODE_RE = /^TH-PH\d+$/;
+const NEW_CODE_RE    = /^TH-[A-Z]{2,4}-\d{6}$/;
+
 async function submitManual() {
   const code = document.getElementById('manual-code').value.trim().toUpperCase();
   const errEl = document.getElementById('manual-err');
   if (!code) { errEl.textContent = 'Ingresa el código.'; errEl.hidden = false; return; }
+  if (!LEGACY_CODE_RE.test(code) && !NEW_CODE_RE.test(code)) {
+    errEl.textContent = 'Formato inválido. Ej: TH-PH001 o TH-BLG-482719';
+    errEl.hidden = false;
+    return;
+  }
   errEl.hidden = true;
   await validateByCorrelative(code);
 }
@@ -875,10 +883,11 @@ async function validateToken(token) {
 async function validateByCorrelative(code) {
   try {
     const data = await api('POST', '/api/tickets/validate-code', { correlative_code: code }, { 'x-staff-token': staffToken });
+    const displayCode = data.public_code || data.correlative_code || code;
     const result = {
       state:       'valid',
       buyer:       data.buyer_name || '—',
-      correlative: data.correlative_code || code,
+      correlative: displayCode,
       event:       data.event_name || '—',
       meta:        '',
     };

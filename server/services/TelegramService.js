@@ -13,82 +13,53 @@ async function telegramPost(method, body) {
   return j.result;
 }
 
-function buildMultipart(fields, fileBuffer, fileField, fileName, mimeType) {
-  const boundary = 'TGBound' + Date.now() + Math.random().toString(36).slice(2);
-  const CRLF = '\r\n';
-  const parts = [];
-  for (const [name, val] of Object.entries(fields)) {
-    parts.push(Buffer.from(`--${boundary}${CRLF}Content-Disposition: form-data; name="${name}"${CRLF}${CRLF}${val}${CRLF}`));
-  }
-  parts.push(Buffer.from(
-    `--${boundary}${CRLF}Content-Disposition: form-data; name="${fileField}"; filename="${fileName}"${CRLF}Content-Type: ${mimeType}${CRLF}${CRLF}`
-  ));
-  parts.push(fileBuffer);
-  parts.push(Buffer.from(`${CRLF}--${boundary}--${CRLF}`));
-  return { body: Buffer.concat(parts), contentType: `multipart/form-data; boundary=${boundary}` };
-}
-
 /**
- * Notifica al admin cuando llega una transferencia pendiente.
+ * Notifica al admin cuando se confirma un nuevo pago con Recurrente.
  * Non-blocking: el caller no debe awaitar.
  */
-async function notifyNewTransfer({ fileBuffer, fileName, mimeType, buyerName, quantity, eventName, amountUsd, reference, orderId, discountCode, discountAmount }) {
-  const chatId = env.TRANSFER_NOTIFY_ID || env.ADMIN_TELEGRAM_IDS[0] || '';
+async function notifyNewOrder({ buyerName, quantity, eventName, orderId, publicCodes }) {
+  const chatId = env.ORDER_NOTIFY_ID || env.ADMIN_TELEGRAM_IDS[0] || '';
   if (!env.TELEGRAM_BOT_TOKEN || !chatId) {
-    console.warn('[telegram] Sin destino — configura TRANSFER_NOTIFY_ID o ADMIN_TELEGRAM_IDS.');
+    console.warn('[telegram] Sin destino — configura ORDER_NOTIFY_ID o ADMIN_TELEGRAM_IDS.');
     return;
   }
 
+  const codesText = publicCodes && publicCodes.length
+    ? publicCodes.join(', ')
+    : '—';
+
   const lines = [
-    '🔔 Nueva transferencia pendiente',
+    '✅ Nuevo pago confirmado',
     '',
     `👤 ${buyerName}`,
     `🎟 ${quantity} ${quantity === 1 ? 'entrada' : 'entradas'}`,
     `🎉 ${eventName}`,
-    `💵 USD ${Number(amountUsd).toFixed(2)}`,
-    reference ? `📋 Folio: ${reference}` : '📋 Sin folio',
+    `🔑 ${codesText}`,
+    '',
+    `🔗 ${env.PUBLIC_BASE_URL}/admin.html`,
   ];
 
-  if (discountCode) {
-    lines.push('');
-    lines.push(`🏷 Código de descuento: ${discountCode}`);
-    if (discountAmount) {
-      lines.push(`💸 Descuento aplicado: -USD ${Number(discountAmount).toFixed(2)}`);
-    }
-  }
-
-  lines.push('');
-  lines.push(`🔗 ${env.PUBLIC_BASE_URL}/admin.html`);
-
-  const caption = lines.join('\n');
+  const text = lines.join('\n');
 
   try {
-    if (fileBuffer) {
-      const isImage = mimeType && mimeType.startsWith('image/');
-      const method = isImage ? 'sendPhoto' : 'sendDocument';
-      const fieldName = isImage ? 'photo' : 'document';
-      const safeFileName = fileName || (isImage ? 'comprobante.jpg' : 'comprobante.pdf');
-      const { body, contentType } = buildMultipart(
-        { chat_id: String(chatId), caption },
-        fileBuffer, fieldName, safeFileName, mimeType || 'application/octet-stream'
-      );
-      const r = await fetch(
-        `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`,
-        { method: 'POST', headers: { 'Content-Type': contentType }, body }
-      );
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.ok) {
-        console.warn(`[telegram] ${method} falló (${j.description}) — enviando texto`);
-        await telegramPost('sendMessage', { chat_id: chatId, text: caption });
-      } else {
-        console.log(`[telegram] ${method} OK → ${chatId}`);
-      }
-    } else {
-      await telegramPost('sendMessage', { chat_id: chatId, text: caption });
-    }
+    await telegramPost('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML' });
+    console.log('[telegram] Notificación enviada → ' + chatId);
   } catch (e) {
     console.error('[telegram.notify]', e.message || e);
   }
 }
 
-module.exports = { notifyNewTransfer, telegramPost };
+/**
+ * @deprecated Usar notifyNewOrder. Mantenido para compatibilidad con código legado.
+ */
+async function notifyNewTransfer(opts) {
+  return notifyNewOrder({
+    buyerName:  opts.buyerName,
+    quantity:   opts.quantity,
+    eventName:  opts.eventName,
+    orderId:    opts.orderId,
+    publicCodes: [],
+  });
+}
+
+module.exports = { notifyNewOrder, notifyNewTransfer, telegramPost };

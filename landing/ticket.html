@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta name="theme-color" content="#050505"/>
-  <title>Acceso Confirmado — Party House</title>
+  <title>Acceso Confirmado — TicketHouse</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -271,24 +271,25 @@
       <p style="font-family:var(--font-display);letter-spacing:var(--track-widest);color:var(--ph-text-dim);text-transform:uppercase;font-size:var(--text-xl)">Cargando tus entradas…</p>
     </div>
 
-    <!-- Pending state (transferencia) -->
+    <!-- Procesando state (Recurrente webhook pending) -->
     <div id="pending-state" hidden>
       <div class="tk-header">
-        <p class="tk-header__wordmark">PARTY HOUSE</p>
+        <p class="tk-header__wordmark">TICKETHOUSE</p>
       </div>
       <div class="tk-pending">
-        <div class="tk-pending__icon">⏳</div>
-        <h1 class="tk-pending__title">COMPROBANTE RECIBIDO</h1>
-        <p class="tk-pending__sub">
-          Revisaremos tu transferencia y te enviaremos las entradas a tu correo electrónico en un plazo máximo de 24 horas.
+        <div class="tk-pending__icon" id="procesando-icon">⏳</div>
+        <h1 class="tk-pending__title" id="procesando-title">PROCESANDO PAGO</h1>
+        <p class="tk-pending__sub" id="procesando-sub">
+          Estamos confirmando tu pago con Recurrente.<br/>Esto solo tarda unos segundos…
         </p>
-        <p style="font-size:var(--text-xs);color:var(--ph-text-dim);letter-spacing:var(--track-wide);text-transform:uppercase;margin-bottom:var(--sp-8)">
-          Revisa también tu carpeta de spam.
+        <div id="procesando-spinner" style="margin:var(--sp-4) auto var(--sp-6);width:36px;height:36px;border:3px solid rgba(79,124,255,.2);border-top-color:#4F7CFF;border-radius:50%;animation:spin 0.9s linear infinite"></div>
+        <p id="procesando-hint" hidden style="font-size:var(--text-xs);color:var(--ph-text-dim);letter-spacing:var(--track-wide);text-transform:uppercase;margin-bottom:var(--sp-8)">
+          Si ya ves el cobro en tu cuenta, revisa también tu correo (incluyendo spam).
         </p>
-        <a href="/" class="ph-btn ph-btn--ghost">Volver al inicio</a>
+        <a href="/" class="ph-btn ph-btn--ghost" id="procesando-back" hidden>Volver al inicio</a>
       </div>
       <div class="tk-footer">
-        <p class="tk-footer__tagline">FOR THOSE WHO <span>KNOW.</span></p>
+        <p class="tk-footer__tagline">tickethouse.gt</p>
       </div>
     </div>
 
@@ -303,7 +304,7 @@
     <div id="main-content" hidden>
 
       <div class="tk-header">
-        <p class="tk-header__wordmark">PARTY HOUSE</p>
+        <p class="tk-header__wordmark">TICKETHOUSE</p>
         <h1 class="tk-header__confirmed">ACCESO<br/><em>CONFIRMADO</em></h1>
         <p class="tk-header__sub" id="tk-intro"></p>
         <a href="/" style="
@@ -349,7 +350,7 @@
 
       <!-- Footer -->
       <div class="tk-footer">
-        <p class="tk-footer__tagline">FOR THOSE WHO <span>KNOW.</span></p>
+        <p class="tk-footer__tagline">tickethouse.gt</p>
       </div>
 
     </div><!-- /main-content -->
@@ -364,16 +365,32 @@
   const { api, getParam, navigate, formatDate, formatUSD, renderQR } = window.PH;
 
   async function init() {
-    // ¿Es estado pendiente (transferencia)?
     const estado = getParam('estado');
+    const orderId = getParam('oid');
+
+    // ── Estado: procesando (Recurrente webhook aún no confirmado)
+    if (estado === 'procesando' && orderId) {
+      document.getElementById('loading-state').hidden = true;
+      document.getElementById('pending-state').hidden = false;
+      startPolling(orderId);
+      return;
+    }
+
+    // ── Estado: pendiente legacy (transferencia)
     if (estado === 'pendiente' || sessionStorage.getItem('ph_transfer_pending') === 'true') {
       sessionStorage.removeItem('ph_transfer_pending');
       document.getElementById('loading-state').hidden  = true;
       document.getElementById('pending-state').hidden  = false;
+      // show static message for transfer (no polling)
+      document.getElementById('procesando-title').textContent = 'COMPROBANTE RECIBIDO';
+      document.getElementById('procesando-sub').innerHTML = 'Revisaremos tu transferencia y te enviaremos las entradas a tu correo electrónico en un plazo máximo de 24 horas.';
+      document.getElementById('procesando-spinner').hidden = true;
+      document.getElementById('procesando-hint').hidden = false;
+      document.getElementById('procesando-back').hidden = false;
       return;
     }
 
-    // Obtener download token
+    // ── Acceso directo con token (desde email)
     const token = getParam('ot') || sessionStorage.getItem('ph_download_token');
     if (!token) {
       return showError('No se encontró información de tu compra. Revisa el correo que recibiste.');
@@ -390,6 +407,57 @@
       };
       showError(msgs[err.data?.error] || 'Error al cargar tus entradas. Intenta con el enlace de tu correo.');
     }
+  }
+
+  // ── Polling: consulta /api/order-status/:orderId cada 3s (máx 5 min)
+  let _pollTimer = null;
+  let _pollCount = 0;
+  const POLL_INTERVAL_MS = 3000;
+  const POLL_MAX = 100; // 5 min
+
+  async function startPolling(orderId) {
+    _pollCount = 0;
+    poll(orderId);
+  }
+
+  async function poll(orderId) {
+    _pollCount++;
+
+    // Mostrar hint después de 20s
+    if (_pollCount === 7) {
+      document.getElementById('procesando-hint').hidden = false;
+    }
+
+    // Timeout tras 5 min
+    if (_pollCount > POLL_MAX) {
+      document.getElementById('procesando-icon').textContent  = '✉';
+      document.getElementById('procesando-title').textContent = 'REVISA TU CORREO';
+      document.getElementById('procesando-sub').textContent   = 'El pago fue recibido. Recibirás tus entradas en el correo en unos instantes.';
+      document.getElementById('procesando-spinner').hidden    = true;
+      document.getElementById('procesando-back').hidden       = false;
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/order-status/${encodeURIComponent(orderId)}`);
+      if (!res.ok) throw new Error('status ' + res.status);
+      const data = await res.json();
+
+      if (data.status === 'paid' && data.download_token) {
+        // Pago confirmado — cargar entradas
+        clearTimeout(_pollTimer);
+        document.getElementById('pending-state').hidden  = true;
+        document.getElementById('loading-state').hidden  = false;
+        sessionStorage.setItem('ph_download_token', data.download_token);
+        const orderData = await api('GET', `/api/download/order/${encodeURIComponent(data.download_token)}`);
+        renderSuccess(orderData, data.download_token);
+        return;
+      }
+    } catch (_) {
+      // Network hiccup — seguir intentando
+    }
+
+    _pollTimer = setTimeout(() => poll(orderId), POLL_INTERVAL_MS);
   }
 
   function renderSuccess(data, downloadToken) {
@@ -430,7 +498,7 @@
         <p class="tk-ticket__buyer">${escHtml(ticket.buyer_name || '—')}</p>
       </div>
       <div class="tk-ticket__footer">
-        <span class="tk-ticket__event">${escHtml(event?.name || 'Party House')}</span>
+        <span class="tk-ticket__event">${escHtml(event?.name || 'TicketHouse')}</span>
         <a
           href="/api/download/ticket/${encodeURIComponent(downloadToken)}/${encodeURIComponent(ticket.correlative_code)}"
           class="tk-download-btn"
