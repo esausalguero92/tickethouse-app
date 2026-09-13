@@ -66,7 +66,7 @@ const authLimiter = rateLimit({
 
 const purchaseLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 5,
+  max: 10,
   message: { error: 'purchase_rate_limit', message: 'Demasiados intentos de compra.' },
 });
 

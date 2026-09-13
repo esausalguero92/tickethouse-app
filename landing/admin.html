@@ -674,7 +674,10 @@
     <div id="panel-dashboard" class="adm-panel active">
       <div class="adm-main__header">
         <h1 class="adm-main__title">DASHBOARD</h1>
-        <div class="adm-main__actions">
+        <div class="adm-main__actions" style="display:flex;gap:8px;align-items:center">
+          <select class="adm-filter-input" id="dash-event-filter" style="min-width:200px">
+            <option value="">Todos los eventos</option>
+          </select>
           <button class="ph-btn ph-btn--ghost" id="refresh-btn" style="font-size:var(--text-xs)">↻ Actualizar</button>
         </div>
       </div>
@@ -811,6 +814,9 @@
         <button class="ph-btn ph-btn--secondary" id="btn-export-excel" onclick="exportOrdersExcel()" style="font-size:12px;padding:8px 16px;letter-spacing:.08em">⬇ EXPORTAR EXCEL</button>
       </div>
       <div class="adm-filters">
+        <select class="adm-filter-input" id="orders-event" style="min-width:180px">
+          <option value="">Todos los eventos</option>
+        </select>
         <input type="text" class="adm-filter-input" id="orders-search" placeholder="Buscar nombre o email…" style="flex:1;min-width:180px"/>
         <select class="adm-filter-input" id="orders-status">
           <option value="">Todos los estados</option>
@@ -829,6 +835,9 @@
         <h1 class="adm-main__title">ENTRADAS</h1>
       </div>
       <div class="adm-filters">
+        <select class="adm-filter-input" id="tickets-event" style="min-width:180px">
+          <option value="">Todos los eventos</option>
+        </select>
         <input type="text" class="adm-filter-input" id="tickets-search" placeholder="Código TH-PH001 o nombre…" style="flex:1;min-width:200px"/>
         <select class="adm-filter-input" id="tickets-status">
           <option value="">Todos</option>
@@ -1204,6 +1213,7 @@ async function loadAll() {
     allTickets = ticketsData.tickets || [];
     allEventos = eventsData.events  || [];
 
+    populateEventDropdowns(allEventos);
     renderDashboard(sumData, allOrders);
     renderOrders(allOrders);
     renderTickets(allTickets);
@@ -1222,16 +1232,58 @@ async function loadAll() {
   }
 }
 
+// ── Populate event dropdowns ───────────────────────────────────────
+function populateEventDropdowns(events) {
+  const selects = ['dash-event-filter', 'orders-event', 'tickets-event'];
+  selects.forEach(function(selId) {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Todos los eventos</option>';
+    events.forEach(function(ev) {
+      const opt = document.createElement('option');
+      opt.value = ev.id;
+      opt.textContent = ev.name + (ev.active ? '' : ' (inactivo)');
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  });
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────
 function renderDashboard(sum, orders) {
-  document.getElementById('stat-sold').textContent     = sum.tickets_sold ?? '—';
-  document.getElementById('stat-capacity').textContent = `de ${sum.max_capacity ?? '?'} capacidad`;
-  document.getElementById('stat-orders').textContent   = sum.paid_orders ?? '—';
-  document.getElementById('stat-events').textContent   = allEventos.filter(e => e.active).length;
-  document.getElementById('stat-redeemed').textContent = sum.redeemed_today ?? '—';
+  const eventId = document.getElementById('dash-event-filter') && document.getElementById('dash-event-filter').value;
 
-  renderOrdersTable('recent-orders-wrap', orders.slice(0, 10), false);
+  if (eventId) {
+    // Calcular stats del evento seleccionado desde datos locales
+    const ev       = allEventos.find(function(e) { return e.id === eventId; });
+    const evOrders = allOrders.filter(function(o) { return o.event && o.event.id === eventId; });
+    const evTickets = allTickets.filter(function(t) { return t.event && t.event.id === eventId; });
+    const todayStr  = new Date().toDateString();
+    const redeemedToday = evTickets.filter(function(t) {
+      return t.status === 'redeemed' && t.redeemed_at && new Date(t.redeemed_at).toDateString() === todayStr;
+    }).length;
+
+    document.getElementById('stat-sold').textContent     = evTickets.length;
+    document.getElementById('stat-capacity').textContent = `de ${ev ? ev.capacity : '?'} capacidad`;
+    document.getElementById('stat-orders').textContent   = evOrders.filter(function(o) { return o.payment_status === 'paid'; }).length;
+    document.getElementById('stat-redeemed').textContent = redeemedToday;
+    renderOrdersTable('recent-orders-wrap', evOrders.slice(0, 10), false);
+  } else {
+    // Mostrar totales globales del API
+    document.getElementById('stat-sold').textContent     = sum.tickets_sold ?? '—';
+    document.getElementById('stat-capacity').textContent = `de ${sum.max_capacity ?? '?'} capacidad`;
+    document.getElementById('stat-orders').textContent   = sum.paid_orders ?? '—';
+    document.getElementById('stat-redeemed').textContent = sum.redeemed_today ?? '—';
+    renderOrdersTable('recent-orders-wrap', orders.slice(0, 10), false);
+  }
+
+  document.getElementById('stat-events').textContent = allEventos.filter(function(e) { return e.active; }).length;
 }
+
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'dash-event-filter') renderDashboard(summary, allOrders);
+});
 
 // ── Orders ─────────────────────────────────────────────────────────
 function renderOrders(orders) {
@@ -1264,6 +1316,7 @@ function renderOrdersTable(wrapperId, orders, showActions) {
       <td style="text-align:center;font-weight:600;color:var(--ph-text)">${o.quantity ?? '—'}</td>
       <td>${statusBadge(o.payment_status)}</td>
       <td><span class="correlative">${o.correlative_codes?.join(', ') || '—'}</span></td>
+      <td style="font-size:11px;color:var(--ph-blue);white-space:nowrap">${esc((o.event && o.event.name) || '—')}</td>
       <td style="color:var(--ph-text-dim);font-size:11px">${o.created_at ? formatDate(o.created_at) : '—'}</td>
     </tr>
   `).join('');
@@ -1271,7 +1324,7 @@ function renderOrdersTable(wrapperId, orders, showActions) {
   wrap.innerHTML = `
     <table class="adm-table">
       <thead><tr>
-        <th>ID</th><th>Comprador</th><th>Email</th><th>Qty</th><th>Estado</th><th>Códigos</th><th>Fecha</th>
+        <th>ID</th><th>Comprador</th><th>Email</th><th>Qty</th><th>Estado</th><th>Códigos</th><th>Evento</th><th>Fecha</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -1292,6 +1345,7 @@ function renderTickets(tickets) {
       <td style="color:var(--ph-text);font-weight:600">${esc(t.buyer_name || '—')}</td>
       <td style="color:var(--ph-text-mute)">${esc(t.buyer_email || '—')}</td>
       <td><span class="badge badge--${t.status === 'redeemed' ? 'redeemed' : 'issued'}">${t.status === 'redeemed' ? 'Usada' : 'Válida'}</span></td>
+      <td style="font-size:11px;color:var(--ph-blue);white-space:nowrap">${esc((t.event && t.event.name) || '—')}</td>
       <td style="font-size:11px;color:var(--ph-text-dim)">${t.redeemed_at ? formatDate(t.redeemed_at) : '—'}</td>
       <td style="font-size:11px;color:var(--ph-text-dim)">${t.created_at ? formatDate(t.created_at) : '—'}</td>
     </tr>
@@ -1300,7 +1354,7 @@ function renderTickets(tickets) {
   wrap.innerHTML = `
     <table class="adm-table">
       <thead><tr>
-        <th>Código</th><th>Titular</th><th>Email</th><th>Estado</th><th>Validado</th><th>Emitida</th>
+        <th>Código</th><th>Titular</th><th>Email</th><th>Estado</th><th>Evento</th><th>Validado</th><th>Emitida</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -1569,28 +1623,34 @@ document.getElementById('evento-modal').addEventListener('click', function(e) {
 // ── Filters ────────────────────────────────────────────────────────
 document.getElementById('orders-search').addEventListener('input', filterOrders);
 document.getElementById('orders-status').addEventListener('change', filterOrders);
+document.getElementById('orders-event').addEventListener('change', filterOrders);
 
 function filterOrders() {
-  const q  = document.getElementById('orders-search').value.toLowerCase();
-  const st = document.getElementById('orders-status').value;
-  const filtered = allOrders.filter(o => {
-    const matchQ  = !q  || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
-    const matchSt = !st || o.payment_status === st;
-    return matchQ && matchSt;
+  const q   = document.getElementById('orders-search').value.toLowerCase();
+  const st  = document.getElementById('orders-status').value;
+  const evId = document.getElementById('orders-event').value;
+  const filtered = allOrders.filter(function(o) {
+    const matchQ  = !q   || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
+    const matchSt = !st  || o.payment_status === st;
+    const matchEv = !evId || (o.event && o.event.id === evId);
+    return matchQ && matchSt && matchEv;
   });
   renderOrdersTable('orders-wrap', filtered, true);
 }
 
 document.getElementById('tickets-search').addEventListener('input', filterTickets);
 document.getElementById('tickets-status').addEventListener('change', filterTickets);
+document.getElementById('tickets-event').addEventListener('change', filterTickets);
 
 function filterTickets() {
-  const q  = document.getElementById('tickets-search').value.toLowerCase();
-  const st = document.getElementById('tickets-status').value;
-  const filtered = allTickets.filter(t => {
-    const matchQ  = !q  || (t.correlative_code||'').toLowerCase().includes(q) || (t.buyer_name||'').toLowerCase().includes(q);
-    const matchSt = !st || t.status === st;
-    return matchQ && matchSt;
+  const q   = document.getElementById('tickets-search').value.toLowerCase();
+  const st  = document.getElementById('tickets-status').value;
+  const evId = document.getElementById('tickets-event').value;
+  const filtered = allTickets.filter(function(t) {
+    const matchQ  = !q   || (t.correlative_code||'').toLowerCase().includes(q) || (t.buyer_name||'').toLowerCase().includes(q);
+    const matchSt = !st  || t.status === st;
+    const matchEv = !evId || (t.event && t.event.id === evId);
+    return matchQ && matchSt && matchEv;
   });
   renderTickets(filtered);
 }
@@ -1624,12 +1684,14 @@ function exportOrdersExcel() {
     showToast('Cargando librería, intenta en un momento…', 'error');
     return;
   }
-  const q  = document.getElementById('orders-search').value.toLowerCase();
-  const st = document.getElementById('orders-status').value;
-  const filtered = allOrders.filter(o => {
-    const matchQ  = !q  || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
-    const matchSt = !st || o.payment_status === st;
-    return matchQ && matchSt;
+  const q    = document.getElementById('orders-search').value.toLowerCase();
+  const st   = document.getElementById('orders-status').value;
+  const evId = document.getElementById('orders-event').value;
+  const filtered = allOrders.filter(function(o) {
+    const matchQ  = !q   || (o.buyer_name||'').toLowerCase().includes(q) || (o.buyer_email||'').toLowerCase().includes(q);
+    const matchSt = !st  || o.payment_status === st;
+    const matchEv = !evId || (o.event && o.event.id === evId);
+    return matchQ && matchSt && matchEv;
   });
 
   const statusMap  = { paid: 'Pagado', awaiting_review: 'Pendiente', pending: 'Pendiente', rejected: 'Rechazado', refunded: 'Reembolsado' };

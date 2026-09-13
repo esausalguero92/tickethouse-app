@@ -935,7 +935,7 @@
   <button class="ph-btn ph-btn--primary mcta-main-btn" id="mcta-main">Comprar entrada</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@recurrente/checkout/dist/recurrente-checkout.min.js"></script>
+<!-- SDK de Recurrente eliminado: checkout redirige directo a app.recurrente.com -->
   <script src="/js/app.js"></script>
 <script>
 'use strict';
@@ -1067,9 +1067,9 @@ function renderEvent(available, artists) {
   if (available != null) {
     if (available <= 5) {
       avBar.classList.add('low');
-      avText.textContent = available + ' entradas restantes';
+      avText.textContent = 'Últimas entradas';
     } else if (available <= 20) {
-      avText.textContent = available + ' disponibles';
+      avText.textContent = 'Disponible';
     } else {
       avText.textContent = 'Disponible';
     }
@@ -1538,21 +1538,43 @@ async function initCheckout() {
     loadingEl.style.display = 'none';
     checkoutMounted = true;
 
-    if (typeof RecurrenteCheckout !== 'undefined') {
-      var checkout = new RecurrenteCheckout({
-        checkoutUrl,
-        container: '#recurrente-checkout-container',
-        onSuccess: function() { onPaymentSuccess(); },
-        onFailure: function() { onPaymentFailure(); },
-        onClose:   function() {},
-      });
-      checkout.open();
-    } else {
-      containerEl.innerHTML =
-        '<iframe src="' + checkoutUrl + '" ' +
-        'style="width:100%;height:500px;border:none;border-radius:8px" ' +
-        'allow="payment" title="Pago seguro"></iframe>';
-    }
+    // Recurrente bloquea iframes (CSP: frame-src app.recurrente.com).
+    // Abrimos un popup — no está sujeto al mismo CSP — y sondeamos
+    // el estado de la orden hasta que el webhook la confirme.
+    var popup = window.open(checkoutUrl, 'recurrente_checkout',
+      'width=500,height=700,left=' + Math.round((screen.width - 500) / 2) +
+      ',top=' + Math.round((screen.height - 700) / 2));
+
+    containerEl.innerHTML =
+      '<div style="text-align:center;padding:40px 20px;color:var(--ph-text-secondary)">' +
+      '<div style="font-size:32px;margin-bottom:12px">💳</div>' +
+      '<p style="font-size:15px;font-weight:600;margin:0 0 6px">Completá tu pago en la ventana de Recurrente</p>' +
+      '<p style="font-size:13px;margin:0 0 20px">Una vez confirmado, te mostraremos tu entrada aquí.</p>' +
+      '<button onclick="if(popup&&!popup.closed)popup.focus()" ' +
+      'style="background:var(--ph-blue);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;cursor:pointer">Volver a la ventana de pago</button>' +
+      '</div>';
+
+    // Sondear cada 4 s hasta que el webhook confirme el pago
+    var pollInterval = setInterval(async function() {
+      try {
+        var status = await api('GET', '/api/order-status/' + orderId);
+        if (status && status.payment_status === 'paid') {
+          clearInterval(pollInterval);
+          if (popup && !popup.closed) popup.close();
+          onPaymentSuccess();
+        }
+      } catch(e) { /* silencioso */ }
+    }, 4000);
+
+    // Si el usuario cierra el popup manualmente, detenemos el sondeo
+    var popupCheck = setInterval(function() {
+      if (popup && popup.closed) {
+        clearInterval(popupCheck);
+        clearInterval(pollInterval);
+        checkoutMounted = false;
+        containerEl.innerHTML = '';
+      }
+    }, 1000);
   } catch (err) {
     console.error('[checkout]', err);
     loadingEl.style.display = 'none';
