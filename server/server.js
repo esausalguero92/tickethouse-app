@@ -41,14 +41,15 @@ app.use(cors({
 app.use(globalLimiter);
 
 // ── Webhook de Recurrente: necesita body crudo (Buffer) para verificar firma Svix ──
-// Leemos el stream manualmente antes de express.json() y marcamos req._body = true
-// para que los body-parsers siguientes omitan este request.
+// express.raw() no setea req._body = true de forma confiable, por lo que express.json()
+// (montado globalmente abajo) lo re-parsea y destruye el Buffer que Svix necesita.
+// Solución: leer el stream manualmente y setear req._body = true explícitamente.
 app.use('/api/webhooks/recurrente', function(req, res, next) {
   var chunks = [];
   req.on('data', function(chunk) { chunks.push(chunk); });
   req.on('end', function() {
     req.body  = Buffer.concat(chunks);
-    req._body = true; // evita que express.json() lo re-parsee
+    req._body = true; // bloquea express.json() para que no re-parsee este body
     next();
   });
   req.on('error', next);

@@ -163,7 +163,8 @@ router.post('/webhooks/recurrente',
       await supabase.from('webhook_events').insert({ svix_id: svixId });
     }
 
-    const eventType = payload.type;
+    // FIX: Recurrente usa `event_type` para el nombre del evento; `type` es el método de pago ("payment")
+    const eventType = payload.event_type;
 
     // 3. Solo procesar pagos exitosos
     if (eventType !== 'intent.succeeded' && eventType !== 'payment_intent.succeeded') {
@@ -171,13 +172,24 @@ router.post('/webhooks/recurrente',
       return res.json({ ok: true, ignored: eventType });
     }
 
-    // 4. Extraer order_id desde metadata
+    // 4. Extraer order_id desde metadata o (fallback) correlacionar por checkout.id
     const intentData = payload.data || payload;
-    const orderId = intentData.metadata && intentData.metadata.order_id;
+    // FIX: metadata puede no venir en el payload de Recurrente; intentarlo primero y luego
+    // buscar por recurrente_checkout_id usando payload.checkout.id como fallback.
+    let orderId = intentData.metadata && intentData.metadata.order_id;
     const intentId = intentData.id || intentData.payment_intent_id;
 
+    if (!orderId && payload.checkout && payload.checkout.id) {
+      const { data: orderByCheckout } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('recurrente_checkout_id', payload.checkout.id)
+        .maybeSingle();
+      if (orderByCheckout) orderId = orderByCheckout.id;
+    }
+
     if (!orderId) {
-      console.error('[webhook.recurrente] Falta metadata.order_id en evento:', svixId);
+      console.error('[webhook.recurrente] No se pudo determinar order_id (svix_id:', svixId, 'checkout:', payload.checkout && payload.checkout.id, ')');
       return res.status(400).json({ error: 'missing_order_id' });
     }
 
