@@ -199,7 +199,7 @@ async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventNa
     doc.font('Grotesk')
        .fontSize(7)
        .fillColor(C.muted)
-       .text('tickethouse.gt  ·  Entrada válida para una persona  ·  No reembolsable', 0, H - 16, {
+       .text('tickethouse.site  ·  Entrada válida para una persona  ·  No reembolsable', 0, H - 16, {
          align: 'center', width: W, characterSpacing: 0.5,
        });
 

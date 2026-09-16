@@ -935,8 +935,9 @@
   <button class="ph-btn ph-btn--primary mcta-main-btn" id="mcta-main">Comprar entrada</button>
 </div>
 
-<!-- SDK de Recurrente eliminado: checkout redirige directo a app.recurrente.com -->
-  <script src="/js/app.js"></script>
+<!-- SDK de Recurrente: embebe el checkout en esta misma página -->
+<script src="https://cdn.jsdelivr.net/npm/recurrente-checkout@latest/recurrente-checkout.js"></script>
+<script src="/js/app.js"></script>
 <script>
 'use strict';
 
@@ -962,6 +963,17 @@ async function init() {
   const id   = getParam('id');
   const code = getParam('c');
   let apiData = null;
+
+  // Si el usuario volvió desde Recurrente después de cancelar, limpiamos
+  // el orderId pendiente para que pueda reintentar desde el principio.
+  if (getParam('checkout') === 'cancelled') {
+    orderId = null;
+    checkoutMounted = false;
+    // Limpiar el param de la URL sin recargar la página
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('checkout');
+    window.history.replaceState({}, '', cleanUrl.toString());
+  }
 
   try {
     const cached   = sessionStorage.getItem('ph_event');
@@ -1498,10 +1510,14 @@ function showGlobalError() {
 
 // ── Payment intent ────────────────────────────────────────────────────────
 async function createPaymentIntent() {
+  var ecId = sessionStorage.getItem('ph_event_code_id') || '';
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ecId)) {
+    throw new Error('event_not_configured');
+  }
   var payload = {
     event_id:       event.id,
     event_code:     sessionStorage.getItem('ph_event_code') || '',
-    event_code_id:  sessionStorage.getItem('ph_event_code_id') || '',
+    event_code_id:  ecId,
     full_name:      document.getElementById('buyer-name').value.trim(),
     email:          document.getElementById('buyer-email').value.trim().toLowerCase(),
     quantity,
@@ -1535,51 +1551,33 @@ async function initCheckout() {
     var checkoutUrl = res.checkout_url;
     if (!checkoutUrl) throw new Error('No checkout URL received');
 
-    loadingEl.style.display = 'none';
+    // SDK de Recurrente: carga el checkout embebido en #recurrente-checkout-container
     checkoutMounted = true;
+    loadingEl.style.display = 'none';
 
-    // Recurrente bloquea iframes (CSP: frame-src app.recurrente.com).
-    // Abrimos un popup — no está sujeto al mismo CSP — y sondeamos
-    // el estado de la orden hasta que el webhook la confirme.
-    var popup = window.open(checkoutUrl, 'recurrente_checkout',
-      'width=500,height=700,left=' + Math.round((screen.width - 500) / 2) +
-      ',top=' + Math.round((screen.height - 700) / 2));
+    RecurrenteCheckout.load({
+      url: checkoutUrl,
+      onSuccess: function() {
+        onPaymentSuccess();
+      },
+      onFailure: function() {
+        onPaymentFailure();
+      },
+      onPaymentInProgress: function() {
+        // Pago con transferencia bancaria en proceso — mismo flujo de polling
+        onPaymentSuccess();
+      },
+    });
 
-    containerEl.innerHTML =
-      '<div style="text-align:center;padding:40px 20px;color:var(--ph-text-secondary)">' +
-      '<div style="font-size:32px;margin-bottom:12px">💳</div>' +
-      '<p style="font-size:15px;font-weight:600;margin:0 0 6px">Completá tu pago en la ventana de Recurrente</p>' +
-      '<p style="font-size:13px;margin:0 0 20px">Una vez confirmado, te mostraremos tu entrada aquí.</p>' +
-      '<button onclick="if(popup&&!popup.closed)popup.focus()" ' +
-      'style="background:var(--ph-blue);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;cursor:pointer">Volver a la ventana de pago</button>' +
-      '</div>';
-
-    // Sondear cada 4 s hasta que el webhook confirme el pago
-    var pollInterval = setInterval(async function() {
-      try {
-        var status = await api('GET', '/api/order-status/' + orderId);
-        if (status && status.payment_status === 'paid') {
-          clearInterval(pollInterval);
-          if (popup && !popup.closed) popup.close();
-          onPaymentSuccess();
-        }
-      } catch(e) { /* silencioso */ }
-    }, 4000);
-
-    // Si el usuario cierra el popup manualmente, detenemos el sondeo
-    var popupCheck = setInterval(function() {
-      if (popup && popup.closed) {
-        clearInterval(popupCheck);
-        clearInterval(pollInterval);
-        checkoutMounted = false;
-        containerEl.innerHTML = '';
-      }
-    }, 1000);
   } catch (err) {
     console.error('[checkout]', err);
     loadingEl.style.display = 'none';
+    if (err && err.message === 'event_not_configured') {
+      errorEl.textContent = 'Este evento no está disponible para compra en este momento. Contactanos para más información.';
+    }
     errorEl.hidden = false;
     orderId = null;
+    checkoutMounted = false;
   }
 }
 

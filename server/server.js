@@ -17,6 +17,8 @@ const downloadRoutes = require('./routes/downloadRoutes');
 const n8nRoutes      = require('./routes/n8nRoutes');
 const discountRoutes = require('./routes/discountRoutes');
 const pdfRoutes      = require('./routes/pdfRoutes');
+// Dev-only routes (never loaded in production)
+const devRoutes = env.isProd ? null : require('./routes/devRoutes');
 
 const app = express();
 
@@ -59,6 +61,12 @@ app.use('/api/download', downloadRoutes);
 app.use('/api/n8n', n8nRoutes);
 app.use('/api', discountRoutes);
 app.use('/pdf', pdfRoutes);
+
+// Dev-only: simular webhook de Recurrente sin tunnel
+if (devRoutes) {
+  app.use('/api/dev', devRoutes);
+  console.log('[dev] Rutas de desarrollo habilitadas en /api/dev/*');
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);
