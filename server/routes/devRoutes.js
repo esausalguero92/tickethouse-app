@@ -51,7 +51,7 @@ router.post('/confirm-order/:orderId', asyncHandler(async (req, res) => {
     .from('orders')
     .update({
       payment_status:       'paid',
-      payment_method:       'recurrente_dev_sim',
+      payment_method:       'recurrente',
       paid_at:              new Date().toISOString(),
       recurrente_intent_id: 'dev_simulated',
     })
