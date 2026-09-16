@@ -344,8 +344,28 @@ router.patch('/events/:id/status',
   })
 );
 
+// PATCH /api/admin/events/:id/archive — desactiva el evento (soft delete)
+// Úsalo cuando el evento tiene órdenes reales que no deben borrarse.
+router.patch('/events/:id/archive',
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { id } = req.params;
+    if (!UUID_RE.test(id)) return res.status(400).json({ error: 'id_invalido' });
+
+    const { error } = await supabase
+      .from('events')
+      .update({ active: false })
+      .eq('id', id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true, archived: true });
+  })
+);
+
 // DELETE /api/admin/events/:id
-// Solo permite borrar si no tiene tickets vendidos
+// Bloquea si tiene órdenes PAGADAS (registros financieros reales).
+// Si solo tiene órdenes pendientes/canceladas, borra en cascada limpiamente.
 router.delete('/events/:id',
   requireAdmin,
   asyncHandler(async (req, res) => {
@@ -353,16 +373,28 @@ router.delete('/events/:id',
     const { id } = req.params;
     if (!UUID_RE.test(id)) return res.status(400).json({ error: 'id_invalido' });
 
-    // Verificar que no tiene tickets emitidos
-    const { count: ticketCount } = await supabase
-      .from('tickets')
+    // 1. Bloquear si hay órdenes pagadas (no borrar registros financieros)
+    const { count: paidCount } = await supabase
+      .from('orders')
       .select('*', { count: 'exact', head: true })
-      .eq('event_id', id);
+      .eq('event_id', id)
+      .eq('status', 'paid');
 
-    if (ticketCount && ticketCount > 0) {
-      return res.status(409).json({ error: 'event_has_tickets', tickets: ticketCount });
+    if (paidCount && paidCount > 0) {
+      return res.status(409).json({
+        error: 'event_has_paid_orders',
+        message: 'Este evento tiene órdenes pagadas. Usa "Archivar" en su lugar para ocultarlo sin perder los registros.',
+        paid_orders: paidCount,
+      });
     }
 
+    // 2. Cascada: borrar registros dependientes sin pagos reales
+    await supabase.from('tickets').delete().eq('event_id', id);
+    await supabase.from('orders').delete().eq('event_id', id);
+    await supabase.from('event_codes').delete().eq('event_id', id);
+    await supabase.from('event_artists').delete().eq('event_id', id);
+
+    // 3. Borrar el evento
     const { error } = await supabase.from('events').delete().eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
     return res.json({ ok: true });

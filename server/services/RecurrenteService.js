@@ -31,7 +31,7 @@ const RECURRENTE_API = 'https://app.recurrente.com/api';
  * @param {string} opts.buyerName      Nombre del comprador
  * @returns {Promise<{ checkoutId: string, checkoutUrl: string }>}
  */
-async function createCheckout({ orderId, eventName, quantity, unitPriceGtq, discountAmount, buyerEmail, buyerName }) {
+async function createCheckout({ orderId, eventId, eventName, quantity, unitPriceGtq, discountAmount, buyerEmail, buyerName }) {
   if (!env.RECURRENTE_SECRET_KEY) {
     throw Object.assign(new Error('Recurrente no configurado (RECURRENTE_SECRET_KEY ausente)'), { status: 503 });
   }
@@ -47,8 +47,10 @@ async function createCheckout({ orderId, eventName, quantity, unitPriceGtq, disc
         quantity,
       },
     ],
-    success_url: `${env.PUBLIC_BASE_URL}/ticket.html`,
-    cancel_url:  `${env.PUBLIC_BASE_URL}/evento.html`,
+    // Redirect de vuelta a ticket.html en modo polling (el webhook ya marcó la orden)
+    success_url: `${env.PUBLIC_BASE_URL}/ticket.html?estado=procesando&oid=${encodeURIComponent(orderId)}`,
+    // Si cancela, vuelve al evento para que pueda reintentar
+    cancel_url:  `${env.PUBLIC_BASE_URL}/evento.html?id=${encodeURIComponent(eventId || '')}&checkout=cancelled`,
     metadata: {
       order_id: orderId,         // Clave para lookup en el webhook
     },

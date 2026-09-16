@@ -41,7 +41,22 @@ router.get('/event/:code',
     }
 
     const { tickets_sold: _ts, capacity: _cap, available: _av, ...publicData } = data;
-    return res.json(publicData);
+
+    // Buscar event_code_id para el flujo de pago (igual que GET /api/events/:id)
+    const eventId = publicData.id || (publicData.event && publicData.event.id);
+    let eventCodeId = null;
+    if (eventId) {
+      const { data: ecData } = await supabase
+        .from('event_codes')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('active', true)
+        .limit(1)
+        .maybeSingle();
+      eventCodeId = ecData ? ecData.id : null;
+    }
+
+    return res.json({ ...publicData, event_code_id: eventCodeId });
   })
 );
 

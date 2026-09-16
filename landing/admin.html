@@ -1409,7 +1409,8 @@ function renderEventosList(events) {
       </td>
       <td style="white-space:nowrap">
         <button onclick="openEventoModal('${ev.id}')" class="adm-btn-sm" style="margin-right:4px">✏ Editar</button>
-        <button onclick="deleteEvento('${ev.id}', '${esc(ev.name)}')" class="adm-btn-sm reject">🗑</button>
+        <button onclick="archiveEvento('${ev.id}', '${esc(ev.name)}')" class="adm-btn-sm" style="margin-right:4px" title="Archivar (desactivar sin borrar datos)">📦</button>
+        <button onclick="deleteEvento('${ev.id}', '${esc(ev.name)}')" class="adm-btn-sm reject" title="Eliminar permanentemente">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -1598,19 +1599,33 @@ async function toggleEventoStatus(eventoId, currentlyActive, btn) {
   }
 }
 
+async function archiveEvento(eventoId, nombre) {
+  if (!confirm(`¿Archivar "${nombre}"?\n\nEl evento se desactivará y dejará de aparecer al público, pero sus órdenes y tickets quedan guardados.`)) return;
+  try {
+    const h = { 'x-admin-token': adminToken, 'Content-Type': 'application/json' };
+    await api('PATCH', `/api/admin/events/${eventoId}/archive`, null, h);
+    showToast('Evento archivado ✓', 'success');
+    loadEventos();
+  } catch (err) {
+    showToast(err.data?.error || 'Error al archivar.', 'error');
+  }
+}
+
 async function deleteEvento(eventoId, nombre) {
-  if (!confirm(`¿Eliminar el evento "${nombre}"? Esta acción no se puede deshacer.`)) return;
+  if (!confirm(`¿ELIMINAR PERMANENTEMENTE "${nombre}"?\n\nSolo es posible si el evento no tiene órdenes pagadas. Esta acción no se puede deshacer.`)) return;
   try {
     const h = { 'x-admin-token': adminToken };
     await api('DELETE', `/api/admin/events/${eventoId}`, null, h);
     showToast('Evento eliminado ✓', 'success');
     loadEventos();
   } catch (err) {
-    const msg = err.data?.error || err.message || 'Error al eliminar.';
-    if (err.status === 409) {
-      showToast('No se puede eliminar: este evento tiene entradas vendidas.', 'error');
+    if (err.status === 409 && err.data?.error === 'event_has_paid_orders') {
+      const archive = confirm(
+        `"${nombre}" tiene ${err.data.paid_orders} orden(es) pagada(s) y no puede eliminarse.\n\n¿Querés archivarlo en su lugar? (Lo desactiva y lo oculta del público sin borrar los datos.)`
+      );
+      if (archive) archiveEvento(eventoId, nombre);
     } else {
-      showToast(msg, 'error');
+      showToast(err.data?.message || err.data?.error || err.message || 'Error al eliminar.', 'error');
     }
   }
 }

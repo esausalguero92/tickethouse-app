@@ -83,7 +83,7 @@ router.post('/payment/recurrente/checkout',
     // Verificar que la orden existe, está pendiente y obtener detalles
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, payment_status, quantity, amount_usd, discount_amount_usd, buyer_name, buyer_email, event:events(name, code_prefix, price_gtq)')
+      .select('id, event_id, payment_status, quantity, amount_usd, discount_amount_usd, buyer_name, buyer_email, event:events(name, code_prefix, price_gtq)')
       .eq('id', order_id)
       .eq('payment_status', 'pending')
       .maybeSingle();
@@ -101,6 +101,7 @@ router.post('/payment/recurrente/checkout',
     try {
       ({ checkoutId, checkoutUrl } = await createCheckout({
         orderId:       order_id,
+        eventId:       order.event_id,
         eventName:     (order.event && order.event.name) || 'TicketHouse',
         quantity:      order.quantity,
         unitPriceGtq,
