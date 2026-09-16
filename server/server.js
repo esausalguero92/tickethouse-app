@@ -41,13 +41,18 @@ app.use(cors({
 app.use(globalLimiter);
 
 // ── Webhook de Recurrente: necesita body crudo (Buffer) para verificar firma Svix ──
-// Se aplica express.raw() como middleware independiente ANTES de express.json().
-// No se monta paymentRoutes aquí porque Express le pasaría "/" al router (stripping
-// del prefix) y el handler router.post('/webhooks/recurrente') nunca matchearía.
-// El handler real corre más abajo via app.use('/api', paymentRoutes) con body crudo ya listo.
-app.use('/api/webhooks/recurrente',
-  express.raw({ type: 'application/json', limit: '256kb' })
-);
+// Leemos el stream manualmente antes de express.json() y marcamos req._body = true
+// para que los body-parsers siguientes omitan este request.
+app.use('/api/webhooks/recurrente', function(req, res, next) {
+  var chunks = [];
+  req.on('data', function(chunk) { chunks.push(chunk); });
+  req.on('end', function() {
+    req.body  = Buffer.concat(chunks);
+    req._body = true; // evita que express.json() lo re-parsee
+    next();
+  });
+  req.on('error', next);
+});
 
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
