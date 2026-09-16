@@ -40,22 +40,19 @@ app.use(cors({
 
 app.use(globalLimiter);
 
-// ── Webhook de Recurrente: necesita body crudo (Buffer) para verificar firma Svix ──
-// express.raw() no setea req._body = true de forma confiable, por lo que express.json()
-// (montado globalmente abajo) lo re-parsea y destruye el Buffer que Svix necesita.
-// Solución: leer el stream manualmente y setear req._body = true explícitamente.
-app.use('/api/webhooks/recurrente', function(req, res, next) {
-  var chunks = [];
-  req.on('data', function(chunk) { chunks.push(chunk); });
-  req.on('end', function() {
-    req.body  = Buffer.concat(chunks);
-    req._body = true; // bloquea express.json() para que no re-parsee este body
-    next();
-  });
-  req.on('error', next);
-});
-
-app.use(express.json({ limit: '512kb' }));
+// ── Body parsing ──────────────────────────────────────────────────────────────
+// El callback verify captura el Buffer crudo ANTES de que express.json() lo parsee.
+// Se guarda en req.rawBody solo para la ruta del webhook de Recurrente,
+// donde Svix necesita el body original para verificar la firma HMAC-SHA256.
+// sanitizeInputs solo toca req.body (el objeto parseado), nunca req.rawBody.
+app.use(express.json({
+  limit: '512kb',
+  verify: function(req, _res, buf) {
+    if (req.url && req.url.includes('/webhooks/recurrente')) {
+      req.rawBody = buf;
+    }
+  },
+}));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 app.use(sanitizeInputs);
 

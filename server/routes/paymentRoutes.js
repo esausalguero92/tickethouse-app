@@ -137,9 +137,11 @@ router.post('/webhooks/recurrente',
     const supabase = getSupabase();
 
     // 1. Verificar firma Svix (lanza si inválida)
+    // req.rawBody es el Buffer crudo capturado por el verify callback de express.json()
+    // antes de que sea parseado o sanitizado. Nunca usar req.body aquí.
     let payload;
     try {
-      payload = verifyWebhookSignature(req.body, req.headers);
+      payload = verifyWebhookSignature(req.rawBody, req.headers);
     } catch (e) {
       console.warn('[webhook.recurrente] Firma inválida:', e.message);
       return res.status(401).json({ error: 'invalid_signature' });
