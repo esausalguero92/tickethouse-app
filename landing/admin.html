@@ -1449,11 +1449,13 @@ function openEventoModal(eventoId) {
       renderEventoImages(ev.images || (ev.image_url ? [ev.image_url] : []));
       document.getElementById('ev-desc').value   = ev.description || '';
       if (ev.event_date) {
-        // Convert ISO to datetime-local format
+        // Mostrar en hora Guatemala (UTC-6) en el input datetime-local
         const d = new Date(ev.event_date);
         const pad = n => String(n).padStart(2, '0');
+        // Convertir a Guatemala: restar 6 horas al UTC
+        const gt = new Date(d.getTime() - 6 * 60 * 60 * 1000);
         document.getElementById('ev-date').value =
-          `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+          `${gt.getUTCFullYear()}-${pad(gt.getUTCMonth()+1)}-${pad(gt.getUTCDate())}T${pad(gt.getUTCHours())}:${pad(gt.getUTCMinutes())}`;
       }
     }
   }
@@ -1540,7 +1542,16 @@ async function submitEventoForm(e) {
   const prefix = document.getElementById('ev-prefix').value.trim().toUpperCase();
   const payload = {
     name:        document.getElementById('ev-name').value.trim(),
-    event_date:  document.getElementById('ev-date').value,
+    // El input datetime-local no tiene timezone — el admin siempre ingresa hora Guatemala (UTC-6)
+    // Convertir a UTC sumando 6 horas antes de guardar en BD
+    event_date:  (() => {
+      const raw = document.getElementById('ev-date').value; // "2026-09-19T21:00"
+      if (!raw) return null;
+      const localDate = new Date(raw + ':00'); // interpreta como hora local del navegador
+      // Forzar offset Guatemala +6h al UTC independientemente del navegador
+      const offsetMs = (localDate.getTimezoneOffset() - 360) * 60 * 1000; // diff entre local y GT
+      return new Date(localDate.getTime() + offsetMs).toISOString();
+    })(),
     venue:       document.getElementById('ev-venue').value.trim(),
     price_gtq:   parseFloat(document.getElementById('ev-price').value),
     capacity:    parseInt(document.getElementById('ev-capacity').value, 10),

@@ -308,6 +308,21 @@ router.patch('/events/:id/status',
     // status sincronizado con active: published ↔ draft
     const status = active ? 'published' : 'draft';
 
+    // Antes de publicar: verificar que el evento tiene code_prefix
+    if (active) {
+      const { data: evCheck } = await supabase
+        .from('events')
+        .select('code_prefix')
+        .eq('id', id)
+        .single();
+      if (!evCheck || !evCheck.code_prefix || !evCheck.code_prefix.trim()) {
+        return res.status(400).json({
+          error: 'missing_code_prefix',
+          message: 'El evento debe tener un prefijo (code_prefix) antes de publicarse.',
+        });
+      }
+    }
+
     const { data, error } = await supabase
       .from('events')
       .update({ active, status })
@@ -332,11 +347,19 @@ router.patch('/events/:id/status',
         .eq('event_id', id)
         .maybeSingle();
       if (!existingEc) {
-        await supabase.from('event_codes').insert({
+        const { error: ecErr } = await supabase.from('event_codes').insert({
           event_id: data.id,
           code:     data.code_prefix,
           active:   true,
         });
+        if (ecErr) {
+          // Revertir: despublicar el evento si no se pudo crear el event_code
+          await supabase.from('events').update({ active: false, status: 'draft' }).eq('id', id);
+          return res.status(500).json({
+            error: 'event_code_creation_failed',
+            message: 'No se pudo crear el código de evento. El evento fue regresado a borrador.',
+          });
+        }
       }
     }
 

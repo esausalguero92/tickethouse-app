@@ -1003,9 +1003,13 @@ async function init() {
       }
     } catch { return showGlobalError(); }
   } else if (id) {
-    // Fetch fresh artists even when event was cached (they may have been added)
+    // Fetch fresh data even when event was cached (artists + event_code_id pueden cambiar)
     try {
       apiData = await api('GET', '/api/events/' + encodeURIComponent(id));
+      // Siempre actualizar event_code_id desde el servidor (no confiar en caché)
+      if (apiData && apiData.event_code_id) {
+        sessionStorage.setItem('ph_event_code_id', apiData.event_code_id);
+      }
     } catch {}
   }
 
