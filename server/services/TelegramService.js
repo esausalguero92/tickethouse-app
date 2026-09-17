@@ -17,7 +17,7 @@ async function telegramPost(method, body) {
  * Notifica al admin cuando se confirma un nuevo pago con Recurrente.
  * Non-blocking: el caller no debe awaitar.
  */
-async function notifyNewOrder({ buyerName, quantity, eventName, orderId, publicCodes }) {
+async function notifyNewOrder({ buyerName, quantity, eventName, orderId, publicCodes, totalSold }) {
   const chatId = env.ORDER_NOTIFY_ID || env.ADMIN_TELEGRAM_IDS[0] || '';
   if (!env.TELEGRAM_BOT_TOKEN || !chatId) {
     console.warn('[telegram] Sin destino — configura ORDER_NOTIFY_ID o ADMIN_TELEGRAM_IDS.');
@@ -28,6 +28,10 @@ async function notifyNewOrder({ buyerName, quantity, eventName, orderId, publicC
     ? publicCodes.join(', ')
     : '—';
 
+  const totalLine = totalSold != null
+    ? `📊 Total vendidas: ${totalSold} entradas`
+    : null;
+
   const lines = [
     '✅ Nuevo pago confirmado',
     '',
@@ -35,6 +39,7 @@ async function notifyNewOrder({ buyerName, quantity, eventName, orderId, publicC
     `🎟 ${quantity} ${quantity === 1 ? 'entrada' : 'entradas'}`,
     `🎉 ${eventName}`,
     `🔑 ${codesText}`,
+    ...(totalLine ? ['', totalLine] : []),
     '',
     `🔗 ${env.PUBLIC_BASE_URL}/admin.html`,
   ];

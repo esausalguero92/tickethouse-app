@@ -252,13 +252,24 @@ router.post('/webhooks/recurrente',
     }
 
     // 8. Notificar al admin por Telegram (non-blocking)
-    notifyNewOrder({
-      buyerName:  order.buyer_name,
-      quantity:   order.quantity,
-      eventName:  (order.event && order.event.name) || 'TicketHouse',
-      orderId,
-      publicCodes: result.publicCodes,
-    }).catch(function(e) { console.error('[webhook.telegram]', e.message); });
+    // Consultar total de entradas vendidas para este evento
+    supabase
+      .from('orders')
+      .select('quantity')
+      .eq('event_id', order.event_id)
+      .eq('payment_status', 'paid')
+      .then(({ data: soldData }) => {
+        const totalSold = (soldData || []).reduce((sum, r) => sum + (r.quantity || 0), 0);
+        return notifyNewOrder({
+          buyerName:   order.buyer_name,
+          quantity:    order.quantity,
+          eventName:   (order.event && order.event.name) || 'TicketHouse',
+          orderId,
+          publicCodes: result.publicCodes,
+          totalSold,
+        });
+      })
+      .catch(function(e) { console.error('[webhook.telegram]', e.message); });
 
     console.log('[webhook.recurrente] Tickets emitidos para orden:', orderId, '→', result.publicCodes);
     return res.json({ ok: true });
