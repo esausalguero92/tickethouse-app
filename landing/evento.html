@@ -575,13 +575,19 @@
     @media (max-width: 768px) {
       .ev-topbar { padding: 0 12px; }
       .ev-split { grid-template-columns: 1fr; min-height: auto; }
-      .ev-left { grid-column: 1; margin: 0; }
-      .ev-right { grid-column: 1; }
+      .ev-left { grid-column: 1 !important; margin: 0 !important; order: -1; }
+      .ev-right { grid-column: 1 !important; }
       .ev-left {
         position: relative; top: auto;
-        height: 48vmax; min-height: 240px; max-height: 380px;
+        height: auto; min-height: unset; max-height: unset;
+        aspect-ratio: 3/4;
         border-radius: 0;
-        margin: 0;
+        margin: 0 !important;
+      }
+      .ev-carousel__slide {
+        background-size: contain;
+        background-position: center center;
+        background-repeat: no-repeat;
       }
       .ev-left__content { padding: 16px 18px 20px; }
       .ev-left__title { font-size: clamp(30px, 9vw, 50px); margin-bottom: 8px; }
@@ -599,6 +605,19 @@
       .step-tabs     { padding: 0 18px; }
       .step-body     { padding: 20px 18px 100px; }
       .checkout-back-link { padding: 12px 18px 0; }
+
+      /* Centrar checkout en móvil */
+      #ev-checkout { display: none; }
+      #ev-checkout.visible {
+        display: flex; flex-direction: column; align-items: center;
+        width: 100%;
+      }
+      #ev-checkout.visible > * { width: 100%; max-width: 100%; }
+      #recurrente-checkout-container { width: 100%; padding: 0 12px; box-sizing: border-box; }
+      .step-heading, .step-sub { text-align: center; }
+      .ev-right__inner { display: flex; flex-direction: column; align-items: center; width: 100%; }
+      #ev-checkout .step-tabs,
+      #ev-checkout .checkout-back-link { text-align: center; }
 
       #mobile-cta { display: flex; }
       #step1-next, #step2-next, #step2-back { display: none; }
@@ -1097,9 +1116,12 @@ function renderEvent(available, artists) {
   var secDivider   = secLineup ? secLineup.nextElementSibling : null;
   if (artists && artists.length) {
     grid.innerHTML = artists.map(function(a) {
-      var photoHtml = a.photo_url
+      var photoEl = a.photo_url
         ? '<img class="ev-artist-photo" src="' + a.photo_url.replace(/"/g,'%22') + '" alt="' + (a.name||'').replace(/"/g,'&quot;') + '" loading="lazy">'
         : '<div class="ev-artist-photo-placeholder">🎧</div>';
+      var photoHtml = a.instagram
+        ? '<a href="https://instagram.com/' + a.instagram.replace(/^@/,'').replace(/"/g,'%22') + '" target="_blank" rel="noopener" style="display:block;line-height:0;">' + photoEl + '</a>'
+        : photoEl;
       var genreHtml = (a.genres||[]).slice(0,3).map(function(g) {
         return '<span class="ev-artist-genre">' + g + '</span>';
       }).join('');

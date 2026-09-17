@@ -1,0 +1,58 @@
+# ======================================================================
+# Party House — Server Node (.env local)
+# NO subir al repositorio — ya está en .gitignore.
+# ======================================================================
+
+# ---- Servidor ----
+PORT=3000
+PUBLIC_BASE_URL=https://tickethouse.site
+
+# ======================================================================
+# Supabase
+# ======================================================================
+SUPABASE_URL=https://pvdrbkvafmlqoylbwsxh.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_G3nfncmtqs8U2JrG546efw_Ing7OszN
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZHJia3ZhZm1scW95bGJ3c3hoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjM3NDAzNywiZXhwIjoyMDkxOTUwMDM3fQ.dP2xizMDcV1KZgzb3DUXImyj2Kx3Oo2glFKELmxlRqg
+RECEIPTS_BUCKET=receipts
+
+# ======================================================================
+# Seguridad
+# ======================================================================
+JWT_SECRET=c2c062aa21511c74a556f6d330420823c1173a30907183fa925cec8ab0f5fb4f
+STAFF_PIN=270492
+N8N_WEBHOOK_SECRET=1897057b18655b51cac305cc356960d08501b26b5602ab61
+
+# ======================================================================
+# Admin
+# ======================================================================
+ADMIN_USERNAME=admin
+# Contraseña: Admin2024!
+ADMIN_PASSWORD_HASH=$2a$12$bP7emW4Ow0xW2VkcWEWEzeD1CuTYSQnQtqae/aw/g5qh2YqZTJU9q
+
+# ======================================================================
+# Recurrente (TEST — cambiar a live en EasyPanel)
+# ======================================================================
+RECURRENTE_SECRET_KEY=sk_test_oZyrCMF6EwLKYpZpC2aAHXRbpQcMhDQZonCvmkI86oR8MM4sMSxtQR3W
+RECURRENTE_WEBHOOK_SECRET=whsec_5sbFmcKt5U7bWt8aDKPM9a9S1a0X1CUv
+
+# ======================================================================
+# Telegram
+# ======================================================================
+TELEGRAM_BOT_TOKEN=8450739146:AAFt5_hjRepNHA28MvxRghK5xed8DXg8UBE
+ADMIN_TELEGRAM_IDS=-5518527733
+ORDER_NOTIFY_ID=-5518527733
+
+# ======================================================================
+# Email (SMTP)
+# ======================================================================
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=info@tickethouse.site
+SMTP_PASS=DimebagD@rrl92
+MAIL_FROM=Ticket House <info@tickethouse.site>
+
+# ======================================================================
+# CORS (producción)
+# ======================================================================
+CORS_ORIGINS=https://tickethouse.site,https://www.tickethouse.site
