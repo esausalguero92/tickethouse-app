@@ -28,6 +28,20 @@ const upload = multer({
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Decodifica entidades HTML que sanitizeInputs inyecta en campos tipo URL
+function decodeHtmlEntities(s) {
+  if (!s || typeof s !== 'string') return s;
+  return s
+    .replace(/&amp;/g,  '&')
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g,   '<')
+    .replace(/&gt;/g,   '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/gi,    (_, d) => String.fromCharCode(+d))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
 async function getActiveEvent(supabase) {
   const { data } = await supabase
     .from('events')
@@ -201,7 +215,7 @@ router.get('/events',
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('events')
-      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, active, code_prefix, image_url, images, created_at')
+      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, active, code_prefix, image_url, images, location_url, created_at')
       .order('event_date', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });
@@ -222,7 +236,7 @@ router.post('/events',
   validateRequest,
   asyncHandler(async (req, res) => {
     const supabase = getSupabase();
-    const { name, event_date, venue, capacity, price_gtq, max_per_order, code_prefix, description, image_url } = req.body;
+    const { name, event_date, venue, capacity, price_gtq, max_per_order, code_prefix, description, image_url, location_url } = req.body;
 
     // Generar prefix automático si no se envía
     const prefix = code_prefix
@@ -241,8 +255,9 @@ router.post('/events',
       tickets_sold:  0,
     };
 
-    if (description) insert.description = String(description).slice(0, 1000);
-    if (image_url)   insert.image_url   = String(image_url).slice(0, 500);
+    if (description)  insert.description  = String(description).slice(0, 1000);
+    if (image_url)    insert.image_url    = String(image_url).slice(0, 500);
+    if (location_url) insert.location_url = decodeHtmlEntities(String(location_url)).slice(0, 500);
 
     const { data, error } = await supabase.from('events').insert(insert).select().single();
     if (error) {
@@ -270,7 +285,7 @@ router.patch('/events/:id',
     const { id } = req.params;
     if (!UUID_RE.test(id)) return res.status(400).json({ error: 'id_invalido' });
 
-    const allowed = ['name', 'event_date', 'venue', 'capacity', 'price_gtq', 'max_per_order', 'code_prefix', 'description', 'image_url', 'images'];
+    const allowed = ['name', 'event_date', 'venue', 'capacity', 'price_gtq', 'max_per_order', 'code_prefix', 'description', 'image_url', 'images', 'location_url'];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
@@ -283,6 +298,11 @@ router.patch('/events/:id',
     }
     if (updates.max_per_order) {
       updates.max_per_order = Math.min(10, Math.max(1, parseInt(updates.max_per_order, 10)));
+    }
+    if (updates.location_url !== undefined) {
+      updates.location_url = updates.location_url
+        ? decodeHtmlEntities(String(updates.location_url)).slice(0, 500)
+        : null;
     }
 
     if (!Object.keys(updates).length) return res.status(400).json({ error: 'no_fields_to_update' });

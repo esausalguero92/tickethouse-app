@@ -77,14 +77,14 @@ router.get('/ticket/:token/:code',
     if (LEGACY_CODE_RE.test(code)) {
       ticketQuery = supabase
         .from('tickets')
-        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue), buyer:buyers(full_name)')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
         .eq('correlative_code', code)
         .eq('order_id', payload.oid)
         .maybeSingle();
     } else {
       ticketQuery = supabase
         .from('tickets')
-        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue), buyer:buyers(full_name)')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
         .eq('public_code', code)
         .eq('order_id', payload.oid)
         .maybeSingle();
@@ -106,10 +106,11 @@ router.get('/ticket/:token/:code',
       publicCode:      ticket.public_code,
       correlativeCode: ticket.correlative_code,
       qrToken:         ticket.qr_token,
-      eventName:       ticket.event ? ticket.event.name       : 'TicketHouse',
-      eventDate:       ticket.event ? ticket.event.event_date : null,
-      eventVenue:      ticket.event ? ticket.event.venue      : '',
-      buyerName:       ticket.buyer ? ticket.buyer.full_name  : '',
+      eventName:       ticket.event ? ticket.event.name         : 'TicketHouse',
+      eventDate:       ticket.event ? ticket.event.event_date   : null,
+      eventVenue:      ticket.event ? ticket.event.venue        : '',
+      buyerName:       ticket.buyer ? ticket.buyer.full_name    : '',
+      locationUrl:     ticket.event ? ticket.event.location_url : null,
     });
 
     res.set('Content-Type', 'application/pdf');

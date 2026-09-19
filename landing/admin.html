@@ -795,6 +795,11 @@
               <div id="ev-pending-list" style="display:flex;flex-wrap:wrap;gap:8px;min-height:0"></div>
             </div>
             <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+              Link de ubicación (opcional)
+              <input type="url" id="ev-location-url" class="adm-filter-input" maxlength="500" placeholder="https://maps.app.goo.gl/…"/>
+              <span id="ev-location-url-status" style="font-size:10px;text-transform:none;letter-spacing:0;color:var(--ph-text-dim);opacity:.7">Se mostrará como enlace clickeable en el PDF de la entrada</span>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
               Descripción (opcional)
               <textarea id="ev-desc" class="adm-filter-input" rows="3" maxlength="1000" placeholder="Detalles del evento…" style="resize:vertical"></textarea>
             </label>
@@ -1435,6 +1440,8 @@ function openEventoModal(eventoId) {
   renderEventoImages([]);
   document.getElementById('ev-pending-list').innerHTML = '';
   _pendingImageFiles = [];
+  const locStatus = document.getElementById('ev-location-url-status');
+  if (locStatus) { locStatus.textContent = 'Se mostrará como enlace clickeable en el PDF de la entrada'; locStatus.style.opacity = '.7'; }
 
   if (eventoId) {
     const ev = allEventos.find(e => e.id === eventoId);
@@ -1444,7 +1451,16 @@ function openEventoModal(eventoId) {
       document.getElementById('ev-venue').value  = ev.venue || '';
       document.getElementById('ev-price').value  = ev.price_gtq || '';
       document.getElementById('ev-capacity').value = ev.capacity || '';
-      document.getElementById('ev-prefix').value = ev.code_prefix || '';
+      document.getElementById('ev-prefix').value       = ev.code_prefix    || '';
+      document.getElementById('ev-location-url').value = ev.location_url || '';
+      const locStatus = document.getElementById('ev-location-url-status');
+      if (ev.location_url) {
+        locStatus.innerHTML = '✅ URL guardada: <a href="' + ev.location_url + '" target="_blank" rel="noopener" style="color:var(--ph-blue);word-break:break-all">' + ev.location_url + '</a>';
+        locStatus.style.opacity = '1';
+      } else {
+        locStatus.textContent = 'Sin ubicación guardada — se mostrará como enlace clickeable en el PDF de la entrada';
+        locStatus.style.opacity = '.7';
+      }
       // Render existing images
       renderEventoImages(ev.images || (ev.image_url ? [ev.image_url] : []));
       document.getElementById('ev-desc').value   = ev.description || '';
@@ -1555,9 +1571,10 @@ async function submitEventoForm(e) {
     venue:       document.getElementById('ev-venue').value.trim(),
     price_gtq:   parseFloat(document.getElementById('ev-price').value),
     capacity:    parseInt(document.getElementById('ev-capacity').value, 10),
-    code_prefix: prefix || null,
+    code_prefix:  prefix || null,
+    location_url: document.getElementById('ev-location-url').value.trim() || null,
     // image_url is managed by upload endpoint
-    description: document.getElementById('ev-desc').value.trim() || null,
+    description:  document.getElementById('ev-desc').value.trim() || null,
   };
 
   try {

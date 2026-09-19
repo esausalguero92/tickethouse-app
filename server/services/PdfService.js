@@ -22,7 +22,20 @@ const C = {
 };
 
 const W = 420;
-const H = 570;
+
+// Decodifica entidades HTML que sanitizeInputs inyecta en campos tipo URL
+function decodeHtmlEntities(s) {
+  if (!s || typeof s !== 'string') return s;
+  return s
+    .replace(/&amp;/g,  '&')
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g,   '<')
+    .replace(/&gt;/g,   '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#(\d+);/gi,    (_, d) => String.fromCharCode(+d))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
 
 /**
  * @param {Object} opts
@@ -33,9 +46,13 @@ const H = 570;
  * @param {string}  [opts.eventDate]
  * @param {string}  [opts.eventVenue]
  * @param {string}  [opts.buyerName]
+ * @param {string}  [opts.locationUrl]
  */
-async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventName, eventDate, eventVenue, buyerName }) {
+async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventName, eventDate, eventVenue, buyerName, locationUrl }) {
   const qrPng = await generateQrBuffer(qrToken, 480);
+
+  // Decodificar URL en caso de que venga con entidades HTML del middleware sanitizador
+  const cleanLocationUrl = locationUrl ? decodeHtmlEntities(locationUrl) : null;
 
   const displayCode = publicCode || correlativeCode || '—';
 
@@ -45,6 +62,34 @@ async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventNa
         hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala',
       })
     : '';
+
+  // ── Paso 1: medir altura del nombre para calcular H exacto ───────
+  // Se usa un doc temporal solo para medición (output descartado).
+  let nameHeightEst = 42; // fallback conservador (~1 línea Bebas 36)
+  try {
+    const tmpDoc = new PDFDocument({ size: [W, 1000], margin: 0 });
+    tmpDoc.registerFont('Bebas', path.join(FONTS_DIR, 'BebasNeue-Regular.ttf'));
+    nameHeightEst = tmpDoc.heightOfString(eventName.toUpperCase(), {
+      font: 'Bebas', fontSize: 36, width: W - 48, characterSpacing: 2, lineGap: 2,
+    });
+    tmpDoc.end(); // descartar output
+  } catch (_) {}
+
+  // Calcular punto de referencia y del code box (mismo flujo que el renderizado)
+  const yCodeRef = 38 + nameHeightEst + 8  // nombre del evento
+                 + 10                        // gap tras separador
+                 + (eventDateStr ? 16 : 0)
+                 + (eventVenue   ? 18 : 0)
+                 + (buyerName    ? 18 : 0)
+                 + 26                        // separador inferior
+                 + 210 + 24                  // QR (210px) + gap (24px)
+                 + 18;                       // texto instrucción
+
+  // Fondo del contenido + gap + footer
+  const contentBottom = cleanLocationUrl ? yCodeRef + 84 : yCodeRef + 40;
+  const H = cleanLocationUrl
+    ? contentBottom + 22 + 26   // 22px gap + 26px footer (altura ajustada con ubicación)
+    : 570;                      // altura original para entradas sin ubicación
 
   const doc = new PDFDocument({
     size: [W, H],
@@ -192,6 +237,38 @@ async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventNa
        .fontSize(28)
        .fillColor(C.accent)
        .text(displayCode, 0, y + 11, { align: 'center', width: W, characterSpacing: 2 });
+
+    // ── Ubicación (opcional) ──────────────────────────────────────
+    if (cleanLocationUrl) {
+      const locY    = y + 46; // debajo del code box (acaba en y+40) + 6 gap
+      const locBoxH = 38;
+
+      // Fondo oscuro igual al code box
+      doc.rect(44, locY, W - 88, locBoxH).fill(C.surface);
+
+      // Bordes accent arriba y abajo
+      doc.rect(44, locY,                  W - 88, 1).fill(C.accent);
+      doc.rect(44, locY + locBoxH - 1,    W - 88, 1).fill(C.accent);
+
+      // Label pequeño
+      doc.font('Grotesk')
+         .fontSize(7)
+         .fillColor(C.muted)
+         .text('UBICACIÓN DEL EVENTO', 0, locY + 6, {
+           align: 'center', width: W, characterSpacing: 2,
+         });
+
+      // Texto principal clickeable
+      doc.font('Grotesk-Bold')
+         .fontSize(10)
+         .fillColor(C.accent)
+         .text('VER UBICACION EN MAPA', 0, locY + 18, {
+           align: 'center', width: W, characterSpacing: 1,
+         });
+
+      // Hacer el bloque completo clickeable (URL ya decodificada)
+      doc.link(44, locY, W - 88, locBoxH, cleanLocationUrl);
+    }
 
     // ── Footer ────────────────────────────────────────────────────
     doc.rect(0, H - 26, W, 26).fill(C.surface);
