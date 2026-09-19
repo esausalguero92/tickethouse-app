@@ -258,6 +258,7 @@ router.post('/webhooks/recurrente',
       .select('quantity')
       .eq('event_id', order.event_id)
       .eq('payment_status', 'paid')
+      .neq('payment_method', 'complimentary')
       .then(({ data: soldData }) => {
         const totalSold = (soldData || []).reduce((sum, r) => sum + (r.quantity || 0), 0);
         return notifyNewOrder({
@@ -275,5 +276,66 @@ router.post('/webhooks/recurrente',
     return res.json({ ok: true });
   })
 );
+
+// ── POST /api/sandbox/confirm-payment ────────────────────────────
+// Solo disponible fuera de producción.
+// Simula el webhook de Recurrente sin verificar firma.
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/sandbox/confirm-payment',
+    body('order_id').isUUID().withMessage('order_id invalido'),
+    validateRequest,
+    asyncHandler(async (req, res) => {
+      const supabase = getSupabase();
+      const { order_id: orderId } = req.body;
+
+      const { data: order, error: oErr } = await supabase
+        .from('orders')
+        .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, event:events(name, event_date, venue, code_prefix)')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (oErr || !order) return res.status(404).json({ error: 'order_not_found' });
+      if (order.payment_status === 'paid') return res.json({ ok: true, already_paid: true });
+
+      const { error: upErr } = await supabase
+        .from('orders')
+        .update({ payment_status: 'paid', payment_method: 'recurrente', paid_at: new Date().toISOString() })
+        .eq('id', orderId)
+        .eq('payment_status', 'pending');
+
+      if (upErr) return res.status(500).json({ error: 'db_update_failed' });
+
+      let result;
+      try {
+        result = await issueTickets({
+          orderId,
+          eventId:     order.event_id,
+          buyerId:     order.buyer_id,
+          buyerName:   order.buyer_name,
+          buyerEmail:  order.buyer_email,
+          quantity:    order.quantity,
+          eventName:   (order.event && order.event.name)       || 'TicketHouse',
+          eventDate:   (order.event && order.event.event_date)  || null,
+          eventVenue:  (order.event && order.event.venue)      || '',
+          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+        });
+      } catch (e) {
+        return res.status(500).json({ error: 'ticket_issue_failed', message: e.message });
+      }
+
+      supabase
+        .from('orders').select('quantity')
+        .eq('event_id', order.event_id).eq('payment_status', 'paid').neq('payment_method', 'complimentary')
+        .then(({ data: soldData }) => {
+          const totalSold = (soldData || []).reduce((s, r) => s + (r.quantity || 0), 0);
+          return notifyNewOrder({ buyerName: order.buyer_name, quantity: order.quantity, eventName: (order.event && order.event.name) || 'TicketHouse', orderId, publicCodes: result.publicCodes, totalSold });
+        })
+        .catch(e => console.error('[sandbox.telegram]', e.message));
+
+      console.log('[sandbox] Pago confirmado:', orderId, '→', result.publicCodes);
+      return res.json({ ok: true, publicCodes: result.publicCodes });
+    })
+  );
+}
 
 module.exports = router;
