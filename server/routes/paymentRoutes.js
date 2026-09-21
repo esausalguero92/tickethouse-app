@@ -5,7 +5,7 @@ const { body } = require('express-validator');
 const { getSupabase } = require('../db/supabase');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validateRequest, purchaseLimiter, paymentLimiter } = require('../middleware/security');
-const { issueTickets } = require('../services/TicketService');
+const { issueTickets, issueTicketsTiers } = require('../services/TicketService');
 const { notifyNewOrder } = require('../services/TelegramService');
 const { createCheckout, verifyWebhookSignature } = require('../services/RecurrenteService');
 const env = require('../config/env');
@@ -61,6 +61,54 @@ router.post('/payment/intent',
         age_not_verified: 400, terms_not_accepted: 400, quantity_invalid: 400,
         name_required: 400, email_invalid: 400, event_code_invalid: 404,
         event_not_available: 410, quantity_exceeds_limit: 400, insufficient_capacity: 409,
+      };
+      return res.status(statusMap[data.error] || 400).json(data);
+    }
+    return res.json(data);
+  })
+);
+
+
+// ── POST /api/payment/intent/tiers ───────────────────────────────
+// Crea orden pendiente para compra de localidades (flujo tiers).
+// El RPC valida capacidad, precios y retorna order_id + total_gtq.
+router.post('/payment/intent/tiers',
+  purchaseLimiter,
+  body('event_id').isUUID().withMessage('event_id inválido'),
+  body('full_name').trim().isLength({ min: 2, max: 120 }).withMessage('Nombre requerido (2-120 chars)'),
+  body('email').trim().isEmail().normalizeEmail().withMessage('Email inválido'),
+  body('tier_items').isArray({ min: 1 }).withMessage('tier_items debe ser un arreglo con al menos 1 localidad'),
+  body('tier_items.*.tier_id').isUUID().withMessage('tier_id inválido'),
+  body('tier_items.*.quantity').isInt({ min: 1 }).withMessage('quantity debe ser entero > 0'),
+  body('age_verified').custom(v => {
+    if (v === true || v === 'true') return true;
+    throw new Error('Debes confirmar mayoría de edad');
+  }),
+  body('terms_accepted').custom(v => {
+    if (v === true || v === 'true') return true;
+    throw new Error('Debes aceptar los términos');
+  }),
+  validateRequest,
+  asyncHandler(async (req, res) => {
+    const supabase = getSupabase();
+    const { event_id, full_name, email, tier_items, age_verified, terms_accepted } = req.body;
+
+    const { data, error } = await supabase.rpc('rpc_create_purchase_intent_tiers', {
+      p_event_id:       event_id,
+      p_full_name:      full_name,
+      p_email:          email,
+      p_tier_items:     tier_items,
+      p_age_verified:   age_verified === true || age_verified === 'true',
+      p_terms_accepted: terms_accepted === true || terms_accepted === 'true',
+    });
+
+    if (error) { console.error('[payment.intent.tiers]', error); return res.status(500).json({ error: 'db_error' }); }
+    console.log('[payment.intent.tiers] rpc result:', JSON.stringify(data));
+    if (data && data.error) {
+      const statusMap = {
+        event_not_found: 404, tier_not_found: 404,
+        no_active_phase: 409, insufficient_capacity: 409,
+        quantity_invalid: 400, max_per_order_exceeded: 400,
       };
       return res.status(statusMap[data.error] || 400).json(data);
     }
@@ -198,7 +246,7 @@ router.post('/webhooks/recurrente',
     // 5. Obtener orden y verificar que está pendiente
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, event:events(name, event_date, venue, code_prefix)')
+      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, tier_items, payment_status, event:events(name, event_date, venue, code_prefix)')
       .eq('id', orderId)
       .maybeSingle();
 
@@ -233,18 +281,34 @@ router.post('/webhooks/recurrente',
     // 7. Emitir tickets (flujo completo: JWT + BD + PDF + email)
     let result;
     try {
-      result = await issueTickets({
-        orderId:    order.id,
-        eventId:    order.event_id,
-        buyerId:    order.buyer_id,
-        buyerName:  order.buyer_name,
-        buyerEmail: order.buyer_email,
-        quantity:   order.quantity,
-        eventName:  (order.event && order.event.name)      || 'TicketHouse',
-        eventDate:  (order.event && order.event.event_date) || null,
-        eventVenue: (order.event && order.event.venue)     || '',
-        eventPrefix: (order.event && order.event.code_prefix) || 'TH',
-      });
+      const hasTierItems = order.tier_items && Array.isArray(order.tier_items) && order.tier_items.length > 0;
+      if (hasTierItems) {
+        result = await issueTicketsTiers({
+          orderId:    order.id,
+          eventId:    order.event_id,
+          buyerId:    order.buyer_id,
+          buyerName:  order.buyer_name,
+          buyerEmail: order.buyer_email,
+          tierItems:  order.tier_items,
+          eventName:  (order.event && order.event.name)       || 'TicketHouse',
+          eventDate:  (order.event && order.event.event_date)  || null,
+          eventVenue: (order.event && order.event.venue)      || '',
+          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+        });
+      } else {
+        result = await issueTickets({
+          orderId:    order.id,
+          eventId:    order.event_id,
+          buyerId:    order.buyer_id,
+          buyerName:  order.buyer_name,
+          buyerEmail: order.buyer_email,
+          quantity:   order.quantity,
+          eventName:  (order.event && order.event.name)      || 'TicketHouse',
+          eventDate:  (order.event && order.event.event_date) || null,
+          eventVenue: (order.event && order.event.venue)     || '',
+          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+        });
+      }
     } catch (e) {
       console.error('[webhook.recurrente] Error emitiendo tickets:', e.message);
       // El webhook ya confirmó pago — el admin puede re-emitir manualmente

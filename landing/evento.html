@@ -731,6 +731,16 @@
             </div>
           </div>
 
+          <!-- LOCALIDADES section (shown when event has tiers) -->
+          <div id="section-tiers" style="display:none;">
+            <div class="ev-section-divider"></div>
+            <div class="ev-section-header">
+              <span class="ev-section-header__label">Localidades</span>
+              <span class="ev-section-header__line"></span>
+            </div>
+            <div class="ev-tickets-section" id="tiers-section-inner"></div>
+          </div>
+
           <!-- LINE UP section ──────────────────────── -->
           <div id="section-lineup">
             <div class="ev-section-header">
@@ -972,9 +982,29 @@ let appliedDiscount = null;
 let checkoutMounted = false;
 let checkoutOpen    = false; // true after clicking "Comprar entrada"
 
+// ── Tier state ──────────────────────────────────────────────────────
+let tiers     = [];      // [{id, name, color, capacity, tickets_sold, active_phase}]
+let tierItems = {};      // { tier_id: quantity }
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 function gtqPrice() {
   return Number(event && event.price_gtq ? event.price_gtq : 0);
+}
+
+function hasTiers() { return tiers.length > 0; }
+
+function getTierTotal() {
+  return tiers.reduce(function(sum, t) {
+    if (!t.active_phase) return sum;
+    var qty   = tierItems[t.id] || 0;
+    var bQty  = Number(t.active_phase.bundle_qty || 1);
+    var packs = bQty > 1 ? Math.floor(qty / bQty) : qty;
+    return sum + packs * Number(t.active_phase.price_gtq || 0);
+  }, 0);
+}
+
+function getTierTotalQty() {
+  return Object.values(tierItems).reduce(function(s, q) { return s + (q || 0); }, 0);
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────
@@ -1046,7 +1076,20 @@ async function init() {
   if (available != null) maxQty = Math.min(10, available);
 
   renderEvent(available, apiData && apiData.artists || []);
-  setupQuantityStepper();
+
+  // Fetch tiers
+  if (event && event.id) {
+    try {
+      var tiersData = await api('GET', '/api/events/' + event.id + '/tiers');
+      tiers = (tiersData && tiersData.tiers) ? tiersData.tiers : [];
+    } catch (e) { tiers = []; }
+  }
+
+  if (hasTiers()) {
+    renderTierSection();
+  } else {
+    setupQuantityStepper();
+  }
   setupSteps();
   setupDiscountCode();
   setupLanding();
@@ -1214,6 +1257,73 @@ function renderEvent(available, artists) {
 }
 
 // ── Landing: buy buttons + checkout ─────────────────────────────────────
+function renderTierSection() {
+  if (!tiers || tiers.length === 0) return;
+  document.getElementById('section-tiers').style.display = '';
+  document.getElementById('section-entradas').style.display = 'none';
+
+  var inner = document.getElementById('tiers-section-inner');
+  inner.innerHTML = tiers.map(function(t) {
+    var phase    = t.active_phase;
+    var bQty     = phase ? Number(phase.bundle_qty || 1) : 1;
+    var priceVal = phase ? ('Q' + Number(phase.price_gtq).toFixed(2) + (bQty > 1 ? ' <span style="font-size:12px;color:rgba(255,255,255,.5)">/ ' + bQty + ' tkt</span>' : '')) : '—';
+    var phaseLbl = phase ? (phase.name + (bQty > 1 ? ' · 📦 paquete ' + bQty + ' entradas' : '')) : 'Sin precio activo';
+    var available = t.capacity != null ? Math.max(0, t.capacity - (t.tickets_sold || 0)) : null;
+    var soldOut   = available === 0 || !phase;
+    var qty       = tierItems[t.id] || 0;
+    return '<div class="ev-ticket-type-card" style="margin-bottom:12px;">'
+      + '<div class="ev-ticket-type-card__body">'
+      +   '<div style="display:flex;align-items:center;gap:8px;">'
+      +     '<div style="width:12px;height:12px;border-radius:50%;background:' + (t.color || '#6366f1') + ';flex-shrink:0;"></div>'
+      +     '<div><p class="ev-ticket-type-name">' + t.name + '</p>'
+      +       '<p class="ev-ticket-type-note" style="font-size:11px;">' + phaseLbl + '</p></div>'
+      +   '</div>'
+      +   '<div style="text-align:right;"><div class="ev-ticket-type-price-val">' + priceVal + '</div></div>'
+      + '</div>'
+      + (!soldOut
+        ? ('<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 12px;">'
+          + '<span style="font-size:11px;color:rgba(255,255,255,.5);">' + (available != null ? available + ' disp.' : 'Disponible') + '</span>'
+          + '<div style="display:flex;align-items:center;">'
+          +   '<button onclick="changeTierQty(\'' + t.id + '\',false)" style="width:32px;height:32px;border-radius:8px 0 0 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;">−</button>'
+          +   '<span id="tier-qty-' + t.id + '" style="min-width:36px;text-align:center;font-size:15px;font-weight:700;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12);height:32px;line-height:32px;">' + qty + '</span>'
+          +   '<button onclick="changeTierQty(\'' + t.id + '\',true)" style="width:32px;height:32px;border-radius:0 8px 8px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;">+</button>'
+          + '</div></div>')
+        : '<div style="padding:8px 14px 12px;"><span style="font-size:11px;color:rgba(255,255,255,.4);">Agotado</span></div>')
+      + '</div>';
+  }).join('');
+
+  var buyBtn = document.createElement('button');
+  buyBtn.className = 'ev-buy-cta'; buyBtn.id = 'btn-buy-tiers';
+  buyBtn.textContent = 'COMPRAR ENTRADAS';
+  buyBtn.addEventListener('click', function() { if (getTierTotalQty() > 0) openCheckout(); });
+  inner.appendChild(buyBtn);
+  updateTierBuyBtn();
+  updateSummary();
+}
+
+function changeTierQty(tierId, isPlus) {
+  var tier = tiers.find(function(t) { return t.id === tierId; });
+  if (!tier || !tier.active_phase) return;
+  var bQty   = Number((tier.active_phase && tier.active_phase.bundle_qty) || 1);
+  var maxCap = tier.capacity != null ? Math.max(0, tier.capacity - (tier.tickets_sold || 0)) : (bQty > 1 ? bQty * 5 : 10);
+  var maxT   = bQty > 1 ? Math.floor(maxCap / bQty) * bQty : Math.min(10, maxCap);
+  var cur    = tierItems[tierId] || 0;
+  if (isPlus) cur = Math.min(cur + bQty, maxT);
+  else        cur = Math.max(cur - bQty, 0);
+  tierItems[tierId] = cur;
+  var el = document.getElementById('tier-qty-' + tierId);
+  if (el) el.textContent = cur;
+  updateSummary(); updateTierBuyBtn();
+}
+
+function updateTierBuyBtn() {
+  var btn = document.getElementById('btn-buy-tiers');
+  if (!btn) return;
+  var total = getTierTotalQty();
+  btn.disabled = total === 0;
+  btn.style.opacity = total === 0 ? '.45' : '1';
+}
+
 function setupLanding() {
   // Buy buttons
   var btnBuy       = document.getElementById('btn-buy');
@@ -1285,25 +1395,47 @@ function setupQuantityStepper() {
 }
 
 function updateSummary() {
-  const price = gtqPrice();
-  const base  = price * quantity;
-  const label = quantity + ' ' + (quantity === 1 ? 'entrada' : 'entradas');
-
-  document.getElementById('summary-line').textContent  = label + ' x Q' + price.toFixed(2);
-  document.getElementById('summary-total').textContent = 'Q' + base.toFixed(2);
-
   var discRow = document.getElementById('summary-discount-row');
   if (discRow) discRow.style.display = 'none';
 
-  var ml = document.getElementById('mini-summary-line');
-  var mt = document.getElementById('mini-summary-total');
-  var mc = document.getElementById('mcta-total');
-  if (ml) ml.textContent = label;
-  if (mt) mt.textContent = 'Q' + base.toFixed(2);
-  if (mc) mc.textContent = 'Q' + base.toFixed(2);
+  if (hasTiers()) {
+    var tierTotal = getTierTotal();
+    var tierQty   = getTierTotalQty();
+    var lineHtml = tiers.filter(function(t) { return (tierItems[t.id]||0) > 0 && t.active_phase; }).map(function(t) {
+      var ph    = t.active_phase;
+      var qty   = tierItems[t.id] || 0;
+      var bQty  = Number(ph.bundle_qty || 1);
+      var packs = bQty > 1 ? Math.floor(qty / bQty) : qty;
+      var label = bQty > 1 ? (t.name + ' x' + packs + ' paq. (' + qty + ' tkt)') : (t.name + ' x' + qty);
+      return '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>' + label + '</span><span>Q' + (packs * Number(ph.price_gtq)).toFixed(2) + '</span></div>';
+    }).join('');
+    var sl = document.getElementById('summary-line');
+    if (sl) sl.innerHTML = lineHtml || (tierQty === 0 ? 'Sin localidades seleccionadas' : '');
+    var st = document.getElementById('summary-total');
+    if (st) st.textContent = 'Q' + tierTotal.toFixed(2);
+    var ml = document.getElementById('mini-summary-line');
+    var mt = document.getElementById('mini-summary-total');
+    var mc = document.getElementById('mcta-total');
+    if (ml) ml.textContent = tierQty + ' entrada' + (tierQty !== 1 ? 's' : '');
+    if (mt) mt.textContent = 'Q' + tierTotal.toFixed(2);
+    if (mc) mc.textContent = 'Q' + tierTotal.toFixed(2);
+    return;
+  }
 
+  var price = gtqPrice();
+  var base  = price * quantity;
+  var label = quantity + ' ' + (quantity === 1 ? 'entrada' : 'entradas');
+  document.getElementById('summary-line').textContent  = label + ' x Q' + price.toFixed(2);
+  document.getElementById('summary-total').textContent = 'Q' + base.toFixed(2);
+  var ml2 = document.getElementById('mini-summary-line');
+  var mt2 = document.getElementById('mini-summary-total');
+  var mc2 = document.getElementById('mcta-total');
+  if (ml2) ml2.textContent = label;
+  if (mt2) mt2.textContent = 'Q' + base.toFixed(2);
+  if (mc2) mc2.textContent = 'Q' + base.toFixed(2);
   if (appliedDiscount) reapplyDiscount();
 }
+
 
 function reapplyDiscount() {
   if (!appliedDiscount) return;
@@ -1409,6 +1541,10 @@ async function applyDiscountCode() {
 // ── Step wizard ───────────────────────────────────────────────────────────
 function setupSteps() {
   document.getElementById('step1-next').addEventListener('click', function() {
+    if (hasTiers() && getTierTotalQty() === 0) {
+      alert('Selecciona al menos una localidad.');
+      return;
+    }
     if (validateStep1()) goToStep(2);
   });
   document.getElementById('step2-back').addEventListener('click', function() { goToStep(1); });
@@ -1536,6 +1672,28 @@ function showGlobalError() {
 
 // ── Payment intent ────────────────────────────────────────────────────────
 async function createPaymentIntent() {
+  var name  = document.getElementById('buyer-name').value.trim();
+  var email = document.getElementById('buyer-email').value.trim().toLowerCase();
+
+  if (hasTiers()) {
+    if (!event || !event.id) throw new Error('event_not_configured');
+    var tierItemsArr = tiers
+      .filter(function(t) { return (tierItems[t.id] || 0) > 0; })
+      .map(function(t) { return { tier_id: t.id, quantity: tierItems[t.id] }; });
+    if (tierItemsArr.length === 0) throw new Error('no_tiers_selected');
+    var data = await api('POST', '/api/payment/intent/tiers', {
+      event_id:       event.id,
+      full_name:      name,
+      email:          email,
+      tier_items:     tierItemsArr,
+      age_verified:   document.getElementById('age-check').checked,
+      terms_accepted: document.getElementById('terms-check').checked,
+    });
+    orderId = data.order_id;
+    return orderId;
+  }
+
+  // Standard (non-tier) purchase
   var ecId = sessionStorage.getItem('ph_event_code_id') || '';
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ecId)) {
     throw new Error('event_not_configured');
@@ -1544,19 +1702,18 @@ async function createPaymentIntent() {
     event_id:       event.id,
     event_code:     sessionStorage.getItem('ph_event_code') || '',
     event_code_id:  ecId,
-    full_name:      document.getElementById('buyer-name').value.trim(),
-    email:          document.getElementById('buyer-email').value.trim().toLowerCase(),
+    full_name:      name,
+    email:          email,
     quantity,
     age_verified:   document.getElementById('age-check').checked,
     terms_accepted: document.getElementById('terms-check').checked,
   };
-  if (appliedDiscount && appliedDiscount.code) {
-    payload.discount_code = appliedDiscount.code;
-  }
+  if (appliedDiscount && appliedDiscount.code) payload.discount_code = appliedDiscount.code;
   var data = await api('POST', '/api/payment/intent', payload);
   orderId = data.order_id;
   return orderId;
 }
+
 
 // ── Recurrente checkout ───────────────────────────────────────────────────
 async function initCheckout() {

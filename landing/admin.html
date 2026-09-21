@@ -658,6 +658,9 @@
       <button class="adm-nav__item" data-panel="panel-artistas" id="nav-artistas">
         <span class="adm-nav__icon">🎤</span> Artistas
       </button>
+      <button class="adm-nav__item" data-panel="panel-localidades" id="nav-localidades">
+        <span class="adm-nav__icon">🎟</span> Localidades
+      </button>
     </nav>
 
     <div class="adm-sidebar__footer">
@@ -1076,6 +1079,47 @@
       </div>
     </div>
 
+
+    <!-- ── PANEL: Localidades ───────────────────────────────────── -->
+    <div id="panel-localidades" class="adm-panel">
+      <div class="adm-main__header">
+        <h1 class="adm-main__title">LOCALIDADES</h1>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <select id="tiers-event-select" class="adm-filter-input" style="max-width:300px;" onchange="loadTiersAdmin()">
+          <option value="">— Selecciona un evento —</option>
+        </select>
+        <span id="tiers-event-msg" style="font-size:13px;color:var(--ph-text-dim)"></span>
+      </div>
+
+      <!-- Add tier form -->
+      <div id="add-tier-form" style="display:none;background:var(--ph-surface);border:1px solid var(--ph-border);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <h3 style="font-size:14px;font-weight:700;margin:0 0 14px;letter-spacing:.04em;">Nueva localidad</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <label style="font-size:11px;color:var(--ph-text-dim)">Nombre *</label>
+            <input type="text" id="new-tier-name" class="adm-filter-input" placeholder="Ej: VIP" maxlength="80" style="width:100%;margin-top:4px"/>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--ph-text-dim)">Capacidad *</label>
+            <input type="number" id="new-tier-capacity" class="adm-filter-input" placeholder="Ej: 200" min="1" style="width:100%;margin-top:4px"/>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--ph-text-dim)">Color</label>
+            <input type="color" id="new-tier-color" value="#6366f1" style="width:100%;margin-top:4px;height:36px;border:1px solid var(--ph-border);border-radius:8px;background:transparent;cursor:pointer;"/>
+          </div>
+          <div>
+            <button class="ph-btn ph-btn--primary" onclick="addTier()" style="font-size:13px;padding:7px 18px;">Crear</button>
+          </div>
+        </div>
+        <div id="add-tier-msg" style="font-size:13px;margin-top:10px;"></div>
+      </div>
+
+      <div id="tiers-list-wrap">
+        <div class="adm-empty"><span class="adm-empty__icon">🎟</span>Selecciona un evento para ver sus localidades.</div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -1193,6 +1237,7 @@ document.querySelectorAll('.adm-nav__item[data-panel]').forEach(btn => {
     if (btn.dataset.panel === 'panel-cortesia')  initCortesia();
     if (btn.dataset.panel === 'panel-descuentos') loadDiscountCodes();
     if (btn.dataset.panel === 'panel-artistas') loadArtists();
+    if (btn.dataset.panel === 'panel-localidades') initTiersPanel();
     closeSidebar();
   });
 });
@@ -1253,6 +1298,19 @@ function populateEventDropdowns(events) {
     });
     if (current) sel.value = current;
   });
+  // Populate tiers event selector
+  var tiersSel = document.getElementById('tiers-event-select');
+  if (tiersSel) {
+    var prevTiers = tiersSel.value;
+    tiersSel.innerHTML = '<option value="">— Selecciona un evento —</option>';
+    events.forEach(function(ev) {
+      var opt = document.createElement('option');
+      opt.value = ev.id;
+      opt.textContent = ev.name;
+      tiersSel.appendChild(opt);
+    });
+    if (prevTiers) tiersSel.value = prevTiers;
+  }
 }
 
 // ── Dashboard ──────────────────────────────────────────────────────
@@ -2211,6 +2269,193 @@ function setupArtistPanel() {
     if (!eventId) return;
     await loadAssignmentArea(eventId);
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// LOCALIDADES (Tiers)
+// ══════════════════════════════════════════════════════════════════
+
+function initTiersPanel() {
+  // Re-populate selector in case loadAll already ran
+  populateEventDropdowns(allEventos);
+}
+
+async function loadTiersAdmin() {
+  var eventId = document.getElementById('tiers-event-select').value;
+  var wrap    = document.getElementById('tiers-list-wrap');
+  var addForm = document.getElementById('add-tier-form');
+  var msg     = document.getElementById('tiers-event-msg');
+
+  if (!eventId) {
+    addForm.style.display = 'none';
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">🎟</span>Selecciona un evento para ver sus localidades.</div>';
+    msg.textContent = '';
+    return;
+  }
+
+  wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ph-text-dim);font-size:13px;">Cargando…</div>';
+  msg.textContent = '';
+
+  const h = { 'x-admin-token': adminToken };
+  var data;
+  try {
+    data = await api('GET', '/api/admin/events/' + eventId + '/tiers', null, h);
+  } catch (e) {
+    wrap.innerHTML = '<div class="adm-empty">Error cargando localidades.</div>';
+    return;
+  }
+
+  var tiers = (data && data.tiers) ? data.tiers : [];
+  addForm.style.display = 'block';
+
+  if (tiers.length === 0) {
+    wrap.innerHTML = '<div class="adm-empty"><span class="adm-empty__icon">🎟</span>No hay localidades. Crea la primera.</div>';
+    return;
+  }
+
+  wrap.innerHTML = tiers.map(function(t) {
+    var phases = (t.tier_phases || []).slice().sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+    var availableCapacity = (t.capacity || 0) - (t.tickets_sold || 0);
+    var phaseRows = phases.map(function(p) {
+      var bundleBadge = p.bundle_qty > 1
+        ? '<span style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px;">📦 x' + p.bundle_qty + '</span>'
+        : '';
+      var priceDisplay = 'Q' + Number(p.price_gtq).toFixed(2)
+        + (p.bundle_qty > 1 ? '<span style="font-size:10px;color:var(--ph-text-dim);margin-left:4px;">/' + p.bundle_qty + ' tkt</span>' : '');
+      var activeDot = p.is_active
+        ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:middle;"></span>'
+        : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);margin-right:5px;vertical-align:middle;"></span>';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap;">'
+        + '<span style="flex:1;min-width:120px;font-size:13px;">' + activeDot + p.name + bundleBadge + '</span>'
+        + '<span style="font-size:13px;font-weight:600;color:var(--ph-white);">' + priceDisplay + '</span>'
+        + '<span style="font-size:11px;color:var(--ph-text-dim);min-width:80px;">'
+        +   (p.capacity != null ? (p.tickets_sold || 0) + '/' + p.capacity + ' vend.' : (p.tickets_sold || 0) + ' vend.')
+        + '</span>'
+        + '<button onclick="togglePhaseActive(\'' + p.id + '\', ' + !p.is_active + ', \'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--ph-white);cursor:pointer;">'
+        +   (p.is_active ? 'Desactivar' : 'Activar') + '</button>'
+        + '<button onclick="deletePhaseAdmin(\'' + p.id + '\', \'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#f87171;cursor:pointer;">Eliminar</button>'
+        + '</div>';
+    }).join('');
+
+    return '<div style="background:var(--ph-surface);border:1px solid var(--ph-border);border-radius:12px;margin-bottom:16px;overflow:hidden;">'
+      + '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ph-border);">'
+      +   '<div style="width:14px;height:14px;border-radius:50%;background:' + (t.color || '#6366f1') + ';flex-shrink:0;"></div>'
+      +   '<span style="font-size:15px;font-weight:700;flex:1;">' + t.name + '</span>'
+      +   '<span style="font-size:12px;color:var(--ph-text-dim);">Disponible: ' + availableCapacity + '/' + t.capacity + '</span>'
+      +   '<button onclick="deleteTierAdmin(\'" + t.id + "\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#f87171;cursor:pointer;">Eliminar localidad</button>'
+      + '</div>'
+      + (phaseRows || '<div style="padding:12px 16px;font-size:13px;color:var(--ph-text-dim);">Sin fases de precio aún.</div>')
+      + '<div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);">'
+      +   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Nombre fase</label>'
+      +       '<input type="text" id="new-phase-name-' + t.id + '" class="adm-filter-input" placeholder="Early bird" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Precio GTQ</label>'
+      +       '<input type="number" id="new-phase-price-' + t.id + '" class="adm-filter-input" placeholder="150.00" min="0.01" step="0.01" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Capacidad (opcional)</label>'
+      +       '<input type="number" id="new-phase-capacity-' + t.id + '" class="adm-filter-input" placeholder="Sin límite" min="1" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Tickets por paquete <span style="color:#fbbf24;font-size:10px;">promo</span></label>'
+      +       '<input type="number" id="new-phase-bundle-' + t.id + '" class="adm-filter-input" placeholder="1" min="1" value="1" title="Ej: 2 = precio cubre 2 entradas" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><button class="ph-btn ph-btn--primary" onclick="addPhaseToTier(\'" + t.id + "\')" style="font-size:12px;padding:7px 14px;">+ Fase</button></div>'
+      +   '</div>'
+      +   '<div id="add-phase-msg-' + t.id + '" style="font-size:13px;margin-top:8px;"></div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+async function addTier() {
+  var eventId  = document.getElementById('tiers-event-select').value;
+  var name     = (document.getElementById('new-tier-name').value || '').trim();
+  var capacity = parseInt(document.getElementById('new-tier-capacity').value, 10);
+  var color    = document.getElementById('new-tier-color').value || '#6366f1';
+  var msgEl    = document.getElementById('add-tier-msg');
+
+  if (!eventId) { msgEl.style.color = '#f87171'; msgEl.textContent = 'Selecciona un evento primero.'; return; }
+  if (!name)    { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
+  if (!capacity || capacity < 1) { msgEl.style.color = '#f87171'; msgEl.textContent = 'La capacidad debe ser >= 1.'; return; }
+
+  msgEl.textContent = 'Creando…'; msgEl.style.color = 'var(--ph-text-dim)';
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('POST', '/api/admin/events/' + eventId + '/tiers', { name, capacity, color }, h);
+    document.getElementById('new-tier-name').value = '';
+    document.getElementById('new-tier-capacity').value = '';
+    document.getElementById('new-tier-color').value = '#6366f1';
+    msgEl.style.color = '#22c55e'; msgEl.textContent = 'Localidad creada ✓';
+    setTimeout(function() { msgEl.textContent = ''; }, 1500);
+    await loadTiersAdmin();
+  } catch (e) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = (e && e.message) ? e.message : 'Error al crear localidad.';
+  }
+}
+
+async function deleteTierAdmin(tierId) {
+  if (!confirm('¿Eliminar esta localidad? (Solo si no tiene ventas)')) return;
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('DELETE', '/api/admin/tiers/' + tierId, null, h);
+    await loadTiersAdmin();
+  } catch (e) {
+    alert((e && e.message) ? e.message : 'No se puede eliminar: tiene tickets vendidos.');
+  }
+}
+
+async function addPhaseToTier(tierId) {
+  var name     = (document.getElementById('new-phase-name-' + tierId).value || '').trim();
+  var price    = parseFloat(document.getElementById('new-phase-price-' + tierId).value);
+  var capRaw   = document.getElementById('new-phase-capacity-' + tierId).value;
+  var capacity = capRaw ? parseInt(capRaw, 10) : null;
+  var bundleRaw = document.getElementById('new-phase-bundle-' + tierId).value;
+  var bundleQty = bundleRaw ? parseInt(bundleRaw, 10) : 1;
+  var msgEl    = document.getElementById('add-phase-msg-' + tierId);
+
+  if (!name)             { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
+  if (!price || price <= 0) { msgEl.style.color = '#f87171'; msgEl.textContent = 'El precio debe ser > 0.'; return; }
+  if (bundleQty < 1)    { msgEl.style.color = '#f87171'; msgEl.textContent = 'Tickets por paquete debe ser >= 1.'; return; }
+
+  msgEl.textContent = 'Creando…'; msgEl.style.color = 'var(--ph-text-dim)';
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('POST', '/api/admin/tiers/' + tierId + '/phases', {
+      name, price_gtq: price,
+      capacity: capacity || undefined,
+      bundle_qty: bundleQty,
+      is_active: true,
+    }, h);
+    document.getElementById('new-phase-name-' + tierId).value = '';
+    document.getElementById('new-phase-price-' + tierId).value = '';
+    document.getElementById('new-phase-capacity-' + tierId).value = '';
+    document.getElementById('new-phase-bundle-' + tierId).value = '1';
+    msgEl.style.color = '#22c55e'; msgEl.textContent = 'Fase creada ✓';
+    setTimeout(function() { msgEl.textContent = ''; }, 1500);
+    await loadTiersAdmin();
+  } catch (e) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = (e && e.message) ? e.message : 'Error al crear fase.';
+  }
+}
+
+async function togglePhaseActive(phaseId, newState, tierId) {
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('PUT', '/api/admin/phases/' + phaseId, { is_active: newState }, h);
+    await loadTiersAdmin();
+  } catch (e) {
+    alert('Error al actualizar fase.');
+  }
+}
+
+async function deletePhaseAdmin(phaseId, tierId) {
+  if (!confirm('¿Eliminar/desactivar esta fase?')) return;
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('DELETE', '/api/admin/phases/' + phaseId, null, h);
+    await loadTiersAdmin();
+  } catch (e) {
+    alert('Error al eliminar fase.');
+  }
 }
 
 
