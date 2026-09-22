@@ -1916,6 +1916,7 @@ async function initCheckout() {
   loadingEl.style.display = 'flex';
   errorEl.hidden          = true;
   containerEl.innerHTML   = '';
+  containerEl.style.display = ''; // Restaurar visibilidad por si onPaymentFailure lo ocultó
 
   try {
     if (!orderId) await createPaymentIntent();
@@ -1959,9 +1960,11 @@ function onPaymentSuccess() {
 
 function onPaymentFailure() {
   checkoutMounted = false;
+  // NO limpiar el container aquí — initCheckout() ya lo hace al reintentar.
+  // Limpiar prematuramente borra el formulario si onFailure dispara por error de red o 3DS cancelado.
+  document.getElementById('recurrente-checkout-container').style.display = 'none';
   document.getElementById('checkout-error').hidden  = false;
   document.getElementById('checkout-loading').style.display = 'none';
-  document.getElementById('recurrente-checkout-container').innerHTML = '';
   orderId = null;
 }
 
