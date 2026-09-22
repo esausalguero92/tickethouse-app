@@ -1389,7 +1389,11 @@ function renderTierSection() {
     }
     var soldOut = (available === 0) || !phase;
     var qty     = tierItems[t.id] || 0;
-    var availLbl = ''; // availability count intentionally hidden
+    var availLbl = '';
+    if (available != null && available <= 20 && !soldOut) {
+      availLbl = '<span class="tier-card__avail' + (available <= 5 ? ' low' : '') + '">'
+        + available + ' disponible' + (available === 1 ? '' : 's') + '</span>';
+    }
     var priceNote = bQty > 1 ? 'por paquete' : 'por entrada';
 
     return '<div class="tier-card">'
@@ -1438,13 +1442,14 @@ function changeTierQty(tierId, isPlus) {
   var tier = tiers.find(function(t) { return t.id === tierId; });
   if (!tier || !tier.active_phase) return;
   var bQty    = Number((tier.active_phase && tier.active_phase.bundle_qty) || 1);
-  // Capacidad máxima expresada en PAQUETES
-  var capTickets = tier.active_phase && tier.active_phase.capacity != null
+  // Capacidad disponible en tickets según la fase
+  var capTickets = (tier.active_phase.capacity != null)
     ? Math.max(0, tier.active_phase.capacity - (tier.active_phase.tickets_sold || 0))
-    : (tier.capacity != null ? Math.max(0, tier.capacity - (tier.tickets_sold || 0)) : bQty * 10);
-  var maxPacks = Math.floor(capTickets / bQty);
-  if (maxPacks < 1) maxPacks = 10; // fallback ilimitado
-  maxPacks = Math.min(maxPacks, 10); // tope UI de 10 paquetes
+    : null; // null = sin límite de capacidad
+  var maxPacks = capTickets != null ? Math.floor(capTickets / bQty) : 999;
+  // Aplicar max_per_order del evento
+  var maxPerOrder = event && event.max_per_order ? Number(event.max_per_order) : 10;
+  maxPacks = Math.min(maxPacks, maxPerOrder, 5); // tope de 5 por localidad
   var cur = tierItems[tierId] || 0;
   if (isPlus) cur = Math.min(cur + 1, maxPacks);
   else        cur = Math.max(cur - 1, 0);

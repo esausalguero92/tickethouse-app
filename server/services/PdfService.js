@@ -104,15 +104,6 @@ function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, bu
     y = doc.y;
   }
 
-  // ── Nombre del comprador ──────────────────────────────────────────
-  if (buyerName) {
-    doc.font('Grotesk-Bold')
-       .fontSize(11)
-       .fillColor(C.text)
-       .text(buyerName.toUpperCase(), 0, y, { align: 'center', width: W, characterSpacing: 0.5 });
-    y = doc.y;
-  }
-
   // ── Localidad (tier) ─────────────────────────────────────────────
   if (tierName) {
     const pillW = Math.min(W - 80, doc.font('Grotesk-Bold').fontSize(10).widthOfString(tierName.toUpperCase(), { characterSpacing: 1.5 }) + 40);

@@ -1465,9 +1465,6 @@ function renderEventosList(events) {
       <td style="text-align:right">Q${Number(ev.price_gtq || 0).toFixed(2)}</td>
       <td style="text-align:center">
         <span style="font-family:var(--font-mono)">${sold} vendidos</span>
-        <div style="height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:4px;width:80px">
-          <div style="height:4px;background:var(--ph-blue);border-radius:2px;width:${Math.min(pct,100)}%"></div>
-        </div>
       </td>
       <td style="text-align:center">
         <button onclick="toggleEventoStatus('${ev.id}', ${ev.active}, this)"

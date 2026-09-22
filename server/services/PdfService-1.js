@@ -178,15 +178,6 @@ async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventNa
       y += 18;
     }
 
-    // ── Nombre del comprador ──────────────────────────────────────
-    if (buyerName) {
-      doc.font('Grotesk-Bold')
-         .fontSize(11)
-         .fillColor(C.text)
-         .text(buyerName.toUpperCase(), 0, y, { align: 'center', width: W, characterSpacing: 0.5 });
-      y += 18;
-    }
-
     // ── Línea separadora ──────────────────────────────────────────
     doc.rect(40, y, W - 80, 0.5).fill(C.line);
     y += 26;

@@ -734,7 +734,8 @@ router.delete('/events/:id/images',
   requireAdmin,
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { url } = req.body;
+    const { url: rawUrl } = req.body;
+    const url = decodeHtmlEntities(rawUrl);
     if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url_requerido' });
 
     const supabase = getSupabase();
