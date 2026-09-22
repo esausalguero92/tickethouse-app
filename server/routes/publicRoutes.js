@@ -164,12 +164,21 @@ router.get('/events/active',
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('events')
-      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, image_url, images, description')
+      .select('id, name, event_date, venue, capacity, tickets_sold, price_gtq, image_url, images, description, ticket_tiers(id, capacity, tickets_sold)')
       .eq('active', true)
       .order('event_date', { ascending: true });
 
     if (error) return res.status(500).json({ error: 'db_error' });
-    return res.json({ events: data || [] });
+
+    // Añadir has_tiers y calcular disponibilidad real
+    const events = (data || []).map(ev => {
+      const tiers = ev.ticket_tiers || [];
+      const hasTiers = tiers.length > 0;
+      const { ticket_tiers: _, ...evData } = ev;
+      return { ...evData, has_tiers: hasTiers };
+    });
+
+    return res.json({ events });
   })
 );
 

@@ -763,16 +763,10 @@
               Lugar *
               <input type="text" id="ev-venue" required maxlength="200" class="adm-filter-input" placeholder="Ej: Club XYZ, Ciudad de Guatemala"/>
             </label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4)">
-              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
-                Capacidad *
-                <input type="number" id="ev-capacity" required min="1" class="adm-filter-input" placeholder="500"/>
-              </label>
-              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
-                Prefijo código
-                <input type="text" id="ev-prefix" maxlength="4" class="adm-filter-input" placeholder="BLG" style="text-transform:uppercase"/>
-              </label>
-            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">
+              Prefijo código
+              <input type="text" id="ev-prefix" maxlength="4" class="adm-filter-input" placeholder="BLG" style="text-transform:uppercase"/>
+            </label>
             <div style="display:flex;flex-direction:column;gap:8px">
               <span style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ph-text-dim)">Imágenes del evento</span>
 
@@ -1095,14 +1089,10 @@
       <!-- Add tier form -->
       <div id="add-tier-form" style="display:none;background:var(--ph-surface);border:1px solid var(--ph-border);border-radius:12px;padding:20px;margin-bottom:20px;">
         <h3 style="font-size:14px;font-weight:700;margin:0 0 14px;letter-spacing:.04em;">Nueva localidad</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;flex-wrap:wrap;">
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;flex-wrap:wrap;">
           <div>
             <label style="font-size:11px;color:var(--ph-text-dim)">Nombre *</label>
             <input type="text" id="new-tier-name" class="adm-filter-input" placeholder="Ej: VIP" maxlength="80" style="width:100%;margin-top:4px"/>
-          </div>
-          <div>
-            <label style="font-size:11px;color:var(--ph-text-dim)">Capacidad *</label>
-            <input type="number" id="new-tier-capacity" class="adm-filter-input" placeholder="Ej: 200" min="1" style="width:100%;margin-top:4px"/>
           </div>
           <div>
             <label style="font-size:11px;color:var(--ph-text-dim)">Color</label>
@@ -1130,6 +1120,24 @@
 
 const { api, formatDate, formatUSD } = window.PH;
 const ADM_TOKEN_KEY = 'ph_admin_token';
+
+// ── Helpers timezone Guatemala (UTC-6, sin DST) ───────────────────
+// Convierte ISO UTC almacenado en BD → valor para input datetime-local (hora GT)
+function isoToGTInput(isoStr) {
+  if (!isoStr) return '';
+  const d  = new Date(isoStr);
+  const gt = new Date(d.getTime() - 6 * 60 * 60 * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  return gt.getUTCFullYear() + '-' + pad(gt.getUTCMonth()+1) + '-' + pad(gt.getUTCDate())
+       + 'T' + pad(gt.getUTCHours()) + ':' + pad(gt.getUTCMinutes());
+}
+// Convierte valor datetime-local (hora GT ingresada por admin) → ISO UTC para BD
+function gtInputToISO(raw) {
+  if (!raw) return null;
+  // Parsear como UTC puro y luego sumar 6h (GT = UTC-6, entonces UTC = GT+6h)
+  const d = new Date(raw + ':00.000Z');
+  return new Date(d.getTime() + 6 * 60 * 60 * 1000).toISOString();
+}
 
 let adminToken = null;
 let allOrders  = [];
@@ -1328,14 +1336,14 @@ function renderDashboard(sum, orders) {
     }).length;
 
     document.getElementById('stat-sold').textContent     = evTickets.length;
-    document.getElementById('stat-capacity').textContent = `de ${ev ? ev.capacity : '?'} capacidad`;
+    document.getElementById('stat-capacity').textContent = `tickets vendidos`;
     document.getElementById('stat-orders').textContent   = evOrders.filter(function(o) { return o.payment_status === 'paid'; }).length;
     document.getElementById('stat-redeemed').textContent = redeemedToday;
     renderOrdersTable('recent-orders-wrap', evOrders.slice(0, 10), false);
   } else {
     // Mostrar totales globales del API
     document.getElementById('stat-sold').textContent     = sum.tickets_sold ?? '—';
-    document.getElementById('stat-capacity').textContent = `de ${sum.max_capacity ?? '?'} capacidad`;
+    document.getElementById('stat-capacity').textContent = `tickets vendidos`;
     document.getElementById('stat-orders').textContent   = sum.paid_orders ?? '—';
     document.getElementById('stat-redeemed').textContent = sum.redeemed_today ?? '—';
     renderOrdersTable('recent-orders-wrap', orders.slice(0, 10), false);
@@ -1448,17 +1456,15 @@ function renderEventosList(events) {
     return;
   }
   const rows = events.map(ev => {
-    const fecha = ev.event_date ? new Date(ev.event_date).toLocaleString('es-GT', { dateStyle:'medium', timeStyle:'short' }) : '—';
+    const fecha = ev.event_date ? new Date(ev.event_date).toLocaleString('es-GT', { dateStyle:'medium', timeStyle:'short', timeZone:'America/Guatemala' }) : '—';
     const sold  = ev.tickets_sold ?? 0;
-    const cap   = ev.capacity ?? '?';
-    const pct   = ev.capacity ? Math.round(sold / ev.capacity * 100) : 0;
     return `<tr>
       <td style="font-weight:600;max-width:200px;word-break:break-word">${esc(ev.name)}</td>
       <td style="white-space:nowrap">${fecha}</td>
       <td>${esc(ev.venue || '—')}</td>
       <td style="text-align:right">Q${Number(ev.price_gtq || 0).toFixed(2)}</td>
       <td style="text-align:center">
-        <span style="font-family:var(--font-mono)">${sold}/${cap}</span>
+        <span style="font-family:var(--font-mono)">${sold} vendidos</span>
         <div style="height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-top:4px;width:80px">
           <div style="height:4px;background:var(--ph-blue);border-radius:2px;width:${Math.min(pct,100)}%"></div>
         </div>
@@ -1508,7 +1514,6 @@ function openEventoModal(eventoId) {
       document.getElementById('ev-name').value   = ev.name || '';
       document.getElementById('ev-venue').value  = ev.venue || '';
       document.getElementById('ev-price').value  = ev.price_gtq || '';
-      document.getElementById('ev-capacity').value = ev.capacity || '';
       document.getElementById('ev-prefix').value       = ev.code_prefix    || '';
       document.getElementById('ev-location-url').value = ev.location_url || '';
       const locStatus = document.getElementById('ev-location-url-status');
@@ -1616,19 +1621,9 @@ async function submitEventoForm(e) {
   const prefix = document.getElementById('ev-prefix').value.trim().toUpperCase();
   const payload = {
     name:        document.getElementById('ev-name').value.trim(),
-    // El input datetime-local no tiene timezone — el admin siempre ingresa hora Guatemala (UTC-6)
-    // Convertir a UTC sumando 6 horas antes de guardar en BD
-    event_date:  (() => {
-      const raw = document.getElementById('ev-date').value; // "2026-09-19T21:00"
-      if (!raw) return null;
-      const localDate = new Date(raw + ':00'); // interpreta como hora local del navegador
-      // Forzar offset Guatemala +6h al UTC independientemente del navegador
-      const offsetMs = (localDate.getTimezoneOffset() - 360) * 60 * 1000; // diff entre local y GT
-      return new Date(localDate.getTime() + offsetMs).toISOString();
-    })(),
+    event_date:  gtInputToISO(document.getElementById('ev-date').value),
     venue:       document.getElementById('ev-venue').value.trim(),
     price_gtq:   parseFloat(document.getElementById('ev-price').value),
-    capacity:    parseInt(document.getElementById('ev-capacity').value, 10),
     code_prefix:  prefix || null,
     location_url: document.getElementById('ev-location-url').value.trim() || null,
     // image_url is managed by upload endpoint
@@ -1845,7 +1840,7 @@ async function initCortesia() {
 
     function renderItems() {
       list.innerHTML = events.map(function(ev) {
-        const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric' }) : '';
+        const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric', timeZone:'America/Guatemala' }) : '';
         const tag  = ev.active ? ' ★' : '';
         const sel  = ev.id === cortesiaEventId ? ' selected' : '';
         return '<div class="ce-dropdown__item' + sel + '" data-id="' + ev.id + '">' + ev.name + tag + (date ? ' — ' + date : '') + '</div>';
@@ -1853,7 +1848,7 @@ async function initCortesia() {
       // Label del botón
       const cur = events.find(function(e) { return e.id === cortesiaEventId; });
       if (cur) {
-        const date = cur.event_date ? new Date(cur.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric' }) : '';
+        const date = cur.event_date ? new Date(cur.event_date).toLocaleDateString('es-GT', { day:'2-digit', month:'short', year:'numeric', timeZone:'America/Guatemala' }) : '';
         label.textContent = cur.name + (cur.active ? ' ★' : '') + (date ? ' — ' + date : '');
       }
     }
@@ -2002,7 +1997,7 @@ async function loadDiscountCodes() {
       <tbody>${codes.map(dc => {
         const typeLabel = dc.discount_type === 'percent' ? dc.discount_value + '%' : '$' + Number(dc.discount_value).toFixed(2);
         const uses      = dc.max_uses ? (dc.uses_count + '/' + dc.max_uses) : dc.uses_count + '/∞';
-        const expires   = dc.expires_at ? new Date(dc.expires_at).toLocaleDateString('es-GT') : '—';
+        const expires   = dc.expires_at ? new Date(dc.expires_at).toLocaleDateString('es-GT', { timeZone:'America/Guatemala' }) : '—';
         const statusBadge = dc.active
           ? '<span style="color:var(--ph-blue);font-size:10px;letter-spacing:.08em">ACTIVO</span>'
           : '<span style="color:var(--ph-text-dim);font-size:10px;letter-spacing:.08em">INACTIVO</span>';
@@ -2075,7 +2070,7 @@ function setupDiscountPanel() {
         discount_type:  type,
         discount_value: parseFloat(value),
         max_uses:       maxUses ? parseInt(maxUses, 10) : null,
-        expires_at:     expires ? new Date(expires).toISOString() : null,
+        expires_at:     gtInputToISO(expires),
         description:    desc || null,
         event_id:       eventId || undefined,
       }, { 'x-admin-token': adminToken });
@@ -2326,15 +2321,42 @@ async function loadTiersAdmin() {
       var activeDot = p.is_active
         ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:middle;"></span>'
         : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);margin-right:5px;vertical-align:middle;"></span>';
+      var dateRange = (p.starts_at || p.ends_at)
+        ? '<span style="font-size:10px;color:var(--ph-text-dim);white-space:nowrap;">'
+          + (p.starts_at ? '▶ ' + new Date(p.starts_at).toLocaleString('es-GT', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'America/Guatemala'}) : '')
+          + (p.ends_at   ? ' → ' + new Date(p.ends_at).toLocaleString('es-GT', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'America/Guatemala'})  : '')
+          + '</span>' : '';
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap;">'
         + '<span style="flex:1;min-width:120px;font-size:13px;">' + activeDot + p.name + bundleBadge + '</span>'
         + '<span style="font-size:13px;font-weight:600;color:var(--ph-white);">' + priceDisplay + '</span>'
+        + dateRange
         + '<span style="font-size:11px;color:var(--ph-text-dim);min-width:80px;">'
         +   (p.capacity != null ? (p.tickets_sold || 0) + '/' + p.capacity + ' vend.' : (p.tickets_sold || 0) + ' vend.')
         + '</span>'
         + '<button onclick="togglePhaseActive(\'' + p.id + '\', ' + !p.is_active + ', \'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--ph-white);cursor:pointer;">'
         +   (p.is_active ? 'Desactivar' : 'Activar') + '</button>'
+        + '<button onclick="toggleEditPhase(\'' + p.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;cursor:pointer;">✏ Editar</button>'
         + '<button onclick="deletePhaseAdmin(\'' + p.id + '\', \'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#f87171;cursor:pointer;">Eliminar</button>'
+        + '</div>'
+        + '<div id="edit-phase-form-' + p.id + '" style="display:none;padding:12px 16px;background:rgba(99,102,241,.05);border-bottom:1px solid rgba(99,102,241,.15);">'
+        +   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;">'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Nombre</label>'
+        +       '<input type="text" id="ep-name-' + p.id + '" class="adm-filter-input" value="' + p.name.replace(/"/g,'&quot;') + '" style="width:100%;margin-top:4px"/></div>'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Precio GTQ</label>'
+        +       '<input type="number" id="ep-price-' + p.id + '" class="adm-filter-input" value="' + Number(p.price_gtq).toFixed(2) + '" min="0.01" step="0.01" style="width:100%;margin-top:4px"/></div>'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Capacidad</label>'
+        +       '<input type="number" id="ep-cap-' + p.id + '" class="adm-filter-input" value="' + (p.capacity != null ? p.capacity : '') + '" min="1" placeholder="Sin límite" style="width:100%;margin-top:4px"/></div>'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Paquete <span style="color:#fbbf24;font-size:10px;">x</span></label>'
+        +       '<input type="number" id="ep-bundle-' + p.id + '" class="adm-filter-input" value="' + (p.bundle_qty || 1) + '" min="1" style="width:100%;margin-top:4px"/></div>'
+        +     '<div><button class="ph-btn ph-btn--primary" onclick="savePhaseAdmin(\'' + p.id + '\', \'' + t.id + '\')" style="font-size:12px;padding:7px 14px;">Guardar</button></div>'
+        +   '</div>'
+        +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Inicio de fase</label>'
+        +       '<input type="datetime-local" id="ep-starts-' + p.id + '" class="adm-filter-input" value="' + isoToGTInput(p.starts_at) + '" style="width:100%;margin-top:4px"/></div>'
+        +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Fin de fase</label>'
+        +       '<input type="datetime-local" id="ep-ends-' + p.id + '" class="adm-filter-input" value="' + isoToGTInput(p.ends_at) + '" style="width:100%;margin-top:4px"/></div>'
+        +   '</div>'
+        +   '<div id="ep-msg-' + p.id + '" style="font-size:13px;margin-top:8px;"></div>'
         + '</div>';
     }).join('');
 
@@ -2342,8 +2364,19 @@ async function loadTiersAdmin() {
       + '<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--ph-border);">'
       +   '<div style="width:14px;height:14px;border-radius:50%;background:' + (t.color || '#6366f1') + ';flex-shrink:0;"></div>'
       +   '<span style="font-size:15px;font-weight:700;flex:1;">' + t.name + '</span>'
-      +   '<span style="font-size:12px;color:var(--ph-text-dim);">Disponible: ' + availableCapacity + '/' + t.capacity + '</span>'
-      +   '<button onclick="deleteTierAdmin(\'" + t.id + "\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#f87171;cursor:pointer;">Eliminar localidad</button>'
+      +   '<span style="font-size:12px;color:var(--ph-text-dim);">' + (t.tickets_sold || 0) + ' vendidos</span>'
+      +   '<button onclick="toggleEditTier(\'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--ph-white);cursor:pointer;">✏ Editar</button>'
+      +   '<button onclick="deleteTierAdmin(\'' + t.id + '\')" style="font-size:11px;padding:3px 10px;border-radius:6px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#f87171;cursor:pointer;">Eliminar</button>'
+      + '</div>'
+      + '<div id="edit-tier-form-' + t.id + '" style="display:none;padding:14px 16px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.06);">'
+      +   '<div style="display:grid;grid-template-columns:1fr 100px auto;gap:10px;align-items:end;">'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Nombre</label>'
+      +       '<input type="text" id="edit-tier-name-' + t.id + '" class="adm-filter-input" value="' + t.name.replace(/"/g, '&quot;') + '" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Color</label>'
+      +       '<input type="color" id="edit-tier-color-' + t.id + '" value="' + (t.color || '#6366f1') + '" style="width:100%;height:36px;margin-top:4px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;cursor:pointer"/></div>'
+      +     '<div><button class="ph-btn ph-btn--primary" onclick="saveTierAdmin(\'' + t.id + '\')" style="font-size:12px;padding:7px 14px;">Guardar</button></div>'
+      +   '</div>'
+      +   '<div id="edit-tier-msg-' + t.id + '" style="font-size:13px;margin-top:8px;"></div>'
       + '</div>'
       + (phaseRows || '<div style="padding:12px 16px;font-size:13px;color:var(--ph-text-dim);">Sin fases de precio aún.</div>')
       + '<div style="padding:14px 16px;border-top:1px solid rgba(255,255,255,.06);">'
@@ -2355,8 +2388,14 @@ async function loadTiersAdmin() {
       +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Capacidad (opcional)</label>'
       +       '<input type="number" id="new-phase-capacity-' + t.id + '" class="adm-filter-input" placeholder="Sin límite" min="1" style="width:100%;margin-top:4px"/></div>'
       +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Tickets por paquete <span style="color:#fbbf24;font-size:10px;">promo</span></label>'
-      +       '<input type="number" id="new-phase-bundle-' + t.id + '" class="adm-filter-input" placeholder="1" min="1" value="1" title="Ej: 2 = precio cubre 2 entradas" style="width:100%;margin-top:4px"/></div>'
-      +     '<div><button class="ph-btn ph-btn--primary" onclick="addPhaseToTier(\'" + t.id + "\')" style="font-size:12px;padding:7px 14px;">+ Fase</button></div>'
+      +       '<input type="number" id="new-phase-bundle-' + t.id + '" class="adm-filter-input" placeholder="1" min="1" value="1" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><button class="ph-btn ph-btn--primary" onclick="addPhaseToTier(\'' + t.id + '\')" style="font-size:12px;padding:7px 14px;">+ Fase</button></div>'
+      +   '</div>'
+      +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Inicio de fase <span style="color:var(--ph-text-dim);font-size:10px;">(opcional)</span></label>'
+      +       '<input type="datetime-local" id="new-phase-starts-' + t.id + '" class="adm-filter-input" style="width:100%;margin-top:4px"/></div>'
+      +     '<div><label style="font-size:11px;color:var(--ph-text-dim)">Fin de fase <span style="color:var(--ph-text-dim);font-size:10px;">(opcional)</span></label>'
+      +       '<input type="datetime-local" id="new-phase-ends-' + t.id + '" class="adm-filter-input" style="width:100%;margin-top:4px"/></div>'
       +   '</div>'
       +   '<div id="add-phase-msg-' + t.id + '" style="font-size:13px;margin-top:8px;"></div>'
       + '</div>'
@@ -2373,14 +2412,12 @@ async function addTier() {
 
   if (!eventId) { msgEl.style.color = '#f87171'; msgEl.textContent = 'Selecciona un evento primero.'; return; }
   if (!name)    { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
-  if (!capacity || capacity < 1) { msgEl.style.color = '#f87171'; msgEl.textContent = 'La capacidad debe ser >= 1.'; return; }
 
   msgEl.textContent = 'Creando…'; msgEl.style.color = 'var(--ph-text-dim)';
   const h = { 'x-admin-token': adminToken };
   try {
-    await api('POST', '/api/admin/events/' + eventId + '/tiers', { name, capacity, color }, h);
+    await api('POST', '/api/admin/events/' + eventId + '/tiers', { name, color }, h);
     document.getElementById('new-tier-name').value = '';
-    document.getElementById('new-tier-capacity').value = '';
     document.getElementById('new-tier-color').value = '#6366f1';
     msgEl.style.color = '#22c55e'; msgEl.textContent = 'Localidad creada ✓';
     setTimeout(function() { msgEl.textContent = ''; }, 1500);
@@ -2409,6 +2446,10 @@ async function addPhaseToTier(tierId) {
   var capacity = capRaw ? parseInt(capRaw, 10) : null;
   var bundleRaw = document.getElementById('new-phase-bundle-' + tierId).value;
   var bundleQty = bundleRaw ? parseInt(bundleRaw, 10) : 1;
+  var startsRaw = document.getElementById('new-phase-starts-' + tierId).value;
+  var endsRaw   = document.getElementById('new-phase-ends-' + tierId).value;
+  var startsAt  = gtInputToISO(startsRaw);
+  var endsAt    = gtInputToISO(endsRaw);
   var msgEl    = document.getElementById('add-phase-msg-' + tierId);
 
   if (!name)             { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
@@ -2422,12 +2463,16 @@ async function addPhaseToTier(tierId) {
       name, price_gtq: price,
       capacity: capacity || undefined,
       bundle_qty: bundleQty,
+      starts_at: startsAt || undefined,
+      ends_at:   endsAt   || undefined,
       is_active: true,
     }, h);
     document.getElementById('new-phase-name-' + tierId).value = '';
     document.getElementById('new-phase-price-' + tierId).value = '';
     document.getElementById('new-phase-capacity-' + tierId).value = '';
     document.getElementById('new-phase-bundle-' + tierId).value = '1';
+    document.getElementById('new-phase-starts-' + tierId).value = '';
+    document.getElementById('new-phase-ends-' + tierId).value = '';
     msgEl.style.color = '#22c55e'; msgEl.textContent = 'Fase creada ✓';
     setTimeout(function() { msgEl.textContent = ''; }, 1500);
     await loadTiersAdmin();
@@ -2444,6 +2489,62 @@ async function togglePhaseActive(phaseId, newState, tierId) {
     await loadTiersAdmin();
   } catch (e) {
     alert('Error al actualizar fase.');
+  }
+}
+
+function toggleEditPhase(phaseId) {
+  var form = document.getElementById('edit-phase-form-' + phaseId);
+  if (form) form.style.display = form.style.display === 'none' ? '' : 'none';
+}
+
+async function savePhaseAdmin(phaseId, tierId) {
+  var name     = (document.getElementById('ep-name-' + phaseId).value || '').trim();
+  var price    = parseFloat(document.getElementById('ep-price-' + phaseId).value);
+  var capRaw   = document.getElementById('ep-cap-' + phaseId).value;
+  var capacity = capRaw ? parseInt(capRaw, 10) : null;
+  var bundle   = parseInt(document.getElementById('ep-bundle-' + phaseId).value, 10) || 1;
+  var startsRaw = document.getElementById('ep-starts-' + phaseId).value;
+  var endsRaw   = document.getElementById('ep-ends-' + phaseId).value;
+  var startsAt  = gtInputToISO(startsRaw);
+  var endsAt    = gtInputToISO(endsRaw);
+  var msgEl    = document.getElementById('ep-msg-' + phaseId);
+  if (!name)           { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
+  if (!price || price <= 0) { msgEl.style.color = '#f87171'; msgEl.textContent = 'El precio debe ser > 0.'; return; }
+  msgEl.textContent = 'Guardando…'; msgEl.style.color = 'var(--ph-text-dim)';
+  const h = { 'x-admin-token': adminToken };
+  var body = { name, price_gtq: price, bundle_qty: bundle };
+  if (capacity)  body.capacity  = capacity;
+  if (startsAt)  body.starts_at = startsAt; else body.starts_at = null;
+  if (endsAt)    body.ends_at   = endsAt;   else body.ends_at   = null;
+  try {
+    await api('PUT', '/api/admin/phases/' + phaseId, body, h);
+    msgEl.style.color = '#22c55e'; msgEl.textContent = 'Guardado ✓';
+    setTimeout(function() { loadTiersAdmin(); }, 800);
+  } catch (e) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = (e && e.message) ? e.message : 'Error al guardar.';
+  }
+}
+
+function toggleEditTier(tierId) {
+  var form = document.getElementById('edit-tier-form-' + tierId);
+  if (form) form.style.display = form.style.display === 'none' ? '' : 'none';
+}
+
+async function saveTierAdmin(tierId) {
+  var name     = (document.getElementById('edit-tier-name-' + tierId).value || '').trim();
+  var color    = document.getElementById('edit-tier-color-' + tierId).value;
+  var msgEl    = document.getElementById('edit-tier-msg-' + tierId);
+  if (!name) { msgEl.style.color = '#f87171'; msgEl.textContent = 'El nombre es requerido.'; return; }
+  msgEl.textContent = 'Guardando…'; msgEl.style.color = 'var(--ph-text-dim)';
+  const h = { 'x-admin-token': adminToken };
+  try {
+    await api('PUT', '/api/admin/tiers/' + tierId, { name, color }, h);
+    msgEl.style.color = '#22c55e'; msgEl.textContent = 'Guardado ✓';
+    setTimeout(function() { loadTiersAdmin(); }, 800);
+  } catch (e) {
+    msgEl.style.color = '#f87171';
+    msgEl.textContent = (e && e.message) ? e.message : 'Error al guardar.';
   }
 }
 

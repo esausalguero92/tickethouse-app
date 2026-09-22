@@ -91,28 +91,104 @@ router.post('/payment/intent/tiers',
   validateRequest,
   asyncHandler(async (req, res) => {
     const supabase = getSupabase();
-    const { event_id, full_name, email, tier_items, age_verified, terms_accepted } = req.body;
+    const { event_id, full_name, email, tier_items } = req.body;
+    const now = new Date();
 
-    const { data, error } = await supabase.rpc('rpc_create_purchase_intent_tiers', {
-      p_event_id:       event_id,
-      p_full_name:      full_name,
-      p_email:          email,
-      p_tier_items:     tier_items,
-      p_age_verified:   age_verified === true || age_verified === 'true',
-      p_terms_accepted: terms_accepted === true || terms_accepted === 'true',
-    });
+    // 1. Cargar evento
+    const { data: event, error: evErr } = await supabase
+      .from('events')
+      .select('id, name, tickets_sold, max_per_order')
+      .eq('id', event_id)
+      .maybeSingle();
 
-    if (error) { console.error('[payment.intent.tiers]', error); return res.status(500).json({ error: 'db_error' }); }
-    console.log('[payment.intent.tiers] rpc result:', JSON.stringify(data));
-    if (data && data.error) {
-      const statusMap = {
-        event_not_found: 404, tier_not_found: 404,
-        no_active_phase: 409, insufficient_capacity: 409,
-        quantity_invalid: 400, max_per_order_exceeded: 400,
-      };
-      return res.status(statusMap[data.error] || 400).json(data);
+    if (evErr || !event) return res.status(404).json({ error: 'Evento no encontrado' });
+
+    // 2. Filtrar items con cantidad > 0
+    const validItems = (tier_items || []).filter(i => parseInt(i.quantity, 10) > 0);
+    if (validItems.length === 0) return res.status(400).json({ error: 'Debes seleccionar al menos una localidad' });
+
+    const totalQty = validItems.reduce((s, i) => s + parseInt(i.quantity, 10), 0);
+
+    if (event.max_per_order && totalQty > event.max_per_order) {
+      return res.status(400).json({ error: `Máximo ${event.max_per_order} tickets por orden` });
     }
-    return res.json(data);
+    // 3. Validar cada tier y su fase activa
+    let total = 0;
+    const tierItemsOut = [];
+
+    for (const item of validItems) {
+      const qty = parseInt(item.quantity, 10);
+
+      // Cargar tier con sus fases
+      const { data: tier, error: tErr } = await supabase
+        .from('ticket_tiers')
+        .select('id, name, capacity, tickets_sold, tier_phases(id, name, price_gtq, capacity, tickets_sold, bundle_qty, sort_order, is_active, starts_at, ends_at)')
+        .eq('id', item.tier_id)
+        .eq('event_id', event_id)
+        .maybeSingle();
+
+      if (tErr || !tier) return res.status(404).json({ error: 'Localidad no encontrada' });
+
+      // Fase activa: is_active=TRUE, ends_at nulo o futuro (starts_at es solo informativo)
+      const phase = (tier.tier_phases || [])
+        .filter(p => p.is_active === true && (p.ends_at === null || new Date(p.ends_at) > now))
+        .sort((a, b) => (a.sort_order - b.sort_order) || 0)[0] || null;
+
+      if (!phase) return res.status(400).json({ error: `No hay precio activo para ${tier.name}` });
+
+      const bundleQty = parseInt(phase.bundle_qty || 1, 10);
+      if (bundleQty > 1 && qty % bundleQty !== 0) {
+        return res.status(400).json({ error: `La cantidad para "${tier.name}" debe ser múltiplo de ${bundleQty}` });
+      }
+      if (phase.capacity != null && (phase.tickets_sold + qty) > phase.capacity) {
+        return res.status(409).json({ error: `Agotada la fase actual de ${tier.name}` });
+      }
+
+      const packs    = qty / bundleQty;
+      const subtotal = packs * parseFloat(phase.price_gtq);
+      total += subtotal;
+
+      tierItemsOut.push({
+        tier_id:        tier.id,
+        tier_name:      tier.name,
+        phase_id:       phase.id,
+        phase_name:     phase.name,
+        quantity:       qty,
+        bundle_qty:     bundleQty,
+        unit_price_gtq: parseFloat(phase.price_gtq),
+      });
+    }
+
+    if (total <= 0) return res.status(400).json({ error: 'Total inválido' });
+
+    // 4. Insertar orden
+    const { data: order, error: insErr } = await supabase
+      .from('orders')
+      .insert({
+        event_id,
+        buyer_name:     full_name,
+        buyer_email:    email,
+        quantity:       totalQty,
+        amount_usd:     total,
+        payment_method: 'recurrente',
+        payment_status: 'pending',
+        tier_items:     tierItemsOut,
+      })
+      .select('id')
+      .single();
+
+    if (insErr || !order) {
+      console.error('[payment.intent.tiers] insert order:', insErr?.message);
+      return res.status(500).json({ error: 'db_error' });
+    }
+
+    console.log('[payment.intent.tiers] orden creada:', order.id, 'total:', total);
+    return res.json({
+      order_id:   order.id,
+      total_gtq:  total,
+      quantity:   totalQty,
+      tier_items: tierItemsOut,
+    });
   })
 );
 
@@ -131,7 +207,7 @@ router.post('/payment/recurrente/checkout',
     // Verificar que la orden existe, está pendiente y obtener detalles
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, event_id, payment_status, quantity, amount_usd, discount_amount_usd, buyer_name, buyer_email, event:events(name, code_prefix, price_gtq)')
+      .select('id, event_id, payment_status, quantity, amount_usd, discount_amount_usd, buyer_name, buyer_email, tier_items, event:events(name, code_prefix, price_gtq)')
       .eq('id', order_id)
       .eq('payment_status', 'pending')
       .maybeSingle();
@@ -142,8 +218,18 @@ router.post('/payment/recurrente/checkout',
     }
 
     // El backend calcula el precio — nunca confiar en el frontend
-    const unitPriceGtq  = Math.round((order.event && order.event.price_gtq ? order.event.price_gtq : 0) * 100);
+    const isTierOrder   = order.tier_items && Array.isArray(order.tier_items) && order.tier_items.length > 0;
     const discountGtq   = Math.round((order.discount_amount_usd || 0) * 100);
+    // Para órdenes de tiers: el total ya está en amount_usd (calculado por el RPC)
+    // Para órdenes estándar: price_gtq * quantity
+    let unitPriceGtq, checkoutQty;
+    if (isTierOrder) {
+      unitPriceGtq  = Math.round((Number(order.amount_usd) || 0) * 100);
+      checkoutQty   = 1; // Recurrente recibe total como 1 ítem
+    } else {
+      unitPriceGtq  = Math.round((order.event && order.event.price_gtq ? order.event.price_gtq : 0) * 100);
+      checkoutQty   = order.quantity;
+    }
 
     let checkoutId, checkoutUrl;
     try {
@@ -151,7 +237,7 @@ router.post('/payment/recurrente/checkout',
         orderId:       order_id,
         eventId:       order.event_id,
         eventName:     (order.event && order.event.name) || 'TicketHouse',
-        quantity:      order.quantity,
+        quantity:      checkoutQty,
         unitPriceGtq,
         discountAmount: discountGtq,
         buyerEmail:    order.buyer_email,
@@ -246,7 +332,7 @@ router.post('/webhooks/recurrente',
     // 5. Obtener orden y verificar que está pendiente
     const { data: order, error: oErr } = await supabase
       .from('orders')
-      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, tier_items, payment_status, event:events(name, event_date, venue, code_prefix)')
+      .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, tier_items, payment_status, event:events(name, event_date, venue, code_prefix, location_url)')
       .eq('id', orderId)
       .maybeSingle();
 
@@ -293,7 +379,8 @@ router.post('/webhooks/recurrente',
           eventName:  (order.event && order.event.name)       || 'TicketHouse',
           eventDate:  (order.event && order.event.event_date)  || null,
           eventVenue: (order.event && order.event.venue)      || '',
-          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+          eventPrefix:   (order.event && order.event.code_prefix)   || 'TH',
+          locationUrl:   (order.event && order.event.location_url)   || null,
         });
       } else {
         result = await issueTickets({
@@ -306,7 +393,8 @@ router.post('/webhooks/recurrente',
           eventName:  (order.event && order.event.name)      || 'TicketHouse',
           eventDate:  (order.event && order.event.event_date) || null,
           eventVenue: (order.event && order.event.venue)     || '',
-          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+          eventPrefix:   (order.event && order.event.code_prefix)   || 'TH',
+          locationUrl:   (order.event && order.event.location_url)   || null,
         });
       }
     } catch (e) {
@@ -354,7 +442,7 @@ if (process.env.NODE_ENV !== 'production') {
 
       const { data: order, error: oErr } = await supabase
         .from('orders')
-        .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, event:events(name, event_date, venue, code_prefix)')
+        .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, tier_items, event:events(name, event_date, venue, code_prefix, location_url)')
         .eq('id', orderId)
         .maybeSingle();
 
@@ -371,6 +459,22 @@ if (process.env.NODE_ENV !== 'production') {
 
       let result;
       try {
+        const hasTierItems = order.tier_items && Array.isArray(order.tier_items) && order.tier_items.length > 0;
+        if (hasTierItems) {
+          result = await issueTicketsTiers({
+            orderId:     order.id,
+            eventId:     order.event_id,
+            buyerId:     order.buyer_id,
+            buyerName:   order.buyer_name,
+            buyerEmail:  order.buyer_email,
+            tierItems:   order.tier_items,
+            eventName:   (order.event && order.event.name)       || 'TicketHouse',
+            eventDate:   (order.event && order.event.event_date)  || null,
+            eventVenue:  (order.event && order.event.venue)      || '',
+            eventPrefix:   (order.event && order.event.code_prefix)   || 'TH',
+          locationUrl:   (order.event && order.event.location_url)   || null,
+          });
+        } else {
         result = await issueTickets({
           orderId,
           eventId:     order.event_id,
@@ -381,8 +485,10 @@ if (process.env.NODE_ENV !== 'production') {
           eventName:   (order.event && order.event.name)       || 'TicketHouse',
           eventDate:   (order.event && order.event.event_date)  || null,
           eventVenue:  (order.event && order.event.venue)      || '',
-          eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+          eventPrefix:   (order.event && order.event.code_prefix)   || 'TH',
+          locationUrl:   (order.event && order.event.location_url)   || null,
         });
+        }
       } catch (e) {
         return res.status(500).json({ error: 'ticket_issue_failed', message: e.message });
       }
@@ -398,6 +504,154 @@ if (process.env.NODE_ENV !== 'production') {
 
       console.log('[sandbox] Pago confirmado:', orderId, '→', result.publicCodes);
       return res.json({ ok: true, publicCodes: result.publicCodes });
+    })
+  );
+}
+
+// ── POST /api/sandbox/reissue-tickets ────────────────────────────
+// Re-emite tickets para una orden 'paid' que no tiene tickets.
+// Solo disponible fuera de producción.
+if (process.env.NODE_ENV !== 'production') {
+  router.post('/sandbox/reissue-tickets',
+    body('order_id').isUUID().withMessage('order_id invalido'),
+    validateRequest,
+    asyncHandler(async (req, res) => {
+      const supabase = getSupabase();
+      const { order_id: orderId } = req.body;
+
+      const { data: order, error: oErr } = await supabase
+        .from('orders')
+        .select('id, event_id, buyer_id, buyer_name, buyer_email, quantity, payment_status, tier_items, event:events(name, event_date, venue, code_prefix, location_url)')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (oErr || !order) return res.status(404).json({ error: 'order_not_found' });
+      if (order.payment_status !== 'paid') return res.status(400).json({ error: 'order_not_paid', status: order.payment_status });
+
+      // Verificar que no haya tickets ya emitidos
+      const { data: existingTickets } = await supabase
+        .from('tickets')
+        .select('id')
+        .eq('order_id', orderId)
+        .neq('status', 'revoked');
+
+      if (existingTickets && existingTickets.length > 0) {
+        return res.status(400).json({ error: 'tickets_already_exist', count: existingTickets.length });
+      }
+
+      let result;
+      try {
+        const hasTierItems = order.tier_items && Array.isArray(order.tier_items) && order.tier_items.length > 0;
+        if (hasTierItems) {
+          result = await issueTicketsTiers({
+            orderId:     order.id,
+            eventId:     order.event_id,
+            buyerId:     order.buyer_id,
+            buyerName:   order.buyer_name,
+            buyerEmail:  order.buyer_email,
+            tierItems:   order.tier_items,
+            eventName:   (order.event && order.event.name)       || 'TicketHouse',
+            eventDate:   (order.event && order.event.event_date)  || null,
+            eventVenue:  (order.event && order.event.venue)      || '',
+            eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+            locationUrl: (order.event && order.event.location_url) || null,
+          });
+        } else {
+          result = await issueTickets({
+            orderId,
+            eventId:     order.event_id,
+            buyerId:     order.buyer_id,
+            buyerName:   order.buyer_name,
+            buyerEmail:  order.buyer_email,
+            quantity:    order.quantity,
+            eventName:   (order.event && order.event.name)       || 'TicketHouse',
+            eventDate:   (order.event && order.event.event_date)  || null,
+            eventVenue:  (order.event && order.event.venue)      || '',
+            eventPrefix: (order.event && order.event.code_prefix) || 'TH',
+            locationUrl: (order.event && order.event.location_url) || null,
+          });
+        }
+      } catch (e) {
+        return res.status(500).json({ error: 'ticket_issue_failed', message: e.message });
+      }
+
+      console.log('[sandbox.reissue] Tickets re-emitidos para', orderId, '→', result.publicCodes);
+      return res.json({ ok: true, publicCodes: result.publicCodes, downloadToken: result.downloadToken });
+    })
+  );
+}
+
+
+// ── POST /api/sandbox/resend-email ───────────────────────────────
+// Reenvía el correo de confirmación con los PDFs regenerados
+// para una orden ya pagada con tickets existentes.
+if (env.isDev) {
+  router.post('/sandbox/resend-email',
+    asyncHandler(async (req, res) => {
+      const { order_id } = req.body;
+      if (!order_id) return res.status(400).json({ error: 'order_id requerido' });
+
+      const supabase = getSupabase();
+
+      // Cargar la orden
+      const { data: order, error: oErr } = await supabase
+        .from('orders')
+        .select('id, event_id, buyer_id, payment_status, buyers(full_name, email), events(name, event_date, venue, location_url, code_prefix)')
+        .eq('id', order_id)
+        .maybeSingle();
+
+      if (oErr || !order) return res.status(404).json({ error: 'Orden no encontrada' });
+      if (order.payment_status !== 'paid') return res.status(400).json({ error: 'Orden no pagada' });
+
+      // Cargar los tickets existentes
+      const { data: tickets, error: tErr } = await supabase
+        .from('tickets')
+        .select('id, public_code, correlative_code, qr_token, tier_name')
+        .eq('order_id', order_id)
+        .eq('status', 'issued');
+
+      if (tErr || !tickets || tickets.length === 0)
+        return res.status(404).json({ error: 'No hay tickets emitidos para esta orden' });
+
+      const { generateTicketPdf } = require('../services/PdfService');
+      const { sendConfirmationEmail } = require('../services/EmailService');
+      const { generateDownloadToken } = require('../services/QrService');
+
+      const ev = order.events;
+      const buyer = order.buyers;
+
+      // Regenerar PDFs con los datos actuales (incluyendo tier_name)
+      const pdfBuffers = await Promise.all(
+        tickets.map(t => generateTicketPdf({
+          publicCode:      t.public_code,
+          correlativeCode: t.correlative_code,
+          qrToken:         t.qr_token,
+          eventName:       ev.name,
+          eventDate:       ev.event_date,
+          eventVenue:      ev.venue,
+          buyerName:       buyer.full_name,
+          locationUrl:     ev.location_url,
+          tierName:        t.tier_name || null,
+        }))
+      );
+
+      const downloadToken = generateDownloadToken(order_id);
+
+      await sendConfirmationEmail({
+        toEmail:     buyer.email,
+        buyerName:   buyer.full_name || 'Invitado/a',
+        eventName:   ev.name,
+        eventDate:   ev.event_date,
+        eventVenue:  ev.venue,
+        tickets: tickets.map((t, i) => ({
+          correlativeCode: t.correlative_code,
+          qrToken:         t.qr_token,
+          pdfBuffer:       pdfBuffers[i],
+        })),
+        downloadUrl: env.PUBLIC_BASE_URL + '/ticket.html?ot=' + downloadToken,
+      });
+
+      return res.json({ ok: true, sent_to: buyer.email, tickets: tickets.length });
     })
   );
 }

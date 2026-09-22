@@ -33,7 +33,7 @@ const env = require('../config/env');
  * @param {string} opts.eventVenue
  * @param {string} [opts.eventPrefix]  Prefijo para códigos públicos (ej. "BLG")
  */
-async function issueTickets({ orderId, eventId, buyerId, buyerName, buyerEmail, quantity, eventName, eventDate, eventVenue, eventPrefix }) {
+async function issueTickets({ orderId, eventId, buyerId, buyerName, buyerEmail, quantity, eventName, eventDate, eventVenue, eventPrefix, locationUrl }) {
   const supabase = getSupabase();
 
   // 1. Generar códigos públicos únicos (TH-BLG-482719)
@@ -100,6 +100,7 @@ async function issueTickets({ orderId, eventId, buyerId, buyerName, buyerEmail, 
         eventDate,
         eventVenue,
         buyerName,
+        locationUrl,
       })
     )
   );
@@ -152,7 +153,7 @@ async function issueTickets({ orderId, eventId, buyerId, buyerName, buyerEmail, 
  * @param {string}   opts.eventVenue
  * @param {string}   [opts.eventPrefix]
  */
-async function issueTicketsTiers({ orderId, eventId, buyerId, buyerName, buyerEmail, tierItems, eventName, eventDate, eventVenue, eventPrefix }) {
+async function issueTicketsTiers({ orderId, eventId, buyerId, buyerName, buyerEmail, tierItems, eventName, eventDate, eventVenue, eventPrefix, locationUrl }) {
   const supabase = getSupabase();
 
   // 1. Calcular cantidad total
@@ -225,6 +226,8 @@ async function issueTicketsTiers({ orderId, eventId, buyerId, buyerName, buyerEm
         eventDate,
         eventVenue,
         buyerName,
+        locationUrl,
+        tierName:   ticketsJson[i].tier_name || null,
       });
     })
   );

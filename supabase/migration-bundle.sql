@@ -67,8 +67,9 @@ BEGIN
   FROM public.tier_phases tp
   WHERE tp.tier_id   = p_tier_id
     AND tp.is_active  = TRUE
-    AND (tp.starts_at IS NULL OR tp.starts_at <= NOW())
-    AND (tp.ends_at   IS NULL OR tp.ends_at   >  NOW())
+    -- starts_at ya NO bloquea: el admin activa manualmente con is_active
+    -- ends_at SI aplica: auto-expira la fase cuando termina
+    AND (tp.ends_at IS NULL OR tp.ends_at > NOW())
     AND (tp.capacity  IS NULL OR tp.tickets_sold < tp.capacity)
   ORDER BY tp.sort_order ASC, tp.created_at ASC
   LIMIT 1;

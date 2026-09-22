@@ -5,9 +5,10 @@
  * GET /api/download/order/:token             → Info de la orden (tickets) por download token
  * GET /api/download/ticket/:token/:code      → Descargar PDF de 1 ticket
  *
- * :code acepta AMBOS formatos:
- *   Legacy: TH-PH001
- *   Nuevo:  TH-BLG-482719
+ * :code acepta TRES formatos:
+ *   Legacy:      TH-PH001
+ *   Nuevo largo: TH-BLG-482719
+ *   Correlativo: PL-00005 (prefijo evento + 5 dígitos)
  *
  * Los tokens son JWT firmados con exp de 24h.
  * Nunca exponer el order_id directamente en URLs predecibles.
@@ -21,12 +22,13 @@ const { downloadLimiter } = require('../middleware/security');
 
 const router = Router();
 
-// Patrones de código válido (legacy + nuevo)
-const LEGACY_CODE_RE = /^TH-PH\d+$/;
-const NEW_CODE_RE    = /^TH-[A-Z]{2,4}-\d{6}$/;
+// Patrones de código válido
+const LEGACY_CODE_RE = /^TH-PH\d+$/;                  // TH-PH001
+const NEW_CODE_RE    = /^TH-[A-Z]{2,4}-\d{6}$/;        // TH-PL-451219
+const CORR_CODE_RE   = /^[A-Z]{2,8}-\d{4,6}$/;         // PL-00005 (correlativo nuevo)
 
 function isValidTicketCode(code) {
-  return LEGACY_CODE_RE.test(code) || NEW_CODE_RE.test(code);
+  return LEGACY_CODE_RE.test(code) || NEW_CODE_RE.test(code) || CORR_CODE_RE.test(code);
 }
 
 // ── GET /api/download/order/:token ────────────────────────────────
@@ -72,19 +74,22 @@ router.get('/ticket/:token/:code',
 
     const supabase = getSupabase();
 
-    // Buscar ticket por correlative_code (legacy) o public_code (nuevo)
+    // Buscar ticket:
+    //   Legacy (TH-PH001) o Correlativo nuevo (PL-00005) → por correlative_code
+    //   Nuevo largo (TH-PL-451219)                        → por public_code
+    const useCorrelative = LEGACY_CODE_RE.test(code) || CORR_CODE_RE.test(code);
     let ticketQuery;
-    if (LEGACY_CODE_RE.test(code)) {
+    if (useCorrelative) {
       ticketQuery = supabase
         .from('tickets')
-        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, tier_name, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
         .eq('correlative_code', code)
         .eq('order_id', payload.oid)
         .maybeSingle();
     } else {
       ticketQuery = supabase
         .from('tickets')
-        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
+        .select('id, correlative_code, public_code, qr_token, status, order_id, event_id, tier_name, event:events(name, event_date, venue, location_url), buyer:buyers(full_name)')
         .eq('public_code', code)
         .eq('order_id', payload.oid)
         .maybeSingle();
@@ -111,6 +116,7 @@ router.get('/ticket/:token/:code',
       eventVenue:      ticket.event ? ticket.event.venue        : '',
       buyerName:       ticket.buyer ? ticket.buyer.full_name    : '',
       locationUrl:     ticket.event ? ticket.event.location_url : null,
+      tierName:        ticket.tier_name || null,
     });
 
     res.set('Content-Type', 'application/pdf');

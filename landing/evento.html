@@ -253,6 +253,75 @@
 
     /* ── ENTRADAS section ────────────────────────────────────────── */
     .ev-tickets-section { padding: 0 48px 28px; }
+    /* ── Tier / Localidad cards ───────────────────────────────────── */
+    .tier-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      transition: border-color .15s;
+    }
+    .tier-card:has(.tier-card__stepper) { border-color: rgba(255,255,255,.18); }
+    .tier-card__accent {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; border-radius: 12px 0 0 12px;
+    }
+    .tier-card__main {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 16px 13px 20px; gap: 12px;
+    }
+    .tier-card__left { flex: 1; min-width: 0; }
+    .tier-card__name {
+      font-size: 14px; font-weight: 700; color: #fff;
+      letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tier-card__phase {
+      font-size: 11px; color: rgba(255,255,255,.45); margin-top: 2px;
+    }
+    .tier-card__right { text-align: right; flex-shrink: 0; }
+    .tier-card__price {
+      font-family: var(--font-title); font-size: 24px;
+      letter-spacing: .04em; color: #fff; line-height: 1;
+    }
+    .tier-card__price-note {
+      font-size: 10px; color: rgba(255,255,255,.4); margin-top: 2px;
+    }
+    .tier-card__soldout {
+      font-size: 11px; font-weight: 600;
+      color: rgba(255,255,255,.3); letter-spacing: .04em; text-transform: uppercase;
+    }
+    .tier-card__stepper {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px 10px 20px;
+      border-top: 1px solid var(--border-dim);
+    }
+    .tier-card__avail { font-size: 11px; color: rgba(255,255,255,.4); }
+    .tier-card__avail.low { color: #fca5a5; }
+    .tier-card__controls { display: flex; align-items: center; gap: 0; }
+    .tier-btn {
+      width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      color: #fff; font-size: 16px; cursor: pointer; transition: background .12s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .tier-btn:first-child { border-radius: 7px 0 0 7px; }
+    .tier-btn:last-child  { border-radius: 0 7px 7px 0; }
+    .tier-btn:hover { background: rgba(255,255,255,.14); }
+    .tier-btn:disabled { opacity: .3; cursor: default; }
+    .tier-qty {
+      min-width: 32px; height: 28px; line-height: 28px; text-align: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+      border-top: 1px solid rgba(255,255,255,.12);
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      padding: 0 4px;
+    }
+    .tier-ticket-lbl {
+      font-size: 11px; color: rgba(255,255,255,.45);
+      min-width: 72px; text-align: right;
+    }
+    /* Legacy classes kept for non-tier card */
     .ev-ticket-type-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: 14px; overflow: hidden; margin-bottom: 14px;
@@ -857,10 +926,10 @@
           <div class="step-panel" id="step-2">
             <div class="step-body">
               <p class="step-heading">Tu pedido</p>
-              <p class="step-sub">Elegí la cantidad y confirmá las condiciones.</p>
+              <p class="step-sub" id="step2-sub">Elegí la cantidad y confirmá las condiciones.</p>
 
               <!-- Ticket card -->
-              <div class="ticket-card">
+              <div class="ticket-card" id="ticket-card-wrap">
                 <div class="ticket-card__header">
                   <div>
                     <p class="ticket-card__name" id="ticket-card-name">Entrada General</p>
@@ -996,14 +1065,22 @@ function hasTiers() { return tiers.length > 0; }
 function getTierTotal() {
   return tiers.reduce(function(sum, t) {
     if (!t.active_phase) return sum;
-    var qty   = tierItems[t.id] || 0;
-    var bQty  = Number(t.active_phase.bundle_qty || 1);
-    var packs = bQty > 1 ? Math.floor(qty / bQty) : qty;
+    var packs = tierItems[t.id] || 0;   // tierItems = nro de paquetes
     return sum + packs * Number(t.active_phase.price_gtq || 0);
   }, 0);
 }
 
 function getTierTotalQty() {
+  // Retorna total de TICKETS (paquetes × bundle_qty)
+  return tiers.reduce(function(s, t) {
+    var packs = tierItems[t.id] || 0;
+    var bQty  = t.active_phase ? Number(t.active_phase.bundle_qty || 1) : 1;
+    return s + packs * bQty;
+  }, 0);
+}
+
+function getTierTotalPacks() {
+  // Retorna total de PAQUETES seleccionados
   return Object.values(tierItems).reduce(function(s, q) { return s + (q || 0); }, 0);
 }
 
@@ -1064,26 +1141,54 @@ async function init() {
 
   document.getElementById('loading-state').hidden = true;
 
-  const available = event.capacity != null
-    ? Math.max((event.capacity) - (event.tickets_sold || 0), 0)
-    : null;
-
-  if (available === 0) {
-    document.getElementById('soldout-banner').hidden = false;
-    return;
-  }
-
-  if (available != null) maxQty = Math.min(10, available);
-
-  renderEvent(available, apiData && apiData.artists || []);
-
-  // Fetch tiers
+  // Fetch tiers primero para saber si la capacidad la manejan los tiers
   if (event && event.id) {
     try {
       var tiersData = await api('GET', '/api/events/' + event.id + '/tiers');
       tiers = (tiersData && tiersData.tiers) ? tiersData.tiers : [];
-    } catch (e) { tiers = []; }
+      console.log('[DEBUG tiers]', JSON.stringify(tiers));
+    } catch (e) { tiers = []; console.log('[DEBUG tiers error]', e); }
   }
+
+  // Si el evento tiene tiers, la capacidad la controlan los tiers (ignorar event.capacity)
+  // Si no tiene tiers, usar la capacidad del evento
+  var available;
+  if (hasTiers()) {
+    // Calcular disponibilidad total sumando tiers con fase activa
+    // Prioridad: capacidad de la fase activa > capacidad del tier > ilimitada
+    var allNoPhase = tiers.every(function(t) { return !t.active_phase; });
+    var totalTierCap = tiers.reduce(function(sum, t) {
+      if (!t.active_phase) return sum;
+      var ap = t.active_phase;
+      var cap;
+      if (ap.capacity != null) {
+        cap = Math.max(0, ap.capacity - (ap.tickets_sold || 0));
+      } else if (t.capacity != null) {
+        cap = Math.max(0, t.capacity - (t.tickets_sold || 0));
+      } else {
+        cap = 999;
+      }
+      return sum + cap;
+    }, 0);
+    // Si hay tiers pero sin fase activa → mostrar tiers igual (cada uno dirá "Sin precio activo")
+    // Solo AGOTADO si todas las fases activas suman 0 de capacidad
+    available = allNoPhase ? 0 : (totalTierCap > 0 ? totalTierCap : 0);
+    if (!allNoPhase && available === 0) {
+      document.getElementById('soldout-banner').hidden = false;
+      return;
+    }
+  } else {
+    available = event.capacity != null
+      ? Math.max((event.capacity) - (event.tickets_sold || 0), 0)
+      : null;
+    if (available === 0) {
+      document.getElementById('soldout-banner').hidden = false;
+      return;
+    }
+    if (available != null) maxQty = Math.min(10, available);
+  }
+
+  renderEvent(available, apiData && apiData.artists || []);
 
   if (hasTiers()) {
     renderTierSection();
@@ -1266,29 +1371,57 @@ function renderTierSection() {
   inner.innerHTML = tiers.map(function(t) {
     var phase    = t.active_phase;
     var bQty     = phase ? Number(phase.bundle_qty || 1) : 1;
-    var priceVal = phase ? ('Q' + Number(phase.price_gtq).toFixed(2) + (bQty > 1 ? ' <span style="font-size:12px;color:rgba(255,255,255,.5)">/ ' + bQty + ' tkt</span>' : '')) : '—';
-    var phaseLbl = phase ? (phase.name + (bQty > 1 ? ' · 📦 paquete ' + bQty + ' entradas' : '')) : 'Sin precio activo';
-    var available = t.capacity != null ? Math.max(0, t.capacity - (t.tickets_sold || 0)) : null;
-    var soldOut   = available === 0 || !phase;
-    var qty       = tierItems[t.id] || 0;
-    return '<div class="ev-ticket-type-card" style="margin-bottom:12px;">'
-      + '<div class="ev-ticket-type-card__body">'
-      +   '<div style="display:flex;align-items:center;gap:8px;">'
-      +     '<div style="width:12px;height:12px;border-radius:50%;background:' + (t.color || '#6366f1') + ';flex-shrink:0;"></div>'
-      +     '<div><p class="ev-ticket-type-name">' + t.name + '</p>'
-      +       '<p class="ev-ticket-type-note" style="font-size:11px;">' + phaseLbl + '</p></div>'
+    var color    = t.color || '#6366f1';
+    var priceVal = phase
+      ? ('Q' + Number(phase.price_gtq).toFixed(2)
+         + (bQty > 1 ? '<span style="font-size:11px;font-family:var(--font-body);color:rgba(255,255,255,.4);font-weight:400;letter-spacing:0"> /' + bQty + '</span>' : ''))
+      : '—';
+    var phaseLbl = phase
+      ? (phase.name + (bQty > 1 ? ' · paquete ' + bQty + ' entradas' : ''))
+      : 'Sin precio activo';
+    var available;
+    if (phase && phase.capacity != null) {
+      available = Math.max(0, phase.capacity - (phase.tickets_sold || 0));
+    } else if (t.capacity != null) {
+      available = Math.max(0, t.capacity - (t.tickets_sold || 0));
+    } else {
+      available = null;
+    }
+    var soldOut = (available === 0) || !phase;
+    var qty     = tierItems[t.id] || 0;
+    var availLbl = ''; // availability count intentionally hidden
+    var priceNote = bQty > 1 ? 'por paquete' : 'por entrada';
+
+    return '<div class="tier-card">'
+      + '<div class="tier-card__accent" style="background:' + color + ';"></div>'
+      + '<div class="tier-card__main">'
+      +   '<div class="tier-card__left">'
+      +     '<div class="tier-card__name">' + t.name + '</div>'
+      +     '<div class="tier-card__phase">' + phaseLbl + '</div>'
       +   '</div>'
-      +   '<div style="text-align:right;"><div class="ev-ticket-type-price-val">' + priceVal + '</div></div>'
+      +   '<div class="tier-card__right">'
+      +     (soldOut
+            ? '<span class="tier-card__soldout">Agotado</span>'
+            : '<div class="tier-card__price">' + priceVal + '</div>'
+              + '<div class="tier-card__price-note">' + priceNote + '</div>')
+      +   '</div>'
       + '</div>'
       + (!soldOut
-        ? ('<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 12px;">'
-          + '<span style="font-size:11px;color:rgba(255,255,255,.5);">' + (available != null ? available + ' disp.' : 'Disponible') + '</span>'
-          + '<div style="display:flex;align-items:center;">'
-          +   '<button onclick="changeTierQty(\'' + t.id + '\',false)" style="width:32px;height:32px;border-radius:8px 0 0 8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;">−</button>'
-          +   '<span id="tier-qty-' + t.id + '" style="min-width:36px;text-align:center;font-size:15px;font-weight:700;border-top:1px solid rgba(255,255,255,.12);border-bottom:1px solid rgba(255,255,255,.12);height:32px;line-height:32px;">' + qty + '</span>'
-          +   '<button onclick="changeTierQty(\'' + t.id + '\',true)" style="width:32px;height:32px;border-radius:0 8px 8px 0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;">+</button>'
-          + '</div></div>')
-        : '<div style="padding:8px 14px 12px;"><span style="font-size:11px;color:rgba(255,255,255,.4);">Agotado</span></div>')
+        ? '<div class="tier-card__stepper">'
+          + '<div style="display:flex;align-items:center;gap:8px;">'
+          +   availLbl
+          +   (bQty > 1 ? '<span style="font-size:10px;color:rgba(255,255,255,.25);">\u00b7 ' + bQty + ' tkt/paq</span>' : '')
+          + '</div>'
+          + '<div style="display:flex;align-items:center;gap:8px;">'
+          +   '<span class="tier-ticket-lbl" id="tier-tkt-lbl-' + t.id + '"></span>'
+          +   '<div class="tier-card__controls">'
+          +     '<button class="tier-btn" onclick="changeTierQty(\'' + t.id + '\',false)">\u2212</button>'
+          +     '<span class="tier-qty" id="tier-qty-' + t.id + '">' + qty + '</span>'
+          +     '<button class="tier-btn" onclick="changeTierQty(\'' + t.id + '\',true)">+</button>'
+          +   '</div>'
+          + '</div>'
+          + '</div>'
+        : '')
       + '</div>';
   }).join('');
 
@@ -1304,15 +1437,26 @@ function renderTierSection() {
 function changeTierQty(tierId, isPlus) {
   var tier = tiers.find(function(t) { return t.id === tierId; });
   if (!tier || !tier.active_phase) return;
-  var bQty   = Number((tier.active_phase && tier.active_phase.bundle_qty) || 1);
-  var maxCap = tier.capacity != null ? Math.max(0, tier.capacity - (tier.tickets_sold || 0)) : (bQty > 1 ? bQty * 5 : 10);
-  var maxT   = bQty > 1 ? Math.floor(maxCap / bQty) * bQty : Math.min(10, maxCap);
-  var cur    = tierItems[tierId] || 0;
-  if (isPlus) cur = Math.min(cur + bQty, maxT);
-  else        cur = Math.max(cur - bQty, 0);
+  var bQty    = Number((tier.active_phase && tier.active_phase.bundle_qty) || 1);
+  // Capacidad máxima expresada en PAQUETES
+  var capTickets = tier.active_phase && tier.active_phase.capacity != null
+    ? Math.max(0, tier.active_phase.capacity - (tier.active_phase.tickets_sold || 0))
+    : (tier.capacity != null ? Math.max(0, tier.capacity - (tier.tickets_sold || 0)) : bQty * 10);
+  var maxPacks = Math.floor(capTickets / bQty);
+  if (maxPacks < 1) maxPacks = 10; // fallback ilimitado
+  maxPacks = Math.min(maxPacks, 10); // tope UI de 10 paquetes
+  var cur = tierItems[tierId] || 0;
+  if (isPlus) cur = Math.min(cur + 1, maxPacks);
+  else        cur = Math.max(cur - 1, 0);
   tierItems[tierId] = cur;
+  // Mostrar paquetes en el span; la leyenda de tickets se actualiza en el label
   var el = document.getElementById('tier-qty-' + tierId);
   if (el) el.textContent = cur;
+  var lbl = document.getElementById('tier-tkt-lbl-' + tierId);
+  if (lbl) {
+    var totalTkt = cur * bQty;
+    lbl.textContent = cur === 0 ? '' : (bQty > 1 ? totalTkt + ' entradas' : totalTkt + (totalTkt === 1 ? ' entrada' : ' entradas'));
+  }
   updateSummary(); updateTierBuyBtn();
 }
 
@@ -1332,6 +1476,18 @@ function setupLanding() {
   if (btnBuySticky) btnBuySticky.addEventListener('click', openCheckout);
 
   document.getElementById('checkout-back-to-info').addEventListener('click', closeCheckout);
+
+  // Live-save buyer info on every keystroke so data survives display toggling and back-swipes
+  var buyerNameInput  = document.getElementById('buyer-name');
+  var buyerEmailInput = document.getElementById('buyer-email');
+  function saveBuyerInfo() {
+    try {
+      if (buyerNameInput)  sessionStorage.setItem('ph_buyer_name',  buyerNameInput.value);
+      if (buyerEmailInput) sessionStorage.setItem('ph_buyer_email', buyerEmailInput.value);
+    } catch(e) {}
+  }
+  if (buyerNameInput)  buyerNameInput.addEventListener('input',  saveBuyerInfo);
+  if (buyerEmailInput) buyerEmailInput.addEventListener('input', saveBuyerInfo);
 
   // Mobile CTA on landing = open checkout
   document.getElementById('mcta-main').addEventListener('click', function() {
@@ -1358,6 +1514,15 @@ function openCheckout() {
   checkoutOpen = true;
   document.getElementById('ev-info').style.display     = 'none';
   document.getElementById('ev-checkout').classList.add('visible');
+  // Restore buyer info saved before hiding (iOS/Safari can clear inputs in display:none containers)
+  try {
+    var sn = sessionStorage.getItem('ph_buyer_name');
+    var se = sessionStorage.getItem('ph_buyer_email');
+    var ne = document.getElementById('buyer-name');
+    var ee = document.getElementById('buyer-email');
+    if (sn && ne && !ne.value) ne.value = sn;
+    if (se && ee && !ee.value) ee.value = se;
+  } catch(e) {}
   goToStep(1);
   var evRight = document.querySelector('.ev-right');
   if (evRight) evRight.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1365,6 +1530,13 @@ function openCheckout() {
 }
 
 function closeCheckout() {
+  // Save buyer info before hiding (iOS/Safari can clear inputs in display:none containers)
+  try {
+    var ne = document.getElementById('buyer-name');
+    var ee = document.getElementById('buyer-email');
+    if (ne && ne.value)  sessionStorage.setItem('ph_buyer_name',  ne.value);
+    if (ee && ee.value)  sessionStorage.setItem('ph_buyer_email', ee.value);
+  } catch(e) {}
   checkoutOpen = false;
   document.getElementById('ev-checkout').classList.remove('visible');
   document.getElementById('ev-info').style.display = '';
@@ -1403,20 +1575,23 @@ function updateSummary() {
     var tierQty   = getTierTotalQty();
     var lineHtml = tiers.filter(function(t) { return (tierItems[t.id]||0) > 0 && t.active_phase; }).map(function(t) {
       var ph    = t.active_phase;
-      var qty   = tierItems[t.id] || 0;
+      var packs = tierItems[t.id] || 0;   // nro de paquetes
       var bQty  = Number(ph.bundle_qty || 1);
-      var packs = bQty > 1 ? Math.floor(qty / bQty) : qty;
-      var label = bQty > 1 ? (t.name + ' x' + packs + ' paq. (' + qty + ' tkt)') : (t.name + ' x' + qty);
+      var tkts  = packs * bQty;
+      var label = bQty > 1
+        ? (t.name + ' · ' + packs + ' paq. (' + tkts + ' tkt)')
+        : (t.name + ' x' + packs);
       return '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>' + label + '</span><span>Q' + (packs * Number(ph.price_gtq)).toFixed(2) + '</span></div>';
     }).join('');
     var sl = document.getElementById('summary-line');
     if (sl) sl.innerHTML = lineHtml || (tierQty === 0 ? 'Sin localidades seleccionadas' : '');
     var st = document.getElementById('summary-total');
     if (st) st.textContent = 'Q' + tierTotal.toFixed(2);
+    var tierPacks = getTierTotalPacks();
     var ml = document.getElementById('mini-summary-line');
     var mt = document.getElementById('mini-summary-total');
     var mc = document.getElementById('mcta-total');
-    if (ml) ml.textContent = tierQty + ' entrada' + (tierQty !== 1 ? 's' : '');
+    if (ml) ml.textContent = tierQty + ' entrada' + (tierQty !== 1 ? 's' : '') + (tierPacks !== tierQty ? ' (' + tierPacks + ' paq.)' : '');
     if (mt) mt.textContent = 'Q' + tierTotal.toFixed(2);
     if (mc) mc.textContent = 'Q' + tierTotal.toFixed(2);
     return;
@@ -1585,6 +1760,13 @@ function goToStep(n) {
   });
 
   currentStep = n;
+  // Hide event-level ticket card in Step 2 when event uses tiers
+  var tcWrap = document.getElementById("ticket-card-wrap");
+  if (tcWrap) tcWrap.style.display = (n === 2 && hasTiers()) ? "none" : "";
+  var step2Sub = document.getElementById("step2-sub");
+  if (step2Sub && n === 2) step2Sub.textContent = hasTiers()
+    ? "Revisá tu selección de localidades y confirmá las condiciones."
+    : "Elegí la cantidad y confirmá las condiciones.";
   updateMobileCta(n);
 
   var evRight = document.querySelector('.ev-right');
@@ -1679,7 +1861,11 @@ async function createPaymentIntent() {
     if (!event || !event.id) throw new Error('event_not_configured');
     var tierItemsArr = tiers
       .filter(function(t) { return (tierItems[t.id] || 0) > 0; })
-      .map(function(t) { return { tier_id: t.id, quantity: tierItems[t.id] }; });
+      .map(function(t) {
+        var packs = tierItems[t.id] || 0;
+        var bQty  = t.active_phase ? Number(t.active_phase.bundle_qty || 1) : 1;
+        return { tier_id: t.id, quantity: packs * bQty };  // tickets reales
+      });
     if (tierItemsArr.length === 0) throw new Error('no_tiers_selected');
     var data = await api('POST', '/api/payment/intent/tiers', {
       event_id:       event.id,

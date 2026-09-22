@@ -827,6 +827,9 @@
   }
 
   function isSoldOut(ev) {
+    // Si el evento tiene localidades (tiers), la disponibilidad
+    // la controlan los tiers — nunca mostrar AGOTADO aquí.
+    if (ev.has_tiers) return false;
     if (ev.capacity == null) return false;
     return (ev.tickets_sold || 0) >= ev.capacity;
   }

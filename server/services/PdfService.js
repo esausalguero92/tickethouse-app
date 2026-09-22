@@ -57,7 +57,7 @@ function registerFonts(doc) {
  * Al llamarse con el mismo `doc` configurado igual en ambos passes,
  * el valor retornado es idéntico en ambos.
  */
-function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, buyerName, cleanLocationUrl, qrPng }) {
+function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, buyerName, tierName, cleanLocationUrl, qrPng }) {
   // ── Banda accent superior ─────────────────────────────────────────
   doc.rect(0, 0, W, 5).fill(C.accent);
 
@@ -111,6 +111,22 @@ function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, bu
        .fillColor(C.text)
        .text(buyerName.toUpperCase(), 0, y, { align: 'center', width: W, characterSpacing: 0.5 });
     y = doc.y;
+  }
+
+  // ── Localidad (tier) ─────────────────────────────────────────────
+  if (tierName) {
+    const pillW = Math.min(W - 80, doc.font('Grotesk-Bold').fontSize(10).widthOfString(tierName.toUpperCase(), { characterSpacing: 1.5 }) + 40);
+    const pillX = (W - pillW) / 2;
+    const pillH = 22;
+    const pillY = y + 4;
+    doc.rect(pillX, pillY, pillW, pillH).fill(C.accent);
+    doc.font('Grotesk-Bold')
+       .fontSize(10)
+       .fillColor(C.bg)
+       .text(tierName.toUpperCase(), pillX, pillY + 5, {
+         align: 'center', width: pillW, characterSpacing: 1.5,
+       });
+    y = pillY + pillH + 8;
   }
 
   // ── Separador ─────────────────────────────────────────────────────
@@ -169,16 +185,28 @@ function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, bu
   // ── Ubicación: texto clickeable debajo del código ─────────────────
   if (cleanLocationUrl) {
     const locY = codeBot + 12; // 12px de gap bajo el code box
-    doc.font('Grotesk-Bold')
-       .fontSize(9)
-       .fillColor(C.accent)
-       .text('VER UBICACION DEL EVENTO EN MAPA', 0, locY, {
-         align:            'center',
-         width:            W,
+    const locLabel = 'VER UBICACION DEL EVENTO EN MAPA';
+
+    doc.font('Grotesk-Bold').fontSize(9);
+    const textW  = doc.widthOfString(locLabel, { characterSpacing: 0.5 });
+    const textX  = (W - textW) / 2; // centrado manual
+
+    // Texto sin underline nativo (PDFKit lo extiende al ancho del bloque)
+    doc.fillColor(C.accent)
+       .text(locLabel, textX, locY, {
          characterSpacing: 0.5,
          link:             cleanLocationUrl,
-         underline:        true,
+         underline:        false,
        });
+
+    // Subrayado manual — exactamente el ancho del texto
+    const lineY = locY + doc.currentLineHeight(false) - 1;
+    doc.moveTo(textX, lineY)
+       .lineTo(textX + textW, lineY)
+       .lineWidth(0.6)
+       .strokeColor(C.accent)
+       .stroke();
+
     return doc.y; // Y real al fondo del texto de ubicación
   }
 
@@ -195,8 +223,9 @@ function drawContent(doc, { displayCode, eventName, eventDateStr, eventVenue, bu
  * @param {string}  [opts.eventVenue]
  * @param {string}  [opts.buyerName]
  * @param {string}  [opts.locationUrl]
+ * @param {string}  [opts.tierName]
  */
-async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventName, eventDate, eventVenue, buyerName, locationUrl }) {
+async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventName, eventDate, eventVenue, buyerName, locationUrl, tierName }) {
   const qrPng = await generateQrBuffer(qrToken, 480);
 
   const cleanLocationUrl = locationUrl ? decodeHtmlEntities(locationUrl) : null;
@@ -209,7 +238,7 @@ async function generateTicketPdf({ publicCode, correlativeCode, qrToken, eventNa
       })
     : '';
 
-  const contentArgs = { displayCode, eventName, eventDateStr, eventVenue, buyerName, cleanLocationUrl, qrPng };
+  const contentArgs = { displayCode, eventName, eventDateStr, eventVenue, buyerName, tierName: tierName || null, cleanLocationUrl, qrPng };
 
   // ── PASS 1: medir Y final del contenido ───────────────────────────
   const TALL = 2000;
