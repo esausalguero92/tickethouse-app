@@ -1390,7 +1390,7 @@ function renderTierSection() {
     var soldOut = (available === 0) || !phase;
     var qty     = tierItems[t.id] || 0;
     var availLbl = '';
-    if (available != null && available <= 20 && !soldOut) {
+    if (available != null && !soldOut) {
       availLbl = '<span class="tier-card__avail' + (available <= 5 ? ' low' : '') + '">'
         + available + ' disponible' + (available === 1 ? '' : 's') + '</span>';
     }
