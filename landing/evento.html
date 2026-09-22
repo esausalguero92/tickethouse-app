@@ -1801,10 +1801,8 @@ function updateMobileCta(n) {
     var mc = document.getElementById('mcta-total');
     if (mc) mc.textContent = 'Q' + gtqPrice().toFixed(2);
   } else if (n === 3) {
-    if (priceBlock) priceBlock.style.display = 'none';
-    btnMain.style.display = 'none';
-    btnBack.style.display = 'block';
-    btnBack.style.flex    = '1';
+    bar.style.display = 'none'; // Ocultar barra en paso de pago — evita toque accidental del botón atrás
+    return;
   } else {
     if (priceBlock) priceBlock.style.display = 'flex';
     btnBack.style.display = (n === 1) ? 'block' : 'block'; // step 1 = back to info
@@ -1909,6 +1907,7 @@ async function createPaymentIntent() {
 // ── Recurrente checkout ───────────────────────────────────────────────────
 async function initCheckout() {
   if (checkoutMounted) return;
+  checkoutMounted = true; // Setear inmediatamente para evitar doble montaje por tap rápido
 
   const loadingEl   = document.getElementById('checkout-loading');
   const errorEl     = document.getElementById('checkout-error');
@@ -1926,7 +1925,6 @@ async function initCheckout() {
     if (!checkoutUrl) throw new Error('No checkout URL received');
 
     // SDK de Recurrente: carga el checkout embebido en #recurrente-checkout-container
-    checkoutMounted = true;
     loadingEl.style.display = 'none';
 
     RecurrenteCheckout.load({
