@@ -1925,8 +1925,14 @@ async function initCheckout() {
     var checkoutUrl = res.checkout_url;
     if (!checkoutUrl) throw new Error('No checkout URL received');
 
-    // SDK de Recurrente: carga el checkout embebido en #recurrente-checkout-container
+    // Móvil: redirigir directo a Recurrente para evitar suspensión del iframe por teclado numérico.
+    // Desktop: mantener el checkout embebido.
     loadingEl.style.display = 'none';
+
+    if (window.innerWidth <= 768) {
+      window.location.href = checkoutUrl;
+      return;
+    }
 
     RecurrenteCheckout.load({
       url: checkoutUrl,
