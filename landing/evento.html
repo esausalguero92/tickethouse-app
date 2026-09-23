@@ -1379,20 +1379,27 @@ function renderTierSection() {
     var phaseLbl = phase
       ? (phase.name + (bQty > 1 ? ' · paquete ' + bQty + ' entradas' : ''))
       : 'Sin precio activo';
-    var available;
+    // capacity en BD esta en entradas; bQty = entradas por paquete
+    // Mostramos paquetes disponibles = floor(capacity/bQty) - ceil(tickets_sold/bQty)
+    var availPacks;
     if (phase && phase.capacity != null) {
-      available = Math.max(0, phase.capacity - (phase.tickets_sold || 0));
+      var totalPacks = Math.floor(phase.capacity / bQty);
+      var soldPacks  = Math.ceil((phase.tickets_sold || 0) / bQty);
+      availPacks = Math.max(0, totalPacks - soldPacks);
     } else if (t.capacity != null) {
-      available = Math.max(0, t.capacity - (t.tickets_sold || 0));
+      var totalPacksT = Math.floor(t.capacity / bQty);
+      var soldPacksT  = Math.ceil((t.tickets_sold || 0) / bQty);
+      availPacks = Math.max(0, totalPacksT - soldPacksT);
     } else {
-      available = null;
+      availPacks = null;
     }
-    var soldOut = (available === 0) || !phase;
+    var available  = availPacks;
+    var soldOut = (availPacks === 0) || !phase;
     var qty     = tierItems[t.id] || 0;
     var availLbl = '';
-    if (available != null && !soldOut) {
-      availLbl = '<span class="tier-card__avail' + (available <= 5 ? ' low' : '') + '">'
-        + available + ' disponible' + (available === 1 ? '' : 's') + '</span>';
+    if (availPacks != null && !soldOut) {
+      availLbl = '<span class="tier-card__avail' + (availPacks <= 5 ? ' low' : '') + '">'
+        + availPacks + ' disponible' + (availPacks === 1 ? '' : 's') + '</span>';
     }
     var priceNote = bQty > 1 ? 'por paquete' : 'por entrada';
 
